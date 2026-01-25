@@ -1,0 +1,169 @@
+"""Configuration manager using QSettings for persistent storage."""
+
+from typing import Self
+
+from PySide6.QtCore import QSettings
+
+from snapcast_mvp.models.profile import ServerProfile, create_profile
+
+# Settings keys
+_KEY_SERVERS = "servers"
+_KEY_LAST_SERVER = "last_server"
+_KEY_AUTO_CONNECT = "auto_connect_enabled"
+
+
+class ConfigManager:
+    """Wrapper around QSettings for type-safe config access.
+
+    QSettings stores config in platform-specific locations:
+    - Windows: HKEY_CURRENT_USER\\Software\\SnapcastMVP\\SnapcastController
+    - macOS: ~/Library/Preferences/com.SnapcastMVP.SnapcastController.plist
+    - Linux: ~/.config/SnapcastMVP/SnapcastController.conf
+
+    Example:
+        config = ConfigManager()
+        profiles = config.get_server_profiles()
+        config.save_server_profiles(profiles)
+    """
+
+    def __init__(self, organization: str = "SnapcastMVP", application: str = "SnapcastController") -> None:
+        """Initialize the config manager.
+
+        Args:
+            organization: Organization name for QSettings.
+            application: Application name for QSettings.
+        """
+        self._settings = QSettings(organization, application)
+
+    @property
+    def settings(self) -> QSettings:
+        """Return the underlying QSettings instance."""
+        return self._settings
+
+    def get_server_profiles(self) -> list[ServerProfile]:
+        """Load saved server profiles.
+
+        Returns:
+            List of ServerProfile objects, or empty list if none saved.
+        """
+        data = self._settings.value(_KEY_SERVERS, [], list)
+        profiles: list[ServerProfile] = []
+
+        for item in data:
+            if isinstance(item, dict):
+                try:
+                    profiles.append(
+                        ServerProfile(
+                            id=item.get("id", ""),
+                            name=item.get("name", ""),
+                            host=item.get("host", ""),
+                            port=item.get("port", 1705),
+                            auto_connect=item.get("auto_connect", False),
+                        )
+                    )
+                except (KeyError, TypeError):
+                    # Skip invalid entries
+                    continue
+
+        return profiles
+
+    def save_server_profiles(self, profiles: list[ServerProfile]) -> None:
+        """Persist server profiles.
+
+        Args:
+            profiles: List of ServerProfile objects to save.
+        """
+        data = [
+            {
+                "id": p.id,
+                "name": p.name,
+                "host": p.host,
+                "port": p.port,
+                "auto_connect": p.auto_connect,
+            }
+            for p in profiles
+        ]
+        self._settings.setValue(_KEY_SERVERS, data)
+
+    def add_server_profile(self, profile: ServerProfile) -> None:
+        """Add a server profile (replacing if ID exists).
+
+        Args:
+            profile: ServerProfile to add.
+        """
+        profiles = self.get_server_profiles()
+        # Remove existing with same ID
+        profiles = [p for p in profiles if p.id != profile.id]
+        # Add new profile
+        profiles.append(profile)
+        self.save_server_profiles(profiles)
+
+    def remove_server_profile(self, profile_id: str) -> bool:
+        """Remove a server profile by ID.
+
+        Args:
+            profile_id: ID of the profile to remove.
+
+        Returns:
+            True if profile was removed, False if not found.
+        """
+        profiles = self.get_server_profiles()
+        original_count = len(profiles)
+        profiles = [p for p in profiles if p.id != profile_id]
+
+        if len(profiles) < original_count:
+            self.save_server_profiles(profiles)
+            return True
+        return False
+
+    def get_profile(self, profile_id: str) -> ServerProfile | None:
+        """Get a server profile by ID.
+
+        Args:
+            profile_id: ID of the profile to find.
+
+        Returns:
+            ServerProfile if found, else None.
+        """
+        for profile in self.get_server_profiles():
+            if profile.id == profile_id:
+                return profile
+        return None
+
+    def get_last_server_id(self) -> str | None:
+        """Get the last connected server ID.
+
+        Returns:
+            Server ID string, or None if no last server.
+        """
+        value = self._settings.value(_KEY_LAST_SERVER, None, str)
+        return value if value else None
+
+    def set_last_server_id(self, server_id: str) -> None:
+        """Set the last connected server ID.
+
+        Args:
+            server_id: Server ID to save.
+        """
+        self._settings.setValue(_KEY_LAST_SERVER, server_id)
+
+    def get_auto_connect_profile(self) -> ServerProfile | None:
+        """Get the profile marked for auto-connect.
+
+        If multiple profiles have auto_connect=True, returns the first one.
+
+        Returns:
+            ServerProfile marked for auto-connect, or None.
+        """
+        for profile in self.get_server_profiles():
+            if profile.auto_connect:
+                return profile
+        return None
+
+    def clear(self) -> None:
+        """Clear all settings (useful for testing or reset)."""
+        self._settings.clear()
+
+    def sync(self) -> None:
+        """Force settings to be written to disk."""
+        self._settings.sync()
