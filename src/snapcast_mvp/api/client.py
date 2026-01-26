@@ -86,6 +86,23 @@ class SnapcastClient:
         """Return True if connected to server."""
         return self._connected and self._reader is not None
 
+    def set_event_handlers(
+        self,
+        on_notification: NotificationHandler | None = None,
+        on_disconnect: ConnectionHandler | None = None,
+        on_error: ErrorHandler | None = None,
+    ) -> None:
+        """Set event handlers for client events.
+
+        Args:
+            on_notification: Handler for JSON-RPC notifications.
+            on_disconnect: Handler for disconnect events.
+            on_error: Handler for errors.
+        """
+        self._on_notification = on_notification
+        self._on_disconnect = on_disconnect
+        self._on_error = on_error
+
     async def __aenter__(self) -> "SnapcastClient":
         """Enter async context (connect)."""
         await self.connect()

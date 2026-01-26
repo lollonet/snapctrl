@@ -1,6 +1,5 @@
 """Tests for SnapcastWorker (QThread worker for async client)."""
 
-
 import pytest
 
 from snapcast_mvp.core.worker import SnapcastWorker

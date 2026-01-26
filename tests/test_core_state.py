@@ -97,7 +97,9 @@ class TestStateStoreBasics:
         assert state.clients == []
         assert state.sources == []
 
-    def test_update_from_server_state(self, state: StateStore, sample_server_state: ServerState) -> None:
+    def test_update_from_server_state(
+        self, state: StateStore, sample_server_state: ServerState
+    ) -> None:
         """Test updating state from ServerState."""
         state.update_from_server_state(sample_server_state)
 
@@ -145,7 +147,9 @@ class TestStateStoreLookups:
         not_found = state.get_source("nonexistent")
         assert not_found is None
 
-    def test_get_clients_for_group(self, state: StateStore, sample_server_state: ServerState) -> None:
+    def test_get_clients_for_group(
+        self, state: StateStore, sample_server_state: ServerState
+    ) -> None:
         """Test getting clients for a specific group."""
         state.update_from_server_state(sample_server_state)
 
@@ -157,7 +161,9 @@ class TestStateStoreLookups:
         empty = state.get_clients_for_group("nonexistent")
         assert empty == []
 
-    def test_get_group_for_client(self, state: StateStore, sample_server_state: ServerState) -> None:
+    def test_get_group_for_client(
+        self, state: StateStore, sample_server_state: ServerState
+    ) -> None:
         """Test finding the group that contains a client."""
         state.update_from_server_state(sample_server_state)
 
@@ -172,14 +178,18 @@ class TestStateStoreLookups:
 class TestStateStoreSignals:
     """Test Qt signal emission."""
 
-    def test_connection_changed_signal(self, state: StateStore, sample_server_state: ServerState, qtbot: QtBot) -> None:
+    def test_connection_changed_signal(
+        self, state: StateStore, sample_server_state: ServerState, qtbot: QtBot
+    ) -> None:
         """Test connection_changed signal emission."""
         with qtbot.wait_signal(state.connection_changed, timeout=100) as blocker:
             state.update_from_server_state(sample_server_state)
 
         assert blocker.args == [True]
 
-    def test_groups_changed_signal(self, state: StateStore, sample_server_state: ServerState, qtbot: QtBot) -> None:
+    def test_groups_changed_signal(
+        self, state: StateStore, sample_server_state: ServerState, qtbot: QtBot
+    ) -> None:
         """Test groups_changed signal emission."""
         with qtbot.wait_signal(state.groups_changed, timeout=100) as blocker:
             state.update_from_server_state(sample_server_state)
@@ -188,7 +198,9 @@ class TestStateStoreSignals:
         assert len(groups) == 2
         assert groups[0].name == "Group 1"
 
-    def test_clients_changed_signal(self, state: StateStore, sample_server_state: ServerState, qtbot: QtBot) -> None:
+    def test_clients_changed_signal(
+        self, state: StateStore, sample_server_state: ServerState, qtbot: QtBot
+    ) -> None:
         """Test clients_changed signal emission."""
         with qtbot.wait_signal(state.clients_changed, timeout=100) as blocker:
             state.update_from_server_state(sample_server_state)
@@ -196,7 +208,9 @@ class TestStateStoreSignals:
         clients = blocker.args[0]
         assert len(clients) == 3
 
-    def test_sources_changed_signal(self, state: StateStore, sample_server_state: ServerState, qtbot: QtBot) -> None:
+    def test_sources_changed_signal(
+        self, state: StateStore, sample_server_state: ServerState, qtbot: QtBot
+    ) -> None:
         """Test sources_changed signal emission."""
         with qtbot.wait_signal(state.sources_changed, timeout=100) as blocker:
             state.update_from_server_state(sample_server_state)
@@ -204,7 +218,9 @@ class TestStateStoreSignals:
         sources = blocker.args[0]
         assert len(sources) == 2
 
-    def test_state_changed_signal(self, state: StateStore, sample_server_state: ServerState, qtbot: QtBot) -> None:
+    def test_state_changed_signal(
+        self, state: StateStore, sample_server_state: ServerState, qtbot: QtBot
+    ) -> None:
         """Test state_changed signal emission."""
         with qtbot.wait_signal(state.state_changed, timeout=100) as blocker:
             state.update_from_server_state(sample_server_state)
@@ -212,7 +228,9 @@ class TestStateStoreSignals:
         emitted_state = blocker.args[0]
         assert emitted_state is sample_server_state
 
-    def test_signals_only_emit_on_change(self, state: StateStore, sample_server_state: ServerState, qtbot: QtBot) -> None:
+    def test_signals_only_emit_on_change(
+        self, state: StateStore, sample_server_state: ServerState, qtbot: QtBot
+    ) -> None:
         """Test that signals don't emit if data hasn't changed."""
         state.update_from_server_state(sample_server_state)
 
@@ -225,7 +243,9 @@ class TestStateStoreSignals:
 class TestStateStoreUpdates:
     """Test optimistic updates."""
 
-    def test_update_client_volume(self, state: StateStore, sample_server_state: ServerState, qtbot: QtBot) -> None:
+    def test_update_client_volume(
+        self, state: StateStore, sample_server_state: ServerState, qtbot: QtBot
+    ) -> None:
         """Test optimistic client volume update."""
         state.update_from_server_state(sample_server_state)
 
@@ -242,7 +262,9 @@ class TestStateStoreUpdates:
         # Should not crash
         state.update_client_volume("client1", 80, True)
 
-    def test_update_group_mute(self, state: StateStore, sample_server_state: ServerState, qtbot: QtBot) -> None:
+    def test_update_group_mute(
+        self, state: StateStore, sample_server_state: ServerState, qtbot: QtBot
+    ) -> None:
         """Test optimistic group mute update."""
         state.update_from_server_state(sample_server_state)
 
@@ -262,7 +284,9 @@ class TestStateStoreUpdates:
 class TestStateStoreClear:
     """Test clearing state."""
 
-    def test_clear_emits_disconnected(self, state: StateStore, sample_server_state: ServerState, qtbot: QtBot) -> None:
+    def test_clear_emits_disconnected(
+        self, state: StateStore, sample_server_state: ServerState, qtbot: QtBot
+    ) -> None:
         """Test that clear emits connection_changed with False."""
         state.update_from_server_state(sample_server_state)
         assert state.is_connected
@@ -285,7 +309,9 @@ class TestStateStoreClear:
 class TestSignalOrdering:
     """Test signal ordering and consistency."""
 
-    def test_multiple_signals_emitted(self, state: StateStore, sample_server_state: ServerState, qtbot: QtBot) -> None:
+    def test_multiple_signals_emitted(
+        self, state: StateStore, sample_server_state: ServerState, qtbot: QtBot
+    ) -> None:
         """Test that multiple signals are emitted on state update."""
         signals_received = []
 

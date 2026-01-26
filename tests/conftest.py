@@ -1,12 +1,19 @@
 """Test fixtures for snapcast_mvp tests."""
 
 import asyncio
+import json
 from collections.abc import AsyncGenerator, Generator
-from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-import websockets
-from websockets.server import WebSocketServerProtocol
+
+# Conditionally import websockets only if actually needed
+# (skip for CI environments without Qt/websockets support)
+try:
+    import websockets
+    from websockets.server import WebSocketServerProtocol
+    HAS_WEBSOCKETS = True
+except ImportError:
+    HAS_WEBSOCKETS = False
 
 from snapcast_mvp.api.client import SnapcastClient
 
@@ -26,12 +33,12 @@ async def mock_server() -> AsyncGenerator[tuple[str, int], None]:
     Returns:
         Tuple of (host, port) for the test server.
     """
+    if not HAS_WEBSOCKETS:
+        pytest.skip("websockets not available in this environment")
 
     async def handler(websocket: WebSocketServerProtocol) -> None:
         """Handle WebSocket connections."""
         async for message in websocket:
-            import json
-
             try:
                 data = json.loads(message)
                 method = data.get("method", "")
@@ -45,26 +52,12 @@ async def mock_server() -> AsyncGenerator[tuple[str, int], None]:
                     }
                     await websocket.send(json.dumps(response))
 
-                # Handle Client.SetVolume
-                elif method == "Client.SetVolume":
-                    response = {
-                        "jsonrpc": "2.0",
-                        "id": data.get("id"),
-                        "result": "OK",
-                    }
-                    await websocket.send(json.dumps(response))
-
-                # Handle Group.SetMute
-                elif method == "Group.SetMute":
-                    response = {
-                        "jsonrpc": "2.0",
-                        "id": data.get("id"),
-                        "result": "OK",
-                    }
-                    await websocket.send(json.dumps(response))
-
-                # Handle Group.SetStream
-                elif method == "Group.SetStream":
+                # Handle Client.SetVolume, Group.SetMute, Group.SetStream
+                elif method in {
+                    "Client.SetVolume",
+                    "Group.SetMute",
+                    "Group.SetStream",
+                }:
                     response = {
                         "jsonrpc": "2.0",
                         "id": data.get("id"),
@@ -203,11 +196,16 @@ def mock_status_response() -> dict:
 
 
 @pytest.fixture
-async def connected_client(mock_server: tuple[str, int]) -> AsyncGenerator[SnapcastClient, None]:
+async def connected_client(
+    mock_server: tuple[str, int],
+) -> AsyncGenerator[SnapcastClient, None]:
     """Fixture providing a connected SnapcastClient.
 
     The client is connected to the mock server.
     """
+    if not HAS_WEBSOCKETS:
+        pytest.skip("websockets not available in this environment")
+
     host, port = mock_server
     url = f"ws://{host}:{port}/jsonrpc"
 

@@ -128,7 +128,12 @@ class StateStore(QObject):
         group = self._groups.get(group_id)
         if not group:
             return []
-        return [self._clients.get(cid) for cid in group.client_ids if self._clients.get(cid)]
+        result: list[Client] = []
+        for cid in group.client_ids:
+            client = self._clients.get(cid)
+            if client:
+                result.append(client)
+        return result
 
     def get_group_for_client(self, client_id: str) -> Group | None:
         """Find the group that contains a client.
@@ -208,8 +213,7 @@ class StateStore(QObject):
             if self._state:
                 # Update clients in state
                 new_state_clients = [
-                    updated if c.id == client_id else c
-                    for c in self._state.clients
+                    updated if c.id == client_id else c for c in self._state.clients
                 ]
                 self._state = replace(self._state, clients=new_state_clients)
                 self.state_changed.emit(self._state)
@@ -232,10 +236,7 @@ class StateStore(QObject):
 
             # Update state if we have it
             if self._state:
-                new_state_groups = [
-                    updated if g.id == group_id else g
-                    for g in self._state.groups
-                ]
+                new_state_groups = [updated if g.id == group_id else g for g in self._state.groups]
                 self._state = replace(self._state, groups=new_state_groups)
                 self.state_changed.emit(self._state)
 

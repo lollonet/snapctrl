@@ -1,5 +1,6 @@
 """Server profile data model for connection configuration."""
 
+import hashlib
 from dataclasses import dataclass, replace
 from typing import Self
 
@@ -51,8 +52,6 @@ def create_profile(
     Returns:
         New ServerProfile with unique ID based on host:port.
     """
-    import hashlib
-
     profile_id = hashlib.md5(f"{host}:{port}".encode()).hexdigest()[:8]
     return ServerProfile(
         id=profile_id,

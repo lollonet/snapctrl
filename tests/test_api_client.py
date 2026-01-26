@@ -9,7 +9,6 @@ from snapcast_mvp.api.client import (
     SnapcastClient,
     _parse_server_status,
 )
-from snapcast_mvp.api.protocol import JsonRpcError
 
 
 class TestSnapcastClient:
@@ -63,12 +62,14 @@ class TestSnapcastClient:
         async def mock_connect_fail(*args: object, **kwargs: object) -> None:
             raise OSError("Connection refused")
 
-        with patch(
-            "snapcast_mvp.api.client.asyncio.open_connection",
-            side_effect=mock_connect_fail,
+        with (
+            patch(
+                "snapcast_mvp.api.client.asyncio.open_connection",
+                side_effect=mock_connect_fail,
+            ),
+            pytest.raises(ConnectionError),
         ):
-            with pytest.raises(ConnectionError):
-                await client.connect()
+            await client.connect()
 
     @pytest.mark.asyncio
     async def test_disconnect_clears_pending(self) -> None:

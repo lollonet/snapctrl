@@ -1,10 +1,8 @@
 """Configuration manager using QSettings for persistent storage."""
 
-from typing import Self
-
 from PySide6.QtCore import QSettings
 
-from snapcast_mvp.models.profile import ServerProfile, create_profile
+from snapcast_mvp.models.profile import ServerProfile
 
 # Settings keys
 _KEY_SERVERS = "servers"
@@ -26,7 +24,9 @@ class ConfigManager:
         config.save_server_profiles(profiles)
     """
 
-    def __init__(self, organization: str = "SnapcastMVP", application: str = "SnapcastController") -> None:
+    def __init__(
+        self, organization: str = "SnapcastMVP", application: str = "SnapcastController"
+    ) -> None:
         """Initialize the config manager.
 
         Args:
