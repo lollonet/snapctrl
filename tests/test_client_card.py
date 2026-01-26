@@ -1,8 +1,8 @@
 """Tests for ClientCard widget."""
 
-import pytest
 from pytestqt.qtbot import QtBot
 
+from snapcast_mvp.models.client import Client
 from snapcast_mvp.ui.widgets.client_card import ClientCard
 
 
@@ -60,8 +60,6 @@ class TestClientCard:
 
     def test_update_from_client(self, qtbot: QtBot) -> None:
         """Test updating from Client model."""
-        from snapcast_mvp.models.client import Client
-
         card = ClientCard(
             client_id="c1",
             name="Old Name",
@@ -89,8 +87,6 @@ class TestClientCard:
 
     def test_update_from_client_not_muted(self, qtbot: QtBot) -> None:
         """Test updating from Client model when not muted."""
-        from snapcast_mvp.models.client import Client
-
         card = ClientCard(
             client_id="c1",
             name="Old Name",

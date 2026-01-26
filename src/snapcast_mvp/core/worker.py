@@ -77,7 +77,7 @@ class SnapcastWorker(QThread):
         self._should_run = False
         if self._client and self._loop and self._loop.is_running():
             # Schedule disconnect on the event loop
-                asyncio.run_coroutine_threadsafe(self._client.disconnect(), self._loop)
+            asyncio.run_coroutine_threadsafe(self._client.disconnect(), self._loop)
 
     def request_status(self) -> None:
         """Request a status update from the server.
@@ -165,10 +165,12 @@ class SnapcastWorker(QThread):
                     self._timeout,
                 )
 
-                # Set up event handlers
-                self._client._on_disconnect = self._on_disconnect
-                self._client._on_error = self._on_error
-                self._client._on_notification = self._on_notification
+                # Set up event handlers using public API
+                self._client.set_event_handlers(
+                    on_notification=self._on_notification,
+                    on_disconnect=self._on_disconnect,
+                    on_error=self._on_error,
+                )
 
                 await self._client.connect()
 

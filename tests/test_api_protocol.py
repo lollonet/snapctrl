@@ -1,7 +1,5 @@
 """Tests for JSON-RPC protocol types."""
 
-import pytest
-
 from snapcast_mvp.api.protocol import (
     JsonRpcError,
     JsonRpcNotification,
@@ -131,9 +129,7 @@ class TestJsonRpcError:
 
     def test_error_with_data(self) -> None:
         """Test creating an error with data."""
-        error = JsonRpcError(
-            code=-1, message="Custom error", data={"key": "value"}
-        )
+        error = JsonRpcError(code=-1, message="Custom error", data={"key": "value"})
         assert error.data == {"key": "value"}
 
     def test_error_str(self) -> None:

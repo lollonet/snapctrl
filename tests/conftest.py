@@ -1,8 +1,8 @@
 """Test fixtures for snapcast_mvp tests."""
 
 import asyncio
+import json
 from collections.abc import AsyncGenerator, Generator
-from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 import websockets
@@ -30,8 +30,6 @@ async def mock_server() -> AsyncGenerator[tuple[str, int], None]:
     async def handler(websocket: WebSocketServerProtocol) -> None:
         """Handle WebSocket connections."""
         async for message in websocket:
-            import json
-
             try:
                 data = json.loads(message)
                 method = data.get("method", "")
@@ -45,26 +43,12 @@ async def mock_server() -> AsyncGenerator[tuple[str, int], None]:
                     }
                     await websocket.send(json.dumps(response))
 
-                # Handle Client.SetVolume
-                elif method == "Client.SetVolume":
-                    response = {
-                        "jsonrpc": "2.0",
-                        "id": data.get("id"),
-                        "result": "OK",
-                    }
-                    await websocket.send(json.dumps(response))
-
-                # Handle Group.SetMute
-                elif method == "Group.SetMute":
-                    response = {
-                        "jsonrpc": "2.0",
-                        "id": data.get("id"),
-                        "result": "OK",
-                    }
-                    await websocket.send(json.dumps(response))
-
-                # Handle Group.SetStream
-                elif method == "Group.SetStream":
+                # Handle Client.SetVolume, Group.SetMute, Group.SetStream
+                elif method in {
+                    "Client.SetVolume",
+                    "Group.SetMute",
+                    "Group.SetStream",
+                }:
                     response = {
                         "jsonrpc": "2.0",
                         "id": data.get("id"),
@@ -203,7 +187,9 @@ def mock_status_response() -> dict:
 
 
 @pytest.fixture
-async def connected_client(mock_server: tuple[str, int]) -> AsyncGenerator[SnapcastClient, None]:
+async def connected_client(
+    mock_server: tuple[str, int],
+) -> AsyncGenerator[SnapcastClient, None]:
     """Fixture providing a connected SnapcastClient.
 
     The client is connected to the mock server.

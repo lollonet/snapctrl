@@ -149,9 +149,7 @@ class ClientCard(QWidget):
         """
         self._connected = connected
         self._status_indicator.setText("●" if connected else "○")
-        self._status_indicator.setStyleSheet(
-            "color: #4CAF50;" if connected else "color: #757575;"
-        )
+        self._status_indicator.setStyleSheet("color: #4CAF50;" if connected else "color: #757575;")
         self._status_indicator.setToolTip("Connected" if connected else "Disconnected")
 
     def update_from_client(self, client: Client) -> None:

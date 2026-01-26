@@ -1,8 +1,6 @@
 """Tests for ConfigManager using QSettings."""
 
 import pytest
-from pytestqt.qtbot import QtBot
-from PySide6.QtCore import QSettings
 
 from snapcast_mvp.core.config import ConfigManager
 from snapcast_mvp.models.profile import ServerProfile, create_profile
@@ -178,12 +176,21 @@ class TestConfigManagerInvalidData:
         """Test that invalid profile entries are skipped."""
         # Manually inject invalid data
         settings = config.settings
-        settings.setValue("servers", [
-            {"id": "valid", "name": "Valid", "host": "host", "port": 1705, "auto_connect": False},
-            {"name": "MissingId"},  # Missing required field
-            "not a dict",  # Wrong type
-            {"id": "", "name": "", "host": ""},  # Empty but valid structure
-        ])
+        settings.setValue(
+            "servers",
+            [
+                {
+                    "id": "valid",
+                    "name": "Valid",
+                    "host": "host",
+                    "port": 1705,
+                    "auto_connect": False,
+                },
+                {"name": "MissingId"},  # Missing required field
+                "not a dict",  # Wrong type
+                {"id": "", "name": "", "host": ""},  # Empty but valid structure
+            ],
+        )
 
         profiles = config.get_server_profiles()
         # Should get the valid one and the empty one

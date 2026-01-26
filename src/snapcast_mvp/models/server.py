@@ -7,24 +7,21 @@ from dataclasses import dataclass
 class Server:
     """Snapcast server connection info.
 
+    Snapcast uses raw TCP sockets with JSON-RPC, NOT WebSocket.
+
     Attributes:
         name: Human-readable name for this server profile.
         host: Server hostname or IP address.
-        port: WebSocket port (default 1704).
+        port: TCP port (default 1705).
         auto_connect: Whether to auto-connect on startup.
     """
 
     name: str
     host: str
-    port: int = 1704
+    port: int = 1705
     auto_connect: bool = False
 
     @property
-    def url(self) -> str:
-        """Return the WebSocket URL for this server."""
-        return f"ws://{self.host}:{self.port}/jsonrpc"
-
-    @property
-    def websocket_url(self) -> str:
-        """Return the WebSocket URL for this server."""
-        return self.url
+    def address(self) -> str:
+        """Return the server address (host:port)."""
+        return f"{self.host}:{self.port}"

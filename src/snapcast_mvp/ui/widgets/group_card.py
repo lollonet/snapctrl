@@ -218,7 +218,7 @@ class GroupCard(QWidget):
         self.clicked.emit()
 
     def _set_selected(self, selected: bool) -> None:
-        """Set the visual selection state.
+        """Internal: Set the visual selection state.
 
         Args:
             selected: Whether this card is selected.
@@ -228,6 +228,14 @@ class GroupCard(QWidget):
             self.setStyleSheet(self._selected_style)
         else:
             self.setStyleSheet(self._base_style)
+
+    def set_selected(self, selected: bool) -> None:
+        """Set the visual selection state (public API).
+
+        Args:
+            selected: Whether this card is selected.
+        """
+        self._set_selected(selected)
 
     def set_group(self, group: Group) -> None:
         """Set the group for this card.
@@ -337,7 +345,7 @@ class GroupCard(QWidget):
             self._update_client_cards(clients)
 
     def _update_client_cards(self, clients: list[Client]) -> None:
-        """Update the client cards in the list.
+        """Internal: Update the client cards in the list.
 
         Args:
             clients: List of clients in this group.
@@ -366,6 +374,14 @@ class GroupCard(QWidget):
         # Update the client count label
         self._client_list_label.setText(f"Clients: ({len(clients)})")
 
+    def update_clients(self, clients: list[Client]) -> None:
+        """Update the client cards in the list (public API).
+
+        Args:
+            clients: List of clients in this group.
+        """
+        self._update_client_cards(clients)
+
     def set_client_volume(self, client_id: str, volume: int) -> None:
         """Update volume for a specific client card.
 
@@ -385,6 +401,24 @@ class GroupCard(QWidget):
         """
         if client_id in self._client_cards:
             self._client_cards[client_id].set_muted(muted)
+
+    def set_mute_state(self, muted: bool) -> None:
+        """Set the mute state without emitting signals (for external updates).
+
+        Use this when updating UI from server state to avoid signal cascades.
+
+        Args:
+            muted: Whether the group is muted.
+        """
+        self._mute_button.blockSignals(True)
+        self._mute_button.setChecked(muted)
+        if muted:
+            self._mute_button.setText("🔇 Unmute")
+        else:
+            self._mute_button.setText("🔊 Mute")
+        self._mute_button.blockSignals(False)
+
+        self._volume_slider.set_muted(muted)
 
     def add_client(
         self,

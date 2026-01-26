@@ -90,7 +90,7 @@ class GroupsPanel(QWidget):
 
         # Update visual selection state on cards
         for gid, card in self._group_cards.items():
-            card._set_selected(gid == group_id)
+            card.set_selected(gid == group_id)
 
     def set_groups(
         self,
@@ -118,7 +118,7 @@ class GroupsPanel(QWidget):
             # Add client cards if available
             group_clients = clients.get(group.id) if clients else None
             if group_clients:
-                card._update_client_cards(group_clients)
+                card.update_clients(group_clients)
 
             # Connect card signals to panel signals
             card.volume_changed.connect(self.volume_changed.emit)
@@ -188,10 +188,8 @@ class GroupsPanel(QWidget):
             muted: New mute state.
         """
         if group_id in self._group_cards:
-            # Update the card's mute button directly
-            card = self._group_cards[group_id]
-            card._mute_button.setChecked(muted)
-            card._on_group_mute_toggled(muted)
+            # Use public API to update mute state without emitting signals
+            self._group_cards[group_id].set_mute_state(muted)
 
     def set_client_volume(self, group_id: str, client_id: str, volume: int) -> None:
         """Update volume for a specific client card.
