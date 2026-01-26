@@ -6,8 +6,6 @@ Run with: pytest -v -m integration
 Server: raspy (192.168.63.3:1705)
 """
 
-import asyncio
-
 import pytest
 
 from snapcast_mvp.api.client import SnapcastClient
@@ -204,9 +202,11 @@ class TestSnapcastReadOnly:
 
             print(f"\n=== Groups on {SNAPCAST_HOST} ===")
             for group in state.groups:
-                playing = "▶" if any(
-                    s.is_playing for s in state.sources if s.id == group.stream_id
-                ) else "⏸"
+                playing = (
+                    "▶"
+                    if any(s.is_playing for s in state.sources if s.id == group.stream_id)
+                    else "⏸"
+                )
                 print(f"  - {group.name or group.id} ({group.id[:8]}...)")
                 print(f"    Stream: {group.stream_id} {playing}")
                 print(f"    Muted: {group.muted}")
@@ -249,7 +249,7 @@ class TestSnapcastReadOnly:
         async with SnapcastClient(SNAPCAST_HOST, SNAPCAST_PORT) as client:
             state = await client.get_status()
 
-            print(f"\n=== Client → Group Mapping ===")
+            print("\n=== Client → Group Mapping ===")
             for group in state.groups:
                 print(f"\nGroup: {group.name or group.id}")
                 for client_id in group.client_ids:
@@ -265,12 +265,10 @@ class TestSnapcastReadOnly:
         async with SnapcastClient(SNAPCAST_HOST, SNAPCAST_PORT) as client:
             state = await client.get_status()
 
-            print(f"\n=== Source → Group Mapping ===")
+            print("\n=== Source → Group Mapping ===")
             for source in state.sources:
                 print(f"\nSource: {source.name or source.id}")
-                groups_using = [
-                    g for g in state.groups if g.stream_id == source.id
-                ]
+                groups_using = [g for g in state.groups if g.stream_id == source.id]
                 for group in groups_using:
                     playing = "▶" if source.is_playing else "⏸"
                     print(f"  - {group.name or group.id} {playing}")
@@ -293,7 +291,9 @@ class TestSnapcastWrite:
             # Find a connected client for testing
             for client_obj in state.clients:
                 if client_obj.connected:
-                    print(f"\n=== Found writable client: {client_obj.name} ({client_obj.id[:8]}...)")
+                    print(
+                        f"\n=== Found writable client: {client_obj.name} ({client_obj.id[:8]}...)"
+                    )
                     print(f"   Current volume: {client_obj.volume}%, muted: {client_obj.muted}")
                     return
 
@@ -348,7 +348,6 @@ class TestSnapcastWrite:
                 pytest.skip("No groups available")
 
             test_group = state.groups[0]
-            original_muted = test_group.muted
 
             # Mute the group
             await client.set_group_mute(test_group.id, True)
