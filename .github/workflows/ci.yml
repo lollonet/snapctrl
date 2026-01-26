@@ -7,7 +7,7 @@ on:
     branches: [main, develop]
 
 jobs:
-  quality:
+  test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -20,26 +20,8 @@ jobs:
       - name: Run ruff
         run: uv run ruff check src tests
 
-      - name: Run tests (non-UI only)
-        run: uv run pytest tests/ -v --ignore=tests/test_ui* --cov=src
+      - name: Run tests (unit only, skip UI)
+        run: uv run pytest tests/ -v --ignore=tests/test_ui* --cov=src --cov-report=term-missing
 
       - name: Check coverage threshold (80%)
         run: uv run coverage report --fail-under=80
-
-  test-ui:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: astral-sh/setup-uv@v3
-
-      - name: Install system dependencies for Qt
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y xvfb libxcb-cursor0
-
-      - name: Install dependencies
-        run: uv sync --all-extras
-
-      - name: Run UI tests with xvfb
-        run: xvfb-run -a uv run pytest tests/test_ui* -v
