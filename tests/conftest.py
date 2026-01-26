@@ -5,8 +5,15 @@ import json
 from collections.abc import AsyncGenerator, Generator
 
 import pytest
-import websockets
-from websockets.server import WebSocketServerProtocol
+
+# Conditionally import websockets only if actually needed
+# (skip for CI environments without Qt/websockets support)
+try:
+    import websockets
+    from websockets.server import WebSocketServerProtocol
+    HAS_WEBSOCKETS = True
+except ImportError:
+    HAS_WEBSOCKETS = False
 
 from snapcast_mvp.api.client import SnapcastClient
 
@@ -26,6 +33,8 @@ async def mock_server() -> AsyncGenerator[tuple[str, int], None]:
     Returns:
         Tuple of (host, port) for the test server.
     """
+    if not HAS_WEBSOCKETS:
+        pytest.skip("websockets not available in this environment")
 
     async def handler(websocket: WebSocketServerProtocol) -> None:
         """Handle WebSocket connections."""
@@ -194,6 +203,9 @@ async def connected_client(
 
     The client is connected to the mock server.
     """
+    if not HAS_WEBSOCKETS:
+        pytest.skip("websockets not available in this environment")
+
     host, port = mock_server
     url = f"ws://{host}:{port}/jsonrpc"
 
