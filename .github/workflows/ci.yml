@@ -14,14 +14,17 @@ jobs:
 
       - uses: astral-sh/setup-uv@v3
 
-      - name: Install dependencies
-        run: uv sync --all-extras
+      - name: Install dependencies (without dev extras)
+        run: uv sync
+
+      - name: Install pytest and dev tools
+        run: uv pip install pytest pytest-cov
 
       - name: Run ruff
         run: uv run ruff check src tests
 
-      - name: Run tests (unit only, skip UI)
-        run: uv run pytest tests/ -v --ignore=tests/test_ui* --cov=src --cov-report=term-missing
+      - name: Run tests
+        run: uv run pytest tests/ -v --cov=src --cov-report=term-missing
 
       - name: Check coverage threshold (80%)
         run: uv run coverage report --fail-under=80
