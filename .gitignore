@@ -84,4 +84,6 @@ BassCodeBase/
 # PyInstaller build artifacts
 build/
 dist/
-*.spec
+# Keep our spec files, ignore any generated ones
+!SnapCTRL.spec
+!SnapCTRL-*.spec
