@@ -3,8 +3,9 @@
 import logging
 import sys
 
-from PySide6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication, QMessageBox
 
+from snapcast_mvp.core.discovery import ServerDiscovery
 from snapcast_mvp.core.state import StateStore
 from snapcast_mvp.core.worker import SnapcastWorker
 from snapcast_mvp.ui.main_window import MainWindow
@@ -12,6 +13,21 @@ from snapcast_mvp.ui.main_window import MainWindow
 # Enable logging
 logging.basicConfig(level=logging.DEBUG, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 logger = logging.getLogger(__name__)
+
+
+def discover_server() -> tuple[str, int] | None:
+    """Discover a Snapcast server on the network.
+
+    Returns:
+        Tuple of (host, port) if found, None otherwise.
+    """
+    logger.info("Searching for Snapcast servers via mDNS...")
+    server = ServerDiscovery.discover_one(timeout=5.0)
+    if server:
+        logger.info("Found server: %s at %s:%d", server.display_name, server.host, server.port)
+        return (server.host, server.port)
+    logger.warning("No Snapcast servers found via mDNS")
+    return None
 
 
 def main() -> int:  # noqa: PLR0915
@@ -23,7 +39,7 @@ def main() -> int:  # noqa: PLR0915
     app = QApplication(sys.argv)
 
     # Parse command line arguments
-    host = "localhost"
+    host: str | None = None
     port = 1705
 
     args = sys.argv[1:]
@@ -31,6 +47,24 @@ def main() -> int:  # noqa: PLR0915
         host = args[0]
         if len(args) > 1:
             port = int(args[1])
+    else:
+        # No arguments - try autodiscovery
+        result = discover_server()
+        if result:
+            host, port = result
+        else:
+            # Show error dialog and exit
+            QMessageBox.critical(
+                None,
+                "No Server Found",
+                "Could not find a Snapcast server on the network.\n\n"
+                "Please specify a server address:\n"
+                "  snapcast-mvp <host> [port]",
+            )
+            return 1
+
+    # At this point host is guaranteed to be set (either from args or autodiscovery)
+    assert host is not None
 
     # Create core components
     state_store = StateStore()
