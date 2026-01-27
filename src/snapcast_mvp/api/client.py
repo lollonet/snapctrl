@@ -476,6 +476,7 @@ def _parse_server_status(data: dict[str, Any]) -> ServerState:
             config = c.get("config", {})
             host = c.get("host", {})
             snapclient = c.get("snapclient", {})
+            last_seen = c.get("lastSeen", {})
 
             clients.append(
                 Client(
@@ -488,6 +489,11 @@ def _parse_server_status(data: dict[str, Any]) -> ServerState:
                     connected=c.get("connected", True),
                     latency=config.get("latency", 0),
                     snapclient_version=snapclient.get("version", ""),
+                    last_seen_sec=last_seen.get("sec", 0),
+                    last_seen_usec=last_seen.get("usec", 0),
+                    host_os=host.get("os", ""),
+                    host_arch=host.get("arch", ""),
+                    host_name=host.get("name", ""),
                 )
             )
 
@@ -499,13 +505,21 @@ def _parse_server_status(data: dict[str, Any]) -> ServerState:
         status_str = s.get("status", "idle")
         uri = s.get("uri", {})
         query = uri.get("query", {})
+        properties = s.get("properties", {})
+
+        # Codec can come from properties (modern) or query (legacy)
+        codec = properties.get("codec", {}).get("name", "") or query.get("codec", "")
 
         sources.append(
             Source(
                 id=s.get("id", ""),
                 name=query.get("name", s.get("id", "")),
                 status=status_str,
-                stream_type=query.get("codec", "unknown"),
+                stream_type=codec or "unknown",  # Keep backward compatibility
+                codec=codec,
+                sample_format=properties.get("sampleFormat", query.get("sampleformat", "")),
+                uri_scheme=uri.get("scheme", ""),
+                uri_raw=uri.get("raw", ""),
             )
         )
 

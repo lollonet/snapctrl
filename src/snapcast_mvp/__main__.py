@@ -11,6 +11,7 @@ from PySide6.QtWidgets import QApplication, QMessageBox
 
 from snapcast_mvp.api.protocol import JsonRpcNotification
 from snapcast_mvp.core.discovery import ServerDiscovery
+from snapcast_mvp.core.ping import PingMonitor
 from snapcast_mvp.core.state import StateStore
 from snapcast_mvp.core.worker import SnapcastWorker
 from snapcast_mvp.ui.main_window import MainWindow
@@ -246,6 +247,31 @@ def main() -> int:  # noqa: PLR0915
     window.groups_panel.mute_toggled.connect(on_group_mute_toggled)
     window.groups_panel.source_changed.connect(on_source_changed)
 
+    # Set up ping monitor for network RTT measurement
+    ping_monitor = PingMonitor(interval_sec=15.0)
+
+    def update_ping_hosts() -> None:
+        """Update ping monitor with current client IPs."""
+        hosts = {c.id: c.host for c in state_store.clients if c.host}
+        ping_monitor.set_hosts(hosts)
+
+    def on_ping_results(results: dict[str, float | None]) -> None:
+        """Handle ping results update."""
+        logger.debug(f"Ping results: {results}")
+        # Store results in window for PropertiesPanel access
+        window.set_ping_results(results)
+
+    ping_monitor.results_updated.connect(on_ping_results)
+
+    # Update ping hosts when state changes
+    def on_clients_changed_for_ping(_clients: list[object]) -> None:
+        update_ping_hosts()
+
+    state_store.clients_changed.connect(on_clients_changed_for_ping)
+
+    # Start ping monitor
+    ping_monitor.start()
+
     # Start worker thread
     worker.start()
 
@@ -253,6 +279,7 @@ def main() -> int:  # noqa: PLR0915
     exit_code = app.exec()
 
     # Cleanup
+    ping_monitor.stop()
     worker.stop()
     worker.wait()
 

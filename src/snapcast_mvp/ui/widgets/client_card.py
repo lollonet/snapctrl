@@ -226,9 +226,9 @@ class ClientCard(QFrame):
         Returns:
             True if event was handled, False otherwise.
         """
-        if (
-            event.type() == QEvent.Type.MouseButtonPress
-            and watched in (self._name_label, self._status_indicator)
+        if event.type() == QEvent.Type.MouseButtonPress and watched in (
+            self._name_label,
+            self._status_indicator,
         ):
             self.clicked.emit(self._client_id)
             return True

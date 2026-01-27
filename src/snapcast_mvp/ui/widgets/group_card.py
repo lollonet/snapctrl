@@ -232,10 +232,7 @@ class GroupCard(QWidget):
         Returns:
             True if event was handled, False otherwise.
         """
-        if (
-            event.type() == QEvent.Type.MouseButtonPress
-            and watched is self._name_label
-        ):
+        if event.type() == QEvent.Type.MouseButtonPress and watched is self._name_label:
             self.clicked.emit()
             return True
         return super().eventFilter(watched, event)
