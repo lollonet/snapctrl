@@ -170,17 +170,24 @@ class StateStore(QObject):
         new_clients = {c.id: c for c in state.clients}
         new_sources = {s.id: s for s in state.sources}
 
-        # Check for changes and emit signals
-        if new_groups != self._groups:
-            self._groups = new_groups
+        # Store all values FIRST, then emit signals
+        # (handlers may read other properties, so all must be updated)
+        groups_changed = new_groups != self._groups
+        clients_changed = new_clients != self._clients
+        sources_changed = new_sources != self._sources
+
+        self._groups = new_groups
+        self._clients = new_clients
+        self._sources = new_sources
+
+        # Now emit signals (handlers can safely read any property)
+        if groups_changed:
             self.groups_changed.emit(state.groups)
 
-        if new_clients != self._clients:
-            self._clients = new_clients
+        if clients_changed:
             self.clients_changed.emit(state.clients)
 
-        if new_sources != self._sources:
-            self._sources = new_sources
+        if sources_changed:
             self.sources_changed.emit(state.sources)
 
         # Emit connection state if changed (including initial connection)
