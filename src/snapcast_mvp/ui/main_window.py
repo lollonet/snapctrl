@@ -131,6 +131,9 @@ class MainWindow(QMainWindow):
         # Auto-select first group when a group is selected
         self._groups_panel.group_selected.connect(self._on_group_selected)
 
+        # Connect group control signals to controller
+        self._groups_panel.mute_toggled.connect(self._on_group_mute_toggled)
+
         # Connect client control signals to controller
         self._groups_panel.client_volume_changed.connect(self._on_client_volume_changed)
         self._groups_panel.client_mute_toggled.connect(self._on_client_mute_toggled)
@@ -249,6 +252,17 @@ class MainWindow(QMainWindow):
         """
         if self._controller:
             await self._controller.on_client_mute_toggled(client_id, muted)
+
+    @Slot(str, bool)
+    async def _on_group_mute_toggled(self, group_id: str, muted: bool) -> None:
+        """Handle group mute toggle from group panel.
+
+        Args:
+            group_id: The group ID.
+            muted: New mute state.
+        """
+        if self._controller:
+            await self._controller.on_group_mute_toggled(group_id, muted)
 
     @property
     def sources_panel(self) -> SourcesPanel:

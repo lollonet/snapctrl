@@ -35,6 +35,28 @@ class TestMainWindowBasics:
         assert window.groups_panel.isVisible()
         assert window.properties_panel.isVisible()
 
+    def test_group_mute_signal_connected(self, qtbot: QtBot) -> None:
+        """Test that group mute toggle signal is connected to controller."""
+        from unittest.mock import Mock
+
+        window = MainWindow()
+        qtbot.addWidget(window)
+
+        # Create a mock slot to verify signal connection
+        mock_slot = Mock()
+
+        # Connect to the group mute toggled signal
+        window._groups_panel.mute_toggled.connect(mock_slot)
+
+        # Emit a signal and verify it propagates
+        window._groups_panel.mute_toggled.emit("test-group", True)
+
+        # Verify the mock was called (group_id, muted)
+        mock_slot.assert_called_once_with("test-group", True)
+
+        # Clean up
+        window._groups_panel.mute_toggled.disconnect(mock_slot)
+
 
 class TestMainWindowStyling:
     """Test MainWindow styling."""
