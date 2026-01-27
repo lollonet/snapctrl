@@ -1,0 +1,50 @@
+name: Build Executable
+
+on:
+  workflow_dispatch:  # Manual trigger only
+    inputs:
+      platform:
+        description: 'Target platform'
+        required: true
+        default: 'windows'
+        type: choice
+        options:
+          - windows
+          - linux
+          - macos
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: ${{ inputs.platform == 'windows' && ['windows-latest'] || inputs.platform == 'linux' && ['ubuntu-latest'] || ['macos-latest'] }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install PyInstaller
+        run: pip install pyinstaller
+
+      - name: Install dependencies
+        run: pip install PySide6
+
+      - name: Build
+        run: |
+          pyinstaller --onefile --name snapcast-mvp \
+            ${{ inputs.platform != 'linux' && '--noconsole' || '--noconsole' }} \
+            ${{ inputs.platform == 'macos' && '--windowed' || '' }} \
+            --hidden-import=PySide6.QtCore \
+            --hidden-import=PySide6.QtGui \
+            --hidden-import=PySide6.QtWidgets \
+            src/snapcast_mvp/__main__.py
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: snapcast-mvp-${{ inputs.platform }}
+          path: dist/snapcast-mvp*
