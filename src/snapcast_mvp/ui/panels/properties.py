@@ -11,6 +11,11 @@ from snapcast_mvp.models.client import Client
 from snapcast_mvp.models.group import Group
 from snapcast_mvp.models.source import Source
 
+# RTT color thresholds (milliseconds)
+_RTT_GOOD_THRESHOLD = 50  # Green below this
+_RTT_WARN_THRESHOLD = 100  # Yellow below this, red above
+_RTT_PRECISION_THRESHOLD = 10  # Show decimal precision below this
+
 
 class PropertiesPanel(QWidget):
     """Right panel showing details of selected item.
@@ -72,11 +77,12 @@ class PropertiesPanel(QWidget):
         self._content.setStyleSheet("color: #e0e0e0;")  # Ensure text is visible
         self._content.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
 
-    def set_client(self, client: Client) -> None:
+    def set_client(self, client: Client, network_rtt: float | None = None) -> None:
         """Display client properties.
 
         Args:
             client: Client to display.
+            network_rtt: Optional network RTT in milliseconds from ping.
         """
         status = "Connected" if client.connected else "Disconnected"
         status_color = "#80ff80" if client.connected else "#ff8080"
@@ -89,6 +95,27 @@ class PropertiesPanel(QWidget):
         )
         rows.append(f"<tr><td><i>Volume:</i></td><td>{client.volume}%</td></tr>")
         rows.append(f"<tr><td><i>Muted:</i></td><td>{'Yes' if client.muted else 'No'}</td></tr>")
+
+        # Network RTT (ping) - prominently displayed
+        if network_rtt is not None:
+            if network_rtt < _RTT_PRECISION_THRESHOLD:
+                rtt_str = f"{network_rtt:.1f}ms"
+            else:
+                rtt_str = f"{int(network_rtt)}ms"
+
+            if network_rtt < _RTT_GOOD_THRESHOLD:
+                rtt_color = "#80ff80"  # Green - good
+            elif network_rtt < _RTT_WARN_THRESHOLD:
+                rtt_color = "#ffff80"  # Yellow - warning
+            else:
+                rtt_color = "#ff8080"  # Red - high latency
+
+            rows.append(
+                f"<tr><td><i>Network RTT:</i></td>"
+                f"<td style='color: {rtt_color};'>{rtt_str}</td></tr>"
+            )
+        elif client.connected:
+            rows.append("<tr><td><i>Network RTT:</i></td><td>measuring...</td></tr>")
 
         # Latency offset (configured compensation)
         rows.append(f"<tr><td><i>Latency offset:</i></td><td>{client.display_latency}</td></tr>")

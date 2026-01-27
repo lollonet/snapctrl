@@ -58,6 +58,7 @@ class MainWindow(QMainWindow):
         self._state = state_store
         self._controller: Controller | None = controller
         self._selected_client_id: str | None = None  # Track selected client for properties updates
+        self._ping_results: dict[str, float | None] = {}  # client_id -> RTT ms
 
         self._setup_ui()
         self._setup_style()
@@ -198,11 +199,12 @@ class MainWindow(QMainWindow):
         # Update visual selection
         self._groups_panel.set_selected_client(client_id)
 
-        # Update properties panel
+        # Update properties panel with ping RTT
         if self._state:
             client = self._state.get_client(client_id)
             if client:
-                self._properties_panel.set_client(client)
+                rtt = self._ping_results.get(client_id)
+                self._properties_panel.set_client(client, network_rtt=rtt)
 
     @Slot(list)
     def _on_sources_changed(self, sources: list[Source]) -> None:
@@ -287,3 +289,28 @@ class MainWindow(QMainWindow):
     def state_store(self) -> StateStore | None:
         """Return the state store."""
         return self._state
+
+    def set_ping_results(self, results: dict[str, float | None]) -> None:
+        """Set ping RTT results for clients.
+
+        Args:
+            results: Dict mapping client_id -> RTT in ms (or None).
+        """
+        self._ping_results = results
+        # Update properties panel if a client is selected
+        if self._selected_client_id and self._state:
+            client = self._state.get_client(self._selected_client_id)
+            if client:
+                rtt = results.get(self._selected_client_id)
+                self._properties_panel.set_client(client, network_rtt=rtt)
+
+    def get_ping_result(self, client_id: str) -> float | None:
+        """Get ping RTT for a client.
+
+        Args:
+            client_id: The client ID.
+
+        Returns:
+            RTT in ms, or None if not available.
+        """
+        return self._ping_results.get(client_id)
