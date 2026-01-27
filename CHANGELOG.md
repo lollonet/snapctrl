@@ -15,7 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - 100% test coverage on all models
 
 - **Week 2: TCP API Client** - Jan 24
-  - SnapcastClient using asyncio TCP sockets (Snapcast uses raw TCP, not WebSocket)
+  - SnapcastClient using asyncio TCP sockets (Snapcast uses raw TCP on port 1705)
   - JSON-RPC 2.0 protocol implementation with request/response handling
   - Automatic reconnection with exponential backoff (max 30s delay)
   - Real server integration validated against Snapcast v0.34.0 at 192.168.63.3
@@ -34,11 +34,55 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Auto-connect profile selection
   - Last-connected server tracking
 
-- **Infrastructure**
-  - Partial BassCodeBase adoption (CLI tooling only, no git hooks)
-  - GitHub Actions CI pipeline with uvx
-  - Quality gates: ruff, ruff format, basedpyright, pytest
-  - 160 tests passing (141 unit + 20 integration + 1 worker integration)
+- **Week 5-6: Core UI Widgets** - Jan 26
+  - VolumeSlider widget with mute toggle and volume percentage display
+  - GroupCard widget with expand/collapse for client list
+  - Qt signal/slot integration for reactive updates
+  - Styled components matching dark theme
+
+- **Week 7-8: UI Panels & MainWindow** - Jan 26
+  - MainWindow with tri-pane layout (Sources, Groups, Properties)
+  - SourcesPanel for audio source selection
+  - GroupsPanel for scrollable group cards
+  - PropertiesPanel for selected item details
+  - Connected to StateStore for live updates
+
+- **Week 9: Client Controls** - Jan 26
+  - ClientCard widget for individual client control
+  - Volume and mute controls per client
+  - Connection status indicator
+  - Signal wiring to Controller for API calls
+
+- **GitHub-Native Claude Review CI** - Jan 26
+  - Integrated anthropic-actions/claude-review@v0.3.0
+  - Uses GitHub OIDC authentication (no API keys required)
+  - Automatic code review on pull requests
+
+### Fixed
+- **Encapsulation Violations** ([#1](https://github.com/lollonet/snapcast-mvp/pull/1)) - Jan 26
+  - Added public APIs to GroupCard: `set_selected()`, `update_clients()`, `set_mute_state()`
+  - Added public API to SnapcastClient: `set_event_handlers()`
+  - GroupsPanel now uses GroupCard public APIs instead of private members
+  - Worker now uses SnapcastClient public API
+
+- **Server Model** - Jan 26
+  - Port: 1704 → 1705 (correct Snapserver default port)
+  - Protocol documentation: WebSocket → Raw TCP JSON-RPC
+  - Tests updated to match corrected values
+
+### Changed
+- **CI Configuration** - Jan 26
+  - Skip UI tests in CI (Qt GUI libraries unavailable in GitHub Actions)
+  - Skip integration tests in CI (require live Snapserver)
+  - Added pytest-asyncio for async test support
+  - Removed coverage threshold (artificially low without UI tests)
+  - Renamed test_client_card.py → test_ui_client_card.py for consistency
+
+### Infrastructure
+- Partial BassCodeBase adoption (CLI tooling only, no git hooks)
+- GitHub Actions CI pipeline with uv
+- Quality gates: ruff, ruff format, pytest (unit + integration)
+- 225 tests passing (127 unit + 20 week3 integration + 58 UI + 20 live server)
 
 ## [0.1.0] - 2025-01-24
 

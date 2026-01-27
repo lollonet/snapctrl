@@ -6,9 +6,9 @@
 Language: Python 3.11+
 Package Manager: uv (or pip)
 UI Framework: PySide6 6.8+
-WebSocket: websockets 14+
-Testing: pytest 8+, pytest-qt 4+
-Linting: ruff 0.7+
+Networking: asyncio (TCP sockets)
+Testing: pytest 9+, pytest-qt 4+, pytest-asyncio
+Linting: ruff 0.9+
 Type Checking: basedpyright 1.21+
 ```
 
@@ -18,52 +18,91 @@ Type Checking: basedpyright 1.21+
 snapcast-mvp/
 ├── .github/
 │   └── workflows/
-│       ├── ci.yml          # Lint, typecheck, test
-│       └── release.yml     # Build releases
+│       ├── ci.yml                 # Lint, format, test (unit only)
+│       └── claude-review.yml      # Claude Code Review on PRs
 ├── src/snapcast_mvp/
-│   ├── core/               # Business logic
-│   ├── models/             # Data models
-│   └── ui/                 # Qt UI
+│   ├── api/                       # TCP API client
+│   ├── core/                      # Business logic
+│   ├── models/                    # Frozen dataclasses
+│   └── ui/                        # PySide6 UI
 ├── tests/
-│   ├── unit/               # Unit tests
-│   └── integration/        # Integration tests
+│   ├── test_*.py                  # Unit tests
+│   └── conftest.py                # Test fixtures
 ├── docs/
-│   ├── requirements/       # REQ-###.md
-│   ├── architecture/       # ARC-###.md
-│   └── ADR/                # Decision records
+│   ├── requirements/              # REQ-###.md
+│   ├── architecture/              # ARC-###.md
+│   └── ADR/                       # Decision records
 ├── pyproject.toml
-├── CONTROL.yaml            # BassCodeBase config
-├── .bass-ready             # BassCodeBase marker
+├── CHANGELOG.md
 └── README.md
 ```
 
 ## CI/CD Pipeline (GitHub Actions)
 
+### Main CI Workflow
+
 ```yaml
 # .github/workflows/ci.yml
 on: [push, pull_request]
-
 jobs:
-  quality:
+  test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-      - run: pip install ruff basedpyright pytest pytest-qt
-      - run: ruff check src tests
-      - run: basedpyright src
-      - run: pytest --cov
+      - uses: astral-sh/setup-uv@v3
 
-  test-ui:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-      - run: pip install -e .
-      - run: pytest tests/ui/  # UI tests (headless)
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Install pytest and dev tools
+        run: uv pip install pytest pytest-cov pytest-asyncio ruff
+
+      - name: Run ruff
+        run: uv run ruff check src tests
+
+      - name: Run tests (skip UI/integration)
+        run: uv run pytest tests/ -v --ignore=tests/test_ui*.py \
+            --ignore=tests/test_integration*.py --cov=src --cov-report=term-missing
+```
+
+### Claude Review Workflow
+
+```yaml
+# .github/workflows/claude-review.yml
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  claude-review:
+    uses: anthropic-actions/claude-review@v0.3.0
+    with:
+      github-token: ${{ secrets.GITHUB_TOKEN }}
+```
+
+**Notes:**
+- UI tests skipped in CI (Qt GUI libraries unavailable in GitHub Actions)
+- Integration tests skipped (require live Snapcast server)
+- Run locally with `QT_QPA_PLATFORM=offscreen uv run pytest`
+
+## Local Development
+
+```bash
+# Install dependencies
+uv sync
+
+# Run quality checks
+uv run ruff check src tests
+uv run ruff format src tests
+
+# Run tests (all)
+QT_QPA_PLATFORM=offscreen uv run pytest tests/ -v
+
+# Run tests (unit only)
+uv run pytest tests/ --ignore=tests/test_ui*.py --ignore=tests/test_integration*.py
+
+# Type check (manual)
+uv run basedpyright src/
 ```
 
 ## Packaging
@@ -78,23 +117,44 @@ jobs:
 
 ## Dependencies
 
+### Runtime
+
 ```toml
 [project]
 dependencies = [
     "PySide6>=6.8.0",
-    "websockets>=14.0",
 ]
+```
 
+### Development
+
+```toml
 [project.optional-dependencies]
 dev = [
-    "pytest>=8.0",
-    "pytest-cov>=5.0",
-    "pytest-qt>=4.3",
-    "ruff>=0.7.0",
+    "pytest>=9.0",
+    "pytest-cov>=7.0",
+    "pytest-qt>=4.5",
+    "pytest-asyncio>=1.0",
+    "ruff>=0.9.0",
     "basedpyright>=1.21.0",
 ]
 ```
 
+**Note:** No websockets dependency - Snapcast uses raw TCP sockets.
+
 ---
 
-*Next: [Testing Strategy](docs/07-TESTING.md) →*
+## Pre-commit Hooks
+
+```bash
+# .git/hooks/pre-commit (installed by pre-commit package)
+#!/bin/bash
+uv run ruff check --fix src tests
+uv run ruff format src tests
+```
+
+---
+
+*Next: [Testing Strategy](07-TESTING.md) →*
+
+*Last updated: 2025-01-26*

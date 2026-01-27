@@ -4,32 +4,50 @@
 
 [![Python](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![Qt](https://img.shields.io/badge/Qt-6.8+-green.svg)](https://www.qt.io/)
+[![CI](https://github.com/lollonet/snapcast-mvp/actions/workflows/ci.yml/badge.svg)](https://github.com/lollonet/snapcast-mvp/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 ## Overview
 
-Snapcast MVP is a cross-platform desktop application that provides an intuitive GUI for controlling Snapcast servers. It allows you to:
+Snapcast MVP is a cross-platform desktop application that provides an intuitive GUI for controlling Snapcast servers. Built with Python and PySide6 (Qt6), it connects to your Snapcast server via TCP and allows real-time control of groups, clients, and audio sources.
 
-- Connect to your Snapcast server (auto-discovery + manual)
-- View groups, clients, and audio sources in real-time
-- Control volume per group and per client
-- Switch audio sources between rooms
-- Mute/unmute any group or client
+### Features
+
+- **Connection Management**: Connect to any Snapcast server (manual configuration)
+- **Real-time State**: Live updates from server via JSON-RPC over TCP
+- **Group Control**: Volume, mute, and stream selection per group
+- **Client Control**: Individual volume and mute for each client
+- **Multi-room Support**: View and control all groups and clients
+
+### Current Status
+
+| Component | Status | Tests |
+|-----------|--------|-------|
+| Data Models | ✅ Complete | 100% |
+| TCP API Client | ✅ Complete | 127 tests |
+| State Management | ✅ Complete | 20 tests |
+| UI Widgets | ✅ Complete | 58 tests |
+| UI Panels | ✅ Complete | - |
+| Integration | ✅ Complete | 20 tests |
+| **Total** | **UI Foundation Complete** | **225 tests** |
 
 ## Requirements
 
 - Python 3.11+
-- PySide6 (Qt6)
-- A running Snapcast server
+- PySide6 6.8+
+- A running Snapcast server (v0.34+ tested)
 
 ## Installation
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/snapcast-mvp.git
+git clone https://github.com/lollonet/snapcast-mvp.git
 cd snapcast-mvp
 
-# Install dependencies
+# Install with uv (recommended)
+uv pip install -e .
+
+# Or with pip
 pip install -e .
 ```
 
@@ -37,42 +55,66 @@ pip install -e .
 
 ```bash
 # Run the application
-snapcast-mvp
+python -m snapcast_mvp
 ```
 
-Or with make:
-
+Set environment variable for headless Qt (useful for testing):
 ```bash
-make run
+export QT_QPA_PLATFORM=offscreen
 ```
 
 ## Development
 
 ```bash
 # Install development dependencies
-make install
+uv sync
 
 # Run quality checks
-make check
+uv run ruff check src tests
+uv run ruff format --check src tests
 
-# Run tests
-make test
+# Run tests (requires Qt display or QT_QPA_PLATFORM=offscreen)
+QT_QPA_PLATFORM=offscreen uv run pytest tests/ -v
+
+# Type checking (manual)
+uv run basedpyright src/
 ```
 
-## Quality Gates
+### Test Coverage
 
-This project is configured for BassCodeBase quality standards.
+- **127 unit tests**: Models, protocol, core components
+- **20 integration tests**: State + worker integration
+- **58 UI tests**: Widgets, panels, main window
+- **20 live server tests**: Real Snapcast server integration
 
-To adopt the full standards:
-```bash
-uv tool install basscodebase
-bass adopt  # Quick wizard, detects .bass-ready
-bass check  # Run quality gates
-```
+## Architecture
+
+- **Models**: Frozen dataclasses for immutable state (Client, Group, Server, Source)
+- **API**: Asyncio TCP client with JSON-RPC 2.0 protocol
+- **Core**: StateStore with Qt signals, QThread worker for background I/O
+- **UI**: PySide6 widgets with reactive signal/slot connections
+
+See [docs/02-ARCHITECTURE.md](docs/02-ARCHITECTURE.md) for details.
 
 ## Roadmap
 
-See [Work Breakdown Structure](docs/08-WBS.md) for the 3-month development plan.
+- [x] Month 1: Foundation (Models, API, State, Configuration)
+- [x] Month 2: UI Foundation (Widgets, Panels, MainWindow)
+- [ ] Month 2: Advanced UI (Drag & drop, context menus, client renaming)
+- [ ] Month 3: Polish (Theming, settings dialog, auto-discovery)
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'feat: add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+Code must pass:
+- `ruff check` - linting
+- `ruff format` - formatting
+- `pytest` - tests
 
 ## License
 

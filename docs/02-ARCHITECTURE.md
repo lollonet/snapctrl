@@ -9,7 +9,7 @@
 │                                                                   │
 │  ┌─────────────┐    ┌──────────────┐    ┌─────────────────┐    │
 │  │   UI Layer  │◄───│ State Store  │◄───│  API Client     │    │
-│  │  (PySide6)  │    │  (Signals)   │    │  (WebSocket)    │    │
+│  │  (PySide6)  │    │  (Signals)   │    │  (asyncio TCP)  │    │
 │  └─────────────┘    └──────────────┘    └────────┬────────┘    │
 │                                                      │             │
 │                                                  ┌───▼────┐       │
@@ -27,13 +27,15 @@
 | Component | Technology | Rationale |
 |-----------|-----------|-----------|
 | **UI Framework** | PySide6 (Qt6) | Cross-platform, native feel, Python |
-| **Networking** | websockets + asyncio | Async WebSocket, JSON-RPC protocol |
-| **Threading** | QThread + asyncio | Non-blocking WebSocket in Qt app |
+| **Networking** | asyncio + TCP sockets | Native async I/O, JSON-RPC protocol |
+| **Threading** | QThread + asyncio | Non-blocking TCP in Qt app |
 | **State** | Central state + Qt signals | Simple, effective, debuggable |
 | **Config** | QSettings | Native to Qt, cross-platform storage |
 | **Testing** | pytest + pytest-qt | Industry standard, Qt widget support |
 | **CI/CD** | GitHub Actions | Git integration, free for public |
 | **Packaging** | PyInstaller (Win), briefcase (macOS/AppImage) | Cross-platform binaries |
+
+**Note:** Snapcast uses raw TCP sockets (not WebSocket) for JSON-RPC on port 1705.
 
 ---
 
@@ -43,39 +45,41 @@
 src/snapcast_mvp/
 ├── __init__.py
 ├── __main__.py              # Entry point
-├── main.py                  # Application bootstrap
 │
-├── core/                    # Business logic (no Qt)
+├── models/                  # Data models (frozen dataclasses)
 │   ├── __init__.py
-│   ├── state.py             # StateStore, state models
-│   ├── api.py               # SnapcastClient (WebSocket)
-│   └── config.py            # ConfigManager (QSettings wrapper)
+│   ├── server.py            # Server, ServerProfile
+│   ├── client.py            # Client
+│   ├── group.py             # Group
+│   ├── source.py            # Source
+│   ├── profile.py           # ServerProfile
+│   └── server_state.py      # ServerState aggregate
 │
-├── ui/                      # Qt UI layer
+├── api/                     # API layer
 │   ├── __init__.py
-│   ├── main_window.py       # MainWindow
-│   ├── panels/              # UI panels
-│   │   ├── __init__.py
-│   │   ├── sources.py       # SourcesPanel (left)
-│   │   ├── groups.py        # GroupsPanel (center)
-│   │   └── properties.py    # PropertiesPanel (right)
-│   ├── widgets/             # Reusable widgets
-│   │   ├── __init__.py
-│   │   ├── volume_slider.py # VolumeSlider with mute
-│   │   ├── group_card.py    # GroupCard widget
-│   │   └── status_indicator.py # Connection status
-│   ├── dialogs/             # Modal dialogs
-│   │   ├── __init__.py
-│   │   └── connection.py    # ConnectionDialog
-│   └── resources/           # Icons, assets
-│       └── qrc_resources.py
+│   ├── client.py            # SnapcastClient (asyncio TCP)
+│   └── protocol.py          # JSON-RPC types
 │
-└── models/                  # Data models (pure Python)
+├── core/                    # Business logic
+│   ├── __init__.py
+│   ├── state.py             # StateStore (Qt signals)
+│   ├── worker.py            # SnapcastWorker (QThread)
+│   ├── config.py            # ConfigManager (QSettings wrapper)
+│   └── controller.py        # Controller (UI → API bridge)
+│
+└── ui/                      # Qt UI layer
     ├── __init__.py
-    ├── server.py            # Server, ServerProfile
-    ├── client.py            # Client, ClientState
-    ├── group.py             # Group, GroupState
-    └── source.py            # Source, StreamState
+    ├── main_window.py       # MainWindow
+    ├── panels/              # UI panels
+    │   ├── __init__.py
+    │   ├── sources.py       # SourcesPanel (left)
+    │   ├── groups.py        # GroupsPanel (center)
+    │   └── properties.py    # PropertiesPanel (right)
+    └── widgets/             # Reusable widgets
+        ├── __init__.py
+        ├── volume_slider.py # VolumeSlider with mute
+        ├── group_card.py    # GroupCard widget
+        └── client_card.py   # ClientCard widget
 ```
 
 ---
@@ -91,40 +95,38 @@ class StateStore(QObject):
     # Signals
     server_connected = Signal()
     server_disconnected = Signal()
-    groups_changed = Signal(list[Group])
-    clients_changed = Signal(list[Client])
-    sources_changed = Signal(list[Source])
+    state_changed = Signal(ServerState)
 
     def __init__(self):
         super().__init__()
-        self._groups: dict[str, Group] = {}
-        self._clients: dict[str, Client] = {}
-        self._sources: dict[str, Source] = {}
+        self._state: ServerState | None = None
 
-    def update_from_status(self, status: dict) -> None:
-        """Update state from server status, emit signals."""
-        # ... update internal state
-        self.groups_changed.emit(list(self._groups.values()))
+    def update_from_server_state(self, state: ServerState) -> None:
+        """Update state from server, emit signal."""
+        self._state = state
+        self.state_changed.emit(state)
 ```
 
 **UI widgets connect to signals:**
 ```python
-self._state.groups_changed.connect(self._on_groups_updated)
+self._state.state_changed.connect(self._on_state_updated)
 ```
 
-### 2. Async WebSocket in Qt App
+### 2. Async TCP in Qt App
 
 ```python
-class WebSocketWorker(QThread):
-    """Background thread running asyncio WebSocket."""
+class SnapcastWorker(QThread):
+    """Background thread running asyncio TCP client."""
 
-    data_received = Signal(dict)
+    state_received = Signal(ServerState)
     connection_lost = Signal()
 
-    def __init__(self, url: str):
+    def __init__(self, host: str, port: int):
         super().__init__()
-        self._url = url
+        self._host = host
+        self._port = port
         self._loop: asyncio.AbstractEventLoop | None = None
+        self._client: SnapcastClient | None = None
 
     def run(self) -> None:
         """Run asyncio event loop in this thread."""
@@ -133,10 +135,10 @@ class WebSocketWorker(QThread):
         self._loop.run_until_complete(self._connect())
 
     async def _connect(self) -> None:
-        async with websockets.connect(self._url) as ws:
-            while True:
-                data = await ws.recv()
-                self.data_received.emit(json.loads(data))
+        """Connect to Snapcast server and listen for updates."""
+        self._client = SnapcastClient(self._host, self._port)
+        async for state in self._client.stream():
+            self.state_received.emit(state)
 ```
 
 ### 3. Configuration Persistence (QSettings)
@@ -169,10 +171,10 @@ class ConfigManager:
 main()
   ├─> Load config (QSettings)
   ├─> Create StateStore
-  ├─> Create WebSocketWorker
+  ├─> Create SnapcastWorker (QThread)
   ├─> Create MainWindow
-  │    ├─> SourcesPanel (subscribes to state.sources_changed)
-  │    ├─> GroupsPanel (subscribes to state.groups_changed)
+  │    ├─> SourcesPanel (subscribes to state)
+  │    ├─> GroupsPanel (subscribes to state)
   │    └─> PropertiesPanel (subscribes to selection)
   ├─> Connect to last server (if auto-connect enabled)
   └─> app.exec()
@@ -183,12 +185,12 @@ main()
 ```
 User: Click "Connect"
   └─> MainWindow._on_connect()
-       └─> WebSocketWorker.start()
-            ├─> Connect to ws://host:1704/jsonrpc
+       └─> SnapcastWorker.start()
+            ├─> Connect to tcp://host:1705
             ├─> Send: {"id": 1, "method": "Server.GetStatus"}
             └─> Receive status
-                 └─> StateStore.update_from_status()
-                      └─> Emit signals
+                 └─> StateStore.update_from_server_state()
+                      └─> Emit state_changed signal
                            └─> UI widgets update
 ```
 
@@ -198,13 +200,12 @@ User: Click "Connect"
 User: Drag volume slider
   └─> VolumeSlider.valueChanged
        └─> GroupsPanel._on_volume_changed(group_id, value)
-            └─> WebSocketWorker.send_rpc({
-                   "method": "Client.SetVolume",
-                   "params": {"id": client_id, "volume": {"percent": value}}
-                 })
-                 └─> Server confirms
-                      └─> StateStore.update_client_volume()
-                           └─> UI slider updates (optimistic)
+            └─> Controller.set_client_volume()
+                 └─> SnapcastClient.set_client_volume()
+                      └─> Send RPC: {"method": "Client.SetVolume", ...}
+                           └─> Server confirms
+                                └─> StateStore updates
+                                     └─> UI slider updates (optimistic)
 ```
 
 ---
@@ -214,7 +215,7 @@ User: Drag volume slider
 | Thread | Responsibility | Communication |
 |--------|----------------|---------------|
 | **Main (Qt)** | UI rendering, event handling | Signals → Worker |
-| **Worker (QThread)** | WebSocket I/O, asyncio loop | Signals → Main |
+| **Worker (QThread)** | TCP I/O, asyncio loop | Signals → Main |
 
 **Rule:** No Qt widgets in Worker thread. No blocking I/O in Main thread.
 
@@ -225,7 +226,7 @@ User: Drag volume slider
 | Error Type | Handling | User Feedback |
 |------------|----------|---------------|
 | Connection refused | Retry 5x with exponential backoff | "Could not connect. Retrying..." |
-| WebSocket dropped | Auto-reconnect | Status indicator: yellow |
+| TCP connection dropped | Auto-reconnect | Status indicator: yellow |
 | Invalid RPC response | Log, show error in status bar | "Server returned invalid data" |
 | Config corrupted | Reset to defaults | "Settings reset to defaults" |
 
@@ -233,25 +234,19 @@ User: Drag volume slider
 
 ## Quality Gates
 
-```yaml
-# CONTROL.yaml
-project:
-  name: snapcast-mvp
-  language: python
-  ci_platform: github
+```bash
+# Pre-commit (automatic)
+uv run ruff check --fix      # linting
+uv run ruff format           # formatting
 
-quality:
-  paths: ["src", "tests"]
-  coverage:
-    enforce: true
-    line: 85
-    branch: 75
-  complexity:
-    enforce: true
-    mccabe:
-      warn: 8
-      fail: 12
+# Manual (before major commits)
+uv run basedpyright src/     # type checking
+QT_QPA_PLATFORM=offscreen uv run pytest  # tests
 ```
+
+**CI (GitHub Actions):**
+- Runs: ruff check, ruff format, pytest (unit + integration only)
+- Skips: UI tests (no Qt in CI), integration tests (no live server)
 
 ---
 
@@ -260,8 +255,10 @@ quality:
 1. **Local network only** - No internet connectivity
 2. **No authentication** - Snapcast JSON-RPC has no auth (trusting network)
 3. **Input validation** - Validate host, port from user input
-4. **WebSocket origin** - Verify server response format
+4. **TCP connection** - Verify server response format (JSON-RPC)
 
 ---
 
-*Next: [Data Models](docs/03-DATA-MODELS.md) →*
+*Next: [Data Models](03-DATA-MODELS.md) →*
+
+*Last updated: 2025-01-26*
