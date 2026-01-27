@@ -1,7 +1,7 @@
 name: Build Executable
 
 on:
-  workflow_dispatch:  # Manual trigger only
+  workflow_dispatch:
     inputs:
       platform:
         description: 'Target platform'
@@ -14,37 +14,47 @@ on:
           - macos
 
 jobs:
-  build:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: ${{ inputs.platform == 'windows' && ['windows-latest'] || inputs.platform == 'linux' && ['ubuntu-latest'] || ['macos-latest'] }}
+  build-windows:
+    if: inputs.platform == 'windows'
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-
-      - name: Install PyInstaller
-        run: pip install pyinstaller
-
-      - name: Install dependencies
-        run: pip install PySide6
-
-      - name: Build
-        run: |
-          pyinstaller --onefile --name snapcast-mvp \
-            ${{ inputs.platform != 'linux' && '--noconsole' || '--noconsole' }} \
-            ${{ inputs.platform == 'macos' && '--windowed' || '' }} \
-            --hidden-import=PySide6.QtCore \
-            --hidden-import=PySide6.QtGui \
-            --hidden-import=PySide6.QtWidgets \
-            src/snapcast_mvp/__main__.py
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
+      - run: pip install pyinstaller PySide6
+      - run: pyinstaller --onefile --name snapcast-mvp --noconsole --hidden-import=PySide6.QtCore --hidden-import=PySide6.QtGui --hidden-import=PySide6.QtWidgets src/snapcast_mvp/__main__.py
+      - uses: actions/upload-artifact@v4
         with:
-          name: snapcast-mvp-${{ inputs.platform }}
-          path: dist/snapcast-mvp*
+          name: snapcast-mvp-windows
+          path: dist/snapcast-mvp.exe
+
+  build-linux:
+    if: inputs.platform == 'linux'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install pyinstaller PySide6
+      - run: pyinstaller --onefile --name snapcast-mvp --noconsole --hidden-import=PySide6.QtCore --hidden-import=PySide6.QtGui --hidden-import=PySide6.QtWidgets src/snapcast_mvp/__main__.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: snapcast-mvp-linux
+          path: dist/snapcast-mvp
+
+  build-macos:
+    if: inputs.platform == 'macos'
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install pyinstaller PySide6
+      - run: pyinstaller --onefile --name snapcast-mvp --windowed --hidden-import=PySide6.QtCore --hidden-import=PySide6.QtGui --hidden-import=PySide6.QtWidgets src/snapcast_mvp/__main__.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: snapcast-mvp-macos
+          path: dist/snapcast-mvp
