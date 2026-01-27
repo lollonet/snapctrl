@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <defs>
+    <!-- Gradient for depth -->
+    <radialGradient id="centerGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color:#FFB347"/>
+      <stop offset="100%" style="stop-color:#FF8C00"/>
+    </radialGradient>
+    <radialGradient id="nodeGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color:#FFCC80"/>
+      <stop offset="100%" style="stop-color:#FF9800"/>
+    </radialGradient>
+    <!-- Background gradient -->
+    <radialGradient id="bgGrad" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" style="stop-color:#2D2D2D"/>
+      <stop offset="100%" style="stop-color:#1A1A1A"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Background circle -->
+  <circle cx="64" cy="64" r="60" fill="url(#bgGrad)" stroke="#FF8C00" stroke-width="2" stroke-opacity="0.3"/>
+
+  <!-- Connection lines (8 directions) -->
+  <g stroke="#FF8C00" stroke-width="2.5" stroke-opacity="0.6" stroke-linecap="round">
+    <!-- Cardinal directions -->
+    <line x1="64" y1="64" x2="64" y2="20"/>
+    <line x1="64" y1="64" x2="64" y2="108"/>
+    <line x1="64" y1="64" x2="20" y2="64"/>
+    <line x1="64" y1="64" x2="108" y2="64"/>
+    <!-- Diagonal directions -->
+    <line x1="64" y1="64" x2="33" y2="33"/>
+    <line x1="64" y1="64" x2="95" y2="33"/>
+    <line x1="64" y1="64" x2="33" y2="95"/>
+    <line x1="64" y1="64" x2="95" y2="95"/>
+  </g>
+
+  <!-- Sound wave arcs from center -->
+  <g fill="none" stroke="#FFCC80" stroke-width="1.5" stroke-opacity="0.4">
+    <circle cx="64" cy="64" r="25"/>
+    <circle cx="64" cy="64" r="35"/>
+    <circle cx="64" cy="64" r="45"/>
+  </g>
+
+  <!-- Outer nodes (speakers/clients) - 8 directions -->
+  <g fill="url(#nodeGlow)">
+    <!-- Cardinal -->
+    <circle cx="64" cy="20" r="8"/>
+    <circle cx="64" cy="108" r="8"/>
+    <circle cx="20" cy="64" r="8"/>
+    <circle cx="108" cy="64" r="8"/>
+    <!-- Diagonal -->
+    <circle cx="33" cy="33" r="7"/>
+    <circle cx="95" cy="33" r="7"/>
+    <circle cx="33" cy="95" r="7"/>
+    <circle cx="95" cy="95" r="7"/>
+  </g>
+
+  <!-- Node highlights -->
+  <g fill="#FFF" fill-opacity="0.3">
+    <circle cx="62" cy="18" r="2"/>
+    <circle cx="62" cy="106" r="2"/>
+    <circle cx="18" cy="62" r="2"/>
+    <circle cx="106" cy="62" r="2"/>
+  </g>
+
+  <!-- Center node (hub/server) -->
+  <circle cx="64" cy="64" r="14" fill="url(#centerGlow)" stroke="#FFE0B2" stroke-width="2"/>
+
+  <!-- Speaker icon in center -->
+  <g fill="#1A1A1A">
+    <rect x="58" y="58" width="6" height="12" rx="1"/>
+    <path d="M64 58 L72 52 L72 76 L64 70 Z"/>
+  </g>
+
+  <!-- Center highlight -->
+  <circle cx="60" cy="60" r="4" fill="#FFF" fill-opacity="0.2"/>
+</svg>

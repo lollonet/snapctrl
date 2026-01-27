@@ -1,8 +1,10 @@
-"""Main entry point for the Snapcast MVP application."""
+"""Main entry point for the SnapCTRL application."""
 
 import logging
 import sys
+from pathlib import Path
 
+from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QApplication, QMessageBox
 
 from snapcast_mvp.core.discovery import ServerDiscovery
@@ -38,11 +40,17 @@ def discover_server() -> tuple[str, int, str] | None:
 
 
 def main() -> int:  # noqa: PLR0915
-    """Run the Snapcast MVP application.
+    """Run the SnapCTRL application.
 
     Returns:
         Exit code (0 for success).
     """
+    # Set app metadata before creating QApplication (required for macOS)
+    QApplication.setApplicationName("SnapCTRL")
+    QApplication.setApplicationDisplayName("SnapCTRL")
+    QApplication.setOrganizationName("SnapCTRL")
+    QApplication.setOrganizationDomain("snapctrl.local")
+
     app = QApplication(sys.argv)
 
     # Parse command line arguments
@@ -99,9 +107,16 @@ def main() -> int:  # noqa: PLR0915
     window = MainWindow(state_store=state_store)
     # Show hostname (FQDN) and IP in title if discovered via mDNS
     if hostname:
-        window.setWindowTitle(f"Snapcast MVP - {hostname} ({host}):{port}")
+        window.setWindowTitle(f"SnapCTRL - {hostname} ({host}):{port}")
     else:
-        window.setWindowTitle(f"Snapcast MVP - {host}:{port}")
+        window.setWindowTitle(f"SnapCTRL - {host}:{port}")
+
+    # Set app icon
+    icon_path = Path(__file__).parent.parent.parent / "resources" / "icon.svg"
+    if icon_path.exists():
+        app.setWindowIcon(QIcon(str(icon_path)))
+        window.setWindowIcon(QIcon(str(icon_path)))
+
     window.show()
 
     # Wire UI signals to worker for volume/mute control

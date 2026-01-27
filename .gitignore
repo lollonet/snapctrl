@@ -28,7 +28,8 @@ MANIFEST
 
 # PyInstaller
 *.manifest
-*.spec
+# Keep SnapCTRL.spec but ignore others
+# *.spec
 
 # Unit test / coverage reports
 htmlcov/
@@ -79,3 +80,8 @@ venv.bak/
 
 # External dependencies
 BassCodeBase/
+
+# PyInstaller build artifacts
+build/
+dist/
+*.spec
