@@ -1,5 +1,7 @@
 """Tests for MainWindow."""
 
+from unittest.mock import Mock
+
 from pytestqt.qtbot import QtBot
 
 from snapcast_mvp.ui.main_window import MainWindow
@@ -37,8 +39,6 @@ class TestMainWindowBasics:
 
     def test_group_mute_signal_connected(self, qtbot: QtBot) -> None:
         """Test that group mute toggle signal is connected to controller."""
-        from unittest.mock import Mock
-
         window = MainWindow()
         qtbot.addWidget(window)
 
