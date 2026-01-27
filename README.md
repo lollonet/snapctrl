@@ -21,15 +21,15 @@ Snapcast MVP is a cross-platform desktop application that provides an intuitive 
 
 ### Current Status
 
-| Component | Status | Tests |
-|-----------|--------|-------|
-| Data Models | ✅ Complete | 100% |
-| TCP API Client | ✅ Complete | 127 tests |
-| State Management | ✅ Complete | 20 tests |
-| UI Widgets | ✅ Complete | 58 tests |
-| UI Panels | ✅ Complete | - |
-| Integration | ✅ Complete | 20 tests |
-| **Total** | **UI Foundation Complete** | **225 tests** |
+| Component        | Status                     | Tests         |
+| ---------------- | -------------------------- | ------------- |
+| Data Models      | ✅ Complete                 | 100%          |
+| TCP API Client   | ✅ Complete                 | 127 tests     |
+| State Management | ✅ Complete                 | 20 tests      |
+| UI Widgets       | ✅ Complete                 | 58 tests      |
+| UI Panels        | ✅ Complete                 | -             |
+| Integration      | ✅ Complete                 | 20 tests      |
+| **Total**        | **UI Foundation Complete** | **225 tests** |
 
 ## Requirements
 
@@ -59,6 +59,7 @@ python -m snapcast_mvp
 ```
 
 Set environment variable for headless Qt (useful for testing):
+
 ```bash
 export QT_QPA_PLATFORM=offscreen
 ```
@@ -112,6 +113,7 @@ See [docs/02-ARCHITECTURE.md](docs/02-ARCHITECTURE.md) for details.
 5. Open a Pull Request
 
 Code must pass:
+
 - `ruff check` - linting
 - `ruff format` - formatting
 - `pytest` - tests

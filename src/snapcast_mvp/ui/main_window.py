@@ -143,7 +143,7 @@ class MainWindow(QMainWindow):
         # Auto-select first group when a group is selected
         self._groups_panel.group_selected.connect(self._on_group_selected)
 
-        # Note: client volume/mute signals are connected in __main__.py to worker
+        # Note: volume/mute signals are connected in __main__.py to worker
         # Don't connect them here to avoid duplicate handlers
 
         # Connect client selection for properties panel
@@ -267,7 +267,6 @@ class MainWindow(QMainWindow):
             client = self._state.get_client(self._selected_client_id)
             if client:
                 self._properties_panel.set_client(client)
-
 
     @property
     def sources_panel(self) -> SourcesPanel:

@@ -23,7 +23,7 @@ jobs:
         with:
           python-version: '3.12'
       - run: pip install pyinstaller PySide6
-      - run: pyinstaller --onefile --name snapcast-mvp --noconsole --hidden-import=PySide6.QtCore --hidden-import=PySide6.QtGui --hidden-import=PySide6.QtWidgets src/snapcast_mvp/__main__.py
+      - run: pyinstaller --onefile --name snapcast-mvp --noconsole --hidden-import=PySide6.QtCore --hidden-import=PySide6.QtGui --hidden-import=PySide6.QtWidgets --hidden-import=zeroconf src/snapcast_mvp/__main__.py
       - uses: actions/upload-artifact@v4
         with:
           name: snapcast-mvp-windows
@@ -38,7 +38,7 @@ jobs:
         with:
           python-version: '3.12'
       - run: pip install pyinstaller PySide6
-      - run: pyinstaller --onefile --name snapcast-mvp --noconsole --hidden-import=PySide6.QtCore --hidden-import=PySide6.QtGui --hidden-import=PySide6.QtWidgets src/snapcast_mvp/__main__.py
+      - run: pyinstaller --onefile --name snapcast-mvp --noconsole --hidden-import=PySide6.QtCore --hidden-import=PySide6.QtGui --hidden-import=PySide6.QtWidgets --hidden-import=zeroconf src/snapcast_mvp/__main__.py
       - uses: actions/upload-artifact@v4
         with:
           name: snapcast-mvp-linux
@@ -53,7 +53,7 @@ jobs:
         with:
           python-version: '3.12'
       - run: pip install pyinstaller PySide6
-      - run: pyinstaller --onefile --name snapcast-mvp --windowed --hidden-import=PySide6.QtCore --hidden-import=PySide6.QtGui --hidden-import=PySide6.QtWidgets src/snapcast_mvp/__main__.py
+      - run: pyinstaller --onefile --name snapcast-mvp --windowed --hidden-import=PySide6.QtCore --hidden-import=PySide6.QtGui --hidden-import=PySide6.QtWidgets --hidden-import=zeroconf src/snapcast_mvp/__main__.py
       - uses: actions/upload-artifact@v4
         with:
           name: snapcast-mvp-macos
