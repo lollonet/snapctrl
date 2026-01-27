@@ -148,11 +148,14 @@ class GroupCard(QWidget):
             The volume slider widget.
         """
         slider = VolumeSlider()
-        slider.volume_changed.connect(
-            lambda vol: self.volume_changed.emit(self._group.id if self._group else "", vol)  # noqa: ARG005
-        )
+        slider.volume_changed.connect(self._on_volume_slider_changed)
         self._volume_slider = slider
         return slider
+
+    def _on_volume_slider_changed(self, vol: int) -> None:
+        """Handle volume slider value changes."""
+        group_id = self._group.id if self._group else ""
+        self.volume_changed.emit(group_id, vol)
 
     def _create_source_row(self) -> QHBoxLayout:
         """Create the source selection row.

@@ -66,6 +66,20 @@ class TestSnapcastWorkerMocked:
         # Should not crash
         worker.set_group_stream("group1", "stream1")
 
+    @pytest.mark.asyncio
+    async def test_set_client_mute_with_no_loop(self) -> None:
+        """Test set_client_mute is safe when loop not running."""
+        worker = SnapcastWorker("192.168.1.100")
+        # Should not crash
+        worker.set_client_mute("client1", True)
+
+    @pytest.mark.asyncio
+    async def test_set_client_mute_unmute_with_no_loop(self) -> None:
+        """Test set_client_mute unmute is safe when loop not running."""
+        worker = SnapcastWorker("192.168.1.100")
+        # Should not crash
+        worker.set_client_mute("client1", False)
+
 
 class TestSnapcastWorkerSignals:
     """Test that worker has required signals."""
