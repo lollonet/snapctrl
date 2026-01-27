@@ -39,8 +39,10 @@ class PropertiesPanel(QWidget):
 
         # Content area (placeholder for now)
         self._content = QLabel("Select an item to see details")
+        self._content.setTextFormat(Qt.TextFormat.RichText)  # Enable HTML rendering
         self._content.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._content.setStyleSheet("color: #606060; font-style: italic;")
+        self._content.setWordWrap(True)
         layout.addWidget(self._content)
 
         layout.addStretch()
@@ -67,8 +69,8 @@ class PropertiesPanel(QWidget):
             </table>
         """
         self._content.setText(html)
-        self._content.setStyleSheet("")
-        self._content.setAlignment(Qt.AlignmentFlag.AlignTop)
+        self._content.setStyleSheet("color: #e0e0e0;")  # Ensure text is visible
+        self._content.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
 
     def set_client(self, client: Client) -> None:
         """Display client properties.
@@ -89,8 +91,8 @@ class PropertiesPanel(QWidget):
             </table>
         """
         self._content.setText(html)
-        self._content.setStyleSheet("")
-        self._content.setAlignment(Qt.AlignmentFlag.AlignTop)
+        self._content.setStyleSheet("color: #e0e0e0;")  # Ensure text is visible
+        self._content.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
 
     def set_source(self, source: Source) -> None:
         """Display source properties.
@@ -108,5 +110,5 @@ class PropertiesPanel(QWidget):
             </table>
         """
         self._content.setText(html)
-        self._content.setStyleSheet("")
-        self._content.setAlignment(Qt.AlignmentFlag.AlignTop)
+        self._content.setStyleSheet("color: #e0e0e0;")  # Ensure text is visible
+        self._content.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)

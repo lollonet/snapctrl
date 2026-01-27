@@ -138,9 +138,18 @@ class SnapcastWorker(QThread):
         """
         if self._loop and self._loop.is_running() and self._client:
             asyncio.run_coroutine_threadsafe(
-                self._client.set_group_mute(group_id, muted),
+                self._safe_set_group_mute(group_id, muted),
                 self._loop,
             )
+
+    async def _safe_set_group_mute(self, group_id: str, muted: bool) -> None:
+        """Set group mute with error handling."""
+        if not self._client or not self._client.is_connected:
+            return
+        try:
+            await self._client.set_group_mute(group_id, muted)
+        except Exception as e:
+            self.error_occurred.emit(e)
 
     def set_group_stream(self, group_id: str, stream_id: str) -> None:
         """Set group audio stream.
@@ -153,9 +162,20 @@ class SnapcastWorker(QThread):
         """
         if self._loop and self._loop.is_running() and self._client:
             asyncio.run_coroutine_threadsafe(
-                self._client.set_group_stream(group_id, stream_id),
+                self._safe_set_group_stream(group_id, stream_id),
                 self._loop,
             )
+
+    async def _safe_set_group_stream(self, group_id: str, stream_id: str) -> None:
+        """Set group stream with error handling and status refresh."""
+        if not self._client or not self._client.is_connected:
+            return
+        try:
+            await self._client.set_group_stream(group_id, stream_id)
+            # Refresh status after changing stream
+            await self._fetch_status()
+        except Exception as e:
+            self.error_occurred.emit(e)
 
     def run(self) -> None:
         """Run the worker thread (entry point)."""
