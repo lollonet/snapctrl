@@ -27,6 +27,7 @@ class DiscoveredServer:
     host: str
     port: int
     addresses: list[str]
+    hostname: str = ""  # FQDN from mDNS (e.g., "raspy.local")
 
     @property
     def display_name(self) -> str:
@@ -95,11 +96,15 @@ class SnapcastServiceListener(ServiceListener):
         streaming_port = info.port or 1704
         control_port = streaming_port + CONTROL_PORT_OFFSET
 
+        # Get hostname (FQDN) from mDNS, strip trailing dot
+        hostname = info.server.rstrip(".") if info.server else ""
+
         server = DiscoveredServer(
             name=server_name or name,
             host=addresses[0],  # Use first address
             port=control_port,
             addresses=addresses,
+            hostname=hostname,
         )
 
         logger.info(

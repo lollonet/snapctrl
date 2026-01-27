@@ -15,17 +15,24 @@ logging.basicConfig(level=logging.DEBUG, format="%(asctime)s %(levelname)s %(nam
 logger = logging.getLogger(__name__)
 
 
-def discover_server() -> tuple[str, int] | None:
+def discover_server() -> tuple[str, int, str] | None:
     """Discover a Snapcast server on the network.
 
     Returns:
-        Tuple of (host, port) if found, None otherwise.
+        Tuple of (host, port, hostname) if found, None otherwise.
+        hostname is the FQDN from mDNS (e.g., "raspy.local").
     """
     logger.info("Searching for Snapcast servers via mDNS...")
     server = ServerDiscovery.discover_one(timeout=5.0)
     if server:
-        logger.info("Found server: %s at %s:%d", server.display_name, server.host, server.port)
-        return (server.host, server.port)
+        logger.info(
+            "Found server: %s at %s (%s):%d",
+            server.display_name,
+            server.hostname or server.host,
+            server.host,
+            server.port,
+        )
+        return (server.host, server.port, server.hostname)
     logger.warning("No Snapcast servers found via mDNS")
     return None
 
@@ -41,6 +48,7 @@ def main() -> int:  # noqa: PLR0915
     # Parse command line arguments
     host: str | None = None
     port = 1705
+    hostname: str = ""  # FQDN from mDNS discovery
 
     args = sys.argv[1:]
     if args:
@@ -51,7 +59,7 @@ def main() -> int:  # noqa: PLR0915
         # No arguments - try autodiscovery
         result = discover_server()
         if result:
-            host, port = result
+            host, port, hostname = result
         else:
             # Show error dialog and exit
             QMessageBox.critical(
@@ -89,7 +97,11 @@ def main() -> int:  # noqa: PLR0915
 
     # Create main window
     window = MainWindow(state_store=state_store)
-    window.setWindowTitle(f"Snapcast MVP - {host}:{port}")
+    # Show hostname (FQDN) and IP in title if discovered via mDNS
+    if hostname:
+        window.setWindowTitle(f"Snapcast MVP - {hostname} ({host}):{port}")
+    else:
+        window.setWindowTitle(f"Snapcast MVP - {host}:{port}")
     window.show()
 
     # Wire UI signals to worker for volume/mute control
