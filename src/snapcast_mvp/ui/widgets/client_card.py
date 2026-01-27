@@ -3,25 +3,27 @@
 A compact widget for individual client control within a group card.
 """
 
-from PySide6.QtCore import Signal
+from PySide6.QtCore import QEvent, QObject, Signal
+from PySide6.QtGui import QMouseEvent
 from PySide6.QtWidgets import (
+    QFrame,
     QHBoxLayout,
     QLabel,
-    QWidget,
 )
 
 from snapcast_mvp.models.client import Client
 from snapcast_mvp.ui.widgets.volume_slider import VolumeSlider
 
 
-class ClientCard(QWidget):
+class ClientCard(QFrame):
     """Card widget for displaying and controlling a client.
 
-    Shows client name, connection status, volume slider, and mute button.
+    Uses QFrame for proper stylesheet support (background, border).
 
     Signals:
         volume_changed: Emitted when volume changes (client_id, volume).
         mute_toggled: Emitted when mute is toggled (client_id, muted).
+        clicked: Emitted when card is clicked (client_id).
 
     Example:
         card = ClientCard(client_id="c1", name="Living Room", volume=50, muted=False)
@@ -30,6 +32,7 @@ class ClientCard(QWidget):
 
     volume_changed = Signal(str, int)  # client_id, volume
     mute_toggled = Signal(str, bool)  # client_id, muted
+    clicked = Signal(str)  # client_id
 
     def __init__(
         self,
@@ -63,30 +66,32 @@ class ClientCard(QWidget):
             volume: Initial volume.
             muted: Initial mute state.
         """
-        self.setStyleSheet("""
-            ClientCard {
-                background-color: #2a2a2a;
-                border-radius: 6px;
-                border: 1px solid #333333;
-                padding: 4px;
-            }
-        """)
+        self._selected = False
+        self.setFrameShape(QFrame.Shape.StyledPanel)
+        self._update_style(False)
 
         layout = QHBoxLayout(self)
         layout.setContentsMargins(8, 6, 8, 6)
         layout.setSpacing(12)
 
-        # Connection indicator
-        self._status_indicator = QLabel("●" if self._connected else "○")
-        self._status_indicator.setStyleSheet(
-            "color: #4CAF50;" if self._connected else "color: #757575;"
-        )
-        self._status_indicator.setToolTip("Connected" if self._connected else "Disconnected")
+        # Connection indicator (clickable)
+        # Use filled circle with different colors: green=connected, red=disconnected
+        self._status_indicator = QLabel("●")
+        if self._connected:
+            self._status_indicator.setStyleSheet("color: #4CAF50; font-size: 14px;")
+            self._status_indicator.setToolTip("Connected")
+        else:
+            self._status_indicator.setStyleSheet("color: #F44336; font-size: 14px;")
+            self._status_indicator.setToolTip("Disconnected")
+        self._status_indicator.setCursor(self.cursor())
+        self._status_indicator.installEventFilter(self)
         layout.addWidget(self._status_indicator)
 
-        # Client name
+        # Client name (clickable)
         self._name_label = QLabel(self._name)
-        self._name_label.setStyleSheet("font-size: 10pt; color: #e0e0e0;")
+        self._name_label.setStyleSheet("font-size: 10pt; color: #e0e0e0; padding: 4px;")
+        self._name_label.setCursor(self.cursor())
+        self._name_label.installEventFilter(self)
         layout.addWidget(self._name_label)
 
         layout.addStretch()
@@ -148,9 +153,45 @@ class ClientCard(QWidget):
             connected: Whether the client is connected.
         """
         self._connected = connected
-        self._status_indicator.setText("●" if connected else "○")
-        self._status_indicator.setStyleSheet("color: #4CAF50;" if connected else "color: #757575;")
-        self._status_indicator.setToolTip("Connected" if connected else "Disconnected")
+        # Always use filled circle, change color: green=connected, red=disconnected
+        if connected:
+            self._status_indicator.setStyleSheet("color: #4CAF50; font-size: 14px;")
+            self._status_indicator.setToolTip("Connected")
+        else:
+            self._status_indicator.setStyleSheet("color: #F44336; font-size: 14px;")
+            self._status_indicator.setToolTip("Disconnected")
+
+    def set_selected(self, selected: bool) -> None:
+        """Set the visual selection state.
+
+        Args:
+            selected: Whether this card is selected.
+        """
+        self._selected = selected
+        self._update_style(selected)
+
+    def _update_style(self, selected: bool) -> None:
+        """Update the visual style based on selection state.
+
+        Args:
+            selected: Whether this card is selected.
+        """
+        if selected:
+            self.setStyleSheet("""
+                ClientCard {
+                    background-color: #3a3a5a;
+                    border-radius: 6px;
+                    border: 2px solid #6a6a9a;
+                }
+            """)
+        else:
+            self.setStyleSheet("""
+                ClientCard {
+                    background-color: #2a2a2a;
+                    border-radius: 6px;
+                    border: 1px solid #333333;
+                }
+            """)
 
     def update_from_client(self, client: Client) -> None:
         """Update card from client data.
@@ -163,3 +204,32 @@ class ClientCard(QWidget):
         self.set_volume(client.volume)
         self.set_muted(client.muted)
         self.set_connected(client.connected)
+
+    # noinspection PyMethodOverriding
+    def mousePressEvent(self, event: QMouseEvent) -> None:  # noqa: N802
+        """Handle mouse press to emit clicked signal.
+
+        Args:
+            event: The mouse event.
+        """
+        # Don't call super() - this prevents event propagation to parent GroupCard
+        event.accept()  # Mark as handled
+        self.clicked.emit(self._client_id)
+
+    def eventFilter(self, watched: QObject, event: QEvent) -> bool:  # noqa: N802
+        """Filter events from child widgets to handle clicks.
+
+        Args:
+            watched: The object being watched.
+            event: The event.
+
+        Returns:
+            True if event was handled, False otherwise.
+        """
+        if (
+            event.type() == QEvent.Type.MouseButtonPress
+            and watched in (self._name_label, self._status_indicator)
+        ):
+            self.clicked.emit(self._client_id)
+            return True
+        return super().eventFilter(watched, event)

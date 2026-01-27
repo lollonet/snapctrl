@@ -35,6 +35,7 @@ class GroupsPanel(QWidget):
     # Signals for client control (forwarded from group cards)
     client_volume_changed = Signal(str, int)  # client_id, volume
     client_mute_toggled = Signal(str, bool)  # client_id, muted
+    client_selected = Signal(str)  # client_id - emitted when a client card is clicked
 
     def __init__(self) -> None:
         """Initialize the groups panel."""
@@ -74,6 +75,7 @@ class GroupsPanel(QWidget):
         # Track group cards by ID
         self._group_cards: dict[str, GroupCard] = {}
         self._selected_group_id: str | None = None
+        self._selected_client_id: str | None = None
 
     @property
     def selected_group_id(self) -> str | None:
@@ -105,6 +107,11 @@ class GroupsPanel(QWidget):
             sources: Optional list of available sources.
             clients: Optional dict mapping group_id to list of clients.
         """
+        # Preserve expanded state before clearing
+        expanded_groups: set[str] = {
+            gid for gid, card in self._group_cards.items() if card.is_expanded
+        }
+
         # Clear existing cards
         for card in self._group_cards.values():
             card.setParent(None)
@@ -129,10 +136,15 @@ class GroupsPanel(QWidget):
             # Connect client signals to panel signals
             card.client_volume_changed.connect(self.client_volume_changed.emit)
             card.client_mute_toggled.connect(self.client_mute_toggled.emit)
+            card.client_clicked.connect(self.client_selected.emit)
 
             self._group_cards[group.id] = card
             # Insert before the stretch
             self._container_layout.insertWidget(self._container_layout.count() - 1, card)
+
+            # Restore expanded state if it was expanded before
+            if group.id in expanded_groups:
+                card.set_expanded(True)
 
         # Restore selection if possible
         if self._selected_group_id and self._selected_group_id in self._group_cards:
@@ -222,3 +234,14 @@ class GroupsPanel(QWidget):
         """
         if group_id in self._group_cards:
             self._group_cards[group_id].set_client_muted(client_id, muted)
+
+    def set_selected_client(self, client_id: str | None) -> None:
+        """Set the selected client across all groups.
+
+        Args:
+            client_id: The client ID to select, or None to deselect all.
+        """
+        self._selected_client_id = client_id
+        # Clear client selection in all groups, then select in the right one
+        for card in self._group_cards.values():
+            card.set_selected_client(client_id)

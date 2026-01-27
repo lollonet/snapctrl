@@ -57,6 +57,7 @@ class MainWindow(QMainWindow):
         super().__init__()
         self._state = state_store
         self._controller: Controller | None = controller
+        self._selected_client_id: str | None = None  # Track selected client for properties updates
 
         self._setup_ui()
         self._setup_style()
@@ -78,18 +79,29 @@ class MainWindow(QMainWindow):
         # Create splitter for resizable panels
         splitter = QSplitter()
 
-        # Create panels
+        # Create panels with fixed widths for side panels
         self._sources_panel = SourcesPanel()
+        self._sources_panel.setMinimumWidth(150)
+        self._sources_panel.setMaximumWidth(250)
+
         self._groups_panel = GroupsPanel()
+
         self._properties_panel = PropertiesPanel()
+        self._properties_panel.setMinimumWidth(200)
+        self._properties_panel.setMaximumWidth(300)
 
         # Add panels to splitter
         splitter.addWidget(self._sources_panel)
         splitter.addWidget(self._groups_panel)
         splitter.addWidget(self._properties_panel)
 
-        # Set initial sizes (left: 200px, center: 400px, right: 200px)
-        splitter.setSizes([200, 400, 200])
+        # Set initial sizes (left: 180px, center: stretch, right: 220px)
+        splitter.setSizes([180, 500, 220])
+
+        # Set stretch factors so center panel expands
+        splitter.setStretchFactor(0, 0)  # Sources: don't stretch
+        splitter.setStretchFactor(1, 1)  # Groups: stretch
+        splitter.setStretchFactor(2, 0)  # Properties: don't stretch
 
         # Add splitter to main layout
         main_layout.addWidget(splitter)
@@ -131,22 +143,22 @@ class MainWindow(QMainWindow):
         # Auto-select first group when a group is selected
         self._groups_panel.group_selected.connect(self._on_group_selected)
 
-        # Connect client control signals to controller
-        self._groups_panel.client_volume_changed.connect(self._on_client_volume_changed)
-        self._groups_panel.client_mute_toggled.connect(self._on_client_mute_toggled)
+        # Note: client volume/mute signals are connected in __main__.py to worker
+        # Don't connect them here to avoid duplicate handlers
+
+        # Connect client selection for properties panel
+        self._groups_panel.client_selected.connect(self._on_client_selected)
 
     @Slot(str)
-    async def _on_source_selected(self, source_id: str) -> None:
+    def _on_source_selected(self, source_id: str) -> None:
         """Handle source selection from sources panel.
 
         Switches the currently selected group to the selected source.
+        This emits the groups_panel.source_changed signal to trigger the change.
 
         Args:
             source_id: The source ID to switch to.
         """
-        if not self._controller:
-            return
-
         # Get the currently selected group
         group_id = self._groups_panel.selected_group_id
 
@@ -158,7 +170,8 @@ class MainWindow(QMainWindow):
                 self._groups_panel.set_selected_group(group_id)
 
         if group_id:
-            await self._controller.on_group_source_changed(group_id, source_id)
+            # Emit through groups_panel to trigger the same handler as dropdown
+            self._groups_panel.source_changed.emit(group_id, source_id)
 
     @Slot(str)
     def _on_group_selected(self, group_id: str) -> None:
@@ -167,8 +180,29 @@ class MainWindow(QMainWindow):
         Args:
             group_id: The group ID that was selected.
         """
-        # Could update properties panel or status bar here
-        pass
+        if self._state:
+            group = self._state.get_group(group_id)
+            if group:
+                self._properties_panel.set_group(group)
+
+    @Slot(str)
+    def _on_client_selected(self, client_id: str) -> None:
+        """Handle client selection from groups panel.
+
+        Args:
+            client_id: The client ID that was selected.
+        """
+        # Track selected client for state updates
+        self._selected_client_id = client_id
+
+        # Update visual selection
+        self._groups_panel.set_selected_client(client_id)
+
+        # Update properties panel
+        if self._state:
+            client = self._state.get_client(client_id)
+            if client:
+                self._properties_panel.set_client(client)
 
     @Slot(list)
     def _on_sources_changed(self, sources: list[Source]) -> None:
@@ -228,27 +262,12 @@ class MainWindow(QMainWindow):
 
         self._groups_panel.set_groups(groups, sources, clients_by_group)
 
-    @Slot(str, int)
-    async def _on_client_volume_changed(self, client_id: str, volume: int) -> None:
-        """Handle client volume change from group panel.
+        # Update properties panel if selected client was updated
+        if self._selected_client_id and self._state:
+            client = self._state.get_client(self._selected_client_id)
+            if client:
+                self._properties_panel.set_client(client)
 
-        Args:
-            client_id: The client ID.
-            volume: New volume value.
-        """
-        if self._controller:
-            await self._controller.on_client_volume_changed(client_id, volume)
-
-    @Slot(str, bool)
-    async def _on_client_mute_toggled(self, client_id: str, muted: bool) -> None:
-        """Handle client mute toggle from group panel.
-
-        Args:
-            client_id: The client ID.
-            muted: New mute state.
-        """
-        if self._controller:
-            await self._controller.on_client_mute_toggled(client_id, muted)
 
     @property
     def sources_panel(self) -> SourcesPanel:

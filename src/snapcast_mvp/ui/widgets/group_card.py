@@ -1,6 +1,6 @@
 """Group card widget - displays a group with volume control and source selection."""
 
-from PySide6.QtCore import Signal
+from PySide6.QtCore import QEvent, QObject, Signal
 from PySide6.QtGui import QMouseEvent
 from PySide6.QtWidgets import (
     QComboBox,
@@ -41,6 +41,7 @@ class GroupCard(QWidget):
     # Signals for client control (forwarded from client cards)
     client_volume_changed = Signal(str, int)  # client_id, volume
     client_mute_toggled = Signal(str, bool)  # client_id, muted
+    client_clicked = Signal(str)  # client_id
 
     def __init__(self, group: Group | None = None) -> None:
         """Initialize the group card.
@@ -102,7 +103,8 @@ class GroupCard(QWidget):
         header.setSpacing(8)
 
         self._name_label = QLabel("Group Name")
-        self._name_label.setStyleSheet("font-weight: bold; font-size: 12pt;")
+        self._name_label.setStyleSheet("font-weight: bold; font-size: 12pt; padding: 4px;")
+        self._name_label.installEventFilter(self)
         header.addWidget(self._name_label)
 
         header.addStretch()
@@ -220,6 +222,24 @@ class GroupCard(QWidget):
         super().mousePressEvent(event)
         self.clicked.emit()
 
+    def eventFilter(self, watched: QObject, event: QEvent) -> bool:  # noqa: N802
+        """Filter events from child widgets to handle clicks on name label.
+
+        Args:
+            watched: The object being watched.
+            event: The event.
+
+        Returns:
+            True if event was handled, False otherwise.
+        """
+        if (
+            event.type() == QEvent.Type.MouseButtonPress
+            and watched is self._name_label
+        ):
+            self.clicked.emit()
+            return True
+        return super().eventFilter(watched, event)
+
     def _set_selected(self, selected: bool) -> None:
         """Internal: Set the visual selection state.
 
@@ -277,6 +297,8 @@ class GroupCard(QWidget):
         """
         self._sources = sources
 
+        # Block signals to avoid triggering source_changed during initialization
+        self._source_combo.blockSignals(True)
         self._source_combo.clear()
         for source in sources:
             self._source_combo.addItem(source.name, source.id)
@@ -286,6 +308,7 @@ class GroupCard(QWidget):
             index = self._source_combo.findData(self._group.stream_id)
             if index >= 0:
                 self._source_combo.setCurrentIndex(index)
+        self._source_combo.blockSignals(False)
 
     def _on_group_mute_toggled(self, checked: bool) -> None:
         """Handle group mute toggle.
@@ -314,6 +337,22 @@ class GroupCard(QWidget):
         self._client_list.setVisible(self._expanded)
         self._expand_button.setText("▲" if self._expanded else "▼")
         self.expand_toggled.emit(self._group.id if self._group else "", self._expanded)
+
+    @property
+    def is_expanded(self) -> bool:
+        """Return whether the client list is expanded."""
+        return self._expanded
+
+    def set_expanded(self, expanded: bool) -> None:
+        """Set the expanded state without emitting signals.
+
+        Args:
+            expanded: Whether the client list should be expanded.
+        """
+        if self._expanded != expanded:
+            self._expanded = expanded
+            self._client_list.setVisible(expanded)
+            self._expand_button.setText("▲" if expanded else "▼")
 
     def set_volume(self, volume: int) -> None:
         """Set the volume for this card.
@@ -346,6 +385,8 @@ class GroupCard(QWidget):
         # Update client cards if provided
         if clients is not None:
             self._update_client_cards(clients)
+            # Update group volume slider to reflect average of connected clients
+            self._update_group_volume_from_clients(clients)
 
     def _update_client_cards(self, clients: list[Client]) -> None:
         """Internal: Update the client cards in the list.
@@ -370,12 +411,32 @@ class GroupCard(QWidget):
             # Forward client signals
             card.volume_changed.connect(self.client_volume_changed.emit)
             card.mute_toggled.connect(self.client_mute_toggled.emit)
+            card.clicked.connect(self.client_clicked.emit)
 
             self._client_cards[client.id] = card
             self._clients_layout.addWidget(card)
 
         # Update the client count label
         self._client_list_label.setText(f"Clients: ({len(clients)})")
+
+    def _update_group_volume_from_clients(self, clients: list[Client]) -> None:
+        """Update group volume slider to reflect average of connected clients.
+
+        Args:
+            clients: List of clients in this group.
+        """
+        # Calculate average volume of connected clients
+        connected_clients = [c for c in clients if c.connected]
+        if connected_clients:
+            avg_volume = sum(c.volume for c in connected_clients) // len(connected_clients)
+        elif clients:
+            # Fall back to all clients if none connected
+            avg_volume = sum(c.volume for c in clients) // len(clients)
+        else:
+            avg_volume = 50  # Default if no clients
+
+        # Update slider without emitting signal
+        self._volume_slider.set_volume(avg_volume)
 
     def update_clients(self, clients: list[Client]) -> None:
         """Update the client cards in the list (public API).
@@ -384,6 +445,8 @@ class GroupCard(QWidget):
             clients: List of clients in this group.
         """
         self._update_client_cards(clients)
+        # Also update group volume slider to reflect client volumes
+        self._update_group_volume_from_clients(clients)
 
     def set_client_volume(self, client_id: str, volume: int) -> None:
         """Update volume for a specific client card.
@@ -407,6 +470,15 @@ class GroupCard(QWidget):
         for client_id, volume in volumes.items():
             if client_id in self._client_cards:
                 self._client_cards[client_id].set_volume(volume)
+
+    def set_selected_client(self, client_id: str | None) -> None:
+        """Set which client is selected in this group.
+
+        Args:
+            client_id: The client ID to select, or None to deselect all.
+        """
+        for cid, card in self._client_cards.items():
+            card.set_selected(cid == client_id)
 
     def set_client_muted(self, client_id: str, muted: bool) -> None:
         """Update mute state for a specific client card.
@@ -463,6 +535,7 @@ class GroupCard(QWidget):
         # Forward client signals
         card.volume_changed.connect(self.client_volume_changed.emit)
         card.mute_toggled.connect(self.client_mute_toggled.emit)
+        card.clicked.connect(self.client_clicked.emit)
 
         self._client_cards[client_id] = card
         self._clients_layout.addWidget(card)

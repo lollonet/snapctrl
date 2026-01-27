@@ -123,8 +123,9 @@ class SnapcastClient:
             return
 
         try:
+            # Use larger buffer limit to handle big Server.GetStatus responses
             self._reader, self._writer = await asyncio.wait_for(
-                asyncio.open_connection(self._host, self._port),
+                asyncio.open_connection(self._host, self._port, limit=1024 * 1024),
                 timeout=self._timeout,
             )
             self._connected = True
@@ -171,6 +172,7 @@ class SnapcastClient:
             while self._connected:
                 try:
                     # Read a line (JSON-RPC messages are newline-delimited)
+                    # Buffer limit is set in open_connection() to handle large responses
                     line = await asyncio.wait_for(
                         self._reader.readline(),
                         timeout=self._timeout,
@@ -190,6 +192,13 @@ class SnapcastClient:
                     # No data for timeout period - check if still connected
                     if not self._connected:
                         break
+                except asyncio.IncompleteReadError:
+                    # Server closed connection mid-read
+                    break
+                except asyncio.LimitOverrunError as e:
+                    # Message too large even with increased limit
+                    self._emit_error(e)
+                    continue
                 except json.JSONDecodeError as e:
                     self._emit_error(e)
                 except Exception as e:
@@ -403,7 +412,7 @@ class SnapcastClient:
         """
         await self.call(
             "Group.SetStream",
-            {"id": group_id, "streamId": stream_id},
+            {"id": group_id, "stream_id": stream_id},
         )
 
 

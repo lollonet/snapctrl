@@ -2,11 +2,14 @@
 
 import logging
 import sys
+import time
 from pathlib import Path
 
+from PySide6.QtCore import QTimer
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QApplication, QMessageBox
 
+from snapcast_mvp.api.protocol import JsonRpcNotification
 from snapcast_mvp.core.discovery import ServerDiscovery
 from snapcast_mvp.core.state import StateStore
 from snapcast_mvp.core.worker import SnapcastWorker
@@ -91,17 +94,62 @@ def main() -> int:  # noqa: PLR0915
         logger.info(f"State received: {state}")
         state_store.update_from_server_state(state)  # type: ignore[arg-type]
 
+        # Reset base volumes for groups whose slider hasn't been used recently
+        # This allows external changes (from mobile app) to update the group slider
+        current_time = time.time()
+        stale_threshold = 1.0  # seconds - reset if slider inactive for this long
+
+        for group_id in list(group_base_volumes.keys()):
+            last_active = group_slider_active.get(group_id, 0)
+            if current_time - last_active > stale_threshold:
+                # Slider is stale, reset base volumes to allow external updates
+                del group_base_volumes[group_id]
+                if group_id in group_slider_start:
+                    del group_slider_start[group_id]
+
     def on_connected() -> None:
         logger.info("Connected to server")
 
     def on_error(err: object) -> None:
         logger.error(f"Error: {err}")
 
+    # Debounce timer for notifications to avoid UI flickering during volume changes
+    notification_timer: QTimer | None = None
+    pending_refresh = False
+
+    def do_refresh() -> None:
+        nonlocal pending_refresh
+        if pending_refresh:
+            pending_refresh = False
+            worker.request_status()
+
+    def on_notification(notification: object) -> None:
+        """Handle server notification by refreshing state with debounce."""
+        nonlocal notification_timer, pending_refresh
+
+        if isinstance(notification, JsonRpcNotification):
+            logger.debug(f"Server notification: {notification.method}")
+
+            # Skip volume notifications if we recently changed volume (avoid feedback loop)
+            if notification.method == "Client.OnVolumeChanged":
+                # Mark that we need a refresh but debounce it
+                pending_refresh = True
+                if notification_timer is None:
+                    notification_timer = QTimer()
+                    notification_timer.setSingleShot(True)
+                    notification_timer.timeout.connect(do_refresh)
+                # Reset timer - only refresh 300ms after last notification
+                notification_timer.start(300)
+            else:
+                # Other notifications (connect, disconnect, etc.) refresh immediately
+                worker.request_status()
+
     worker.state_received.connect(on_state_received)
     worker.connected.connect(on_connected)
     worker.disconnected.connect(state_store.clear)
     worker.connection_lost.connect(state_store.clear)
     worker.error_occurred.connect(on_error)
+    worker.notification_received.connect(on_notification)
 
     # Create main window
     window = MainWindow(state_store=state_store)
@@ -123,10 +171,14 @@ def main() -> int:  # noqa: PLR0915
     # Track base volumes for proportional group volume control
     group_base_volumes: dict[str, dict[str, int]] = {}  # group_id -> {client_id -> base_volume}
     group_slider_start: dict[str, int] = {}  # group_id -> slider start value
+    group_slider_active: dict[str, float] = {}  # group_id -> timestamp when slider was last used
 
     def on_client_volume_changed(client_id: str, volume: int) -> None:
         client = state_store.get_client(client_id)
         muted = client.muted if client else False
+        # Auto-mute at volume 0 to ensure true silence on all clients
+        if volume == 0:
+            muted = True
         logger.debug(f"Client volume: {client_id} -> {volume} (muted={muted})")
         worker.set_client_volume(client_id, volume, muted)
 
@@ -140,20 +192,25 @@ def main() -> int:  # noqa: PLR0915
         if not group:
             return
 
-        # Initialize base volumes on first interaction
+        # Mark this group's slider as active
+        group_slider_active[group_id] = time.time()
+
+        # Initialize base volumes on first interaction or after reset
         if group_id not in group_base_volumes:
             group_base_volumes[group_id] = {}
             for client_id in group.client_ids:
                 client = state_store.get_client(client_id)
                 if client:
                     group_base_volumes[group_id][client_id] = client.volume
-            group_slider_start[group_id] = 50  # Default slider position
+            # Calculate average volume as slider start position
+            volumes = list(group_base_volumes[group_id].values())
+            group_slider_start[group_id] = sum(volumes) // len(volumes) if volumes else 50
 
         start_value = group_slider_start.get(group_id, 50)
         if start_value == 0:
             start_value = 1  # Avoid division by zero
 
-        # Calculate scale factor: slider at 100 = 2x base, slider at 50 = 1x base, slider at 0 = 0x
+        # Calculate scale factor based on slider movement from start position
         scale = volume / start_value
 
         logger.debug(f"Group volume: {group_id} -> {volume} (scale={scale:.2f})")
@@ -166,6 +223,9 @@ def main() -> int:  # noqa: PLR0915
             new_volumes[client_id] = new_vol
             client = state_store.get_client(client_id)
             muted = client.muted if client else False
+            # Auto-mute at volume 0 to ensure true silence on all clients
+            if new_vol == 0:
+                muted = True
             worker.set_client_volume(client_id, new_vol, muted)
 
         # Update client sliders visually (signals blocked, no cascade)
