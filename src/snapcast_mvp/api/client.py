@@ -8,7 +8,7 @@ import asyncio
 import json
 from collections.abc import Callable
 from contextlib import suppress
-from typing import Any
+from typing import Any, cast
 
 from snapcast_mvp.api.protocol import (
     JsonRpcError,
@@ -510,6 +510,38 @@ def _parse_server_status(data: dict[str, Any]) -> ServerState:
         # Codec can come from properties (modern) or query (legacy)
         codec = properties.get("codec", {}).get("name", "") or query.get("codec", "")
 
+        # Extract metadata (track info) if available
+        metadata_raw = properties.get("metadata")
+        meta_title = ""
+        meta_artist = ""
+        meta_album = ""
+        meta_art_url = ""
+
+        if isinstance(metadata_raw, dict):
+            metadata = cast(dict[str, Any], metadata_raw)
+            # Title
+            title_val = metadata.get("title")
+            if title_val is not None:
+                meta_title = str(title_val)
+
+            # Artist (can be list or string)
+            artist_val = metadata.get("artist")
+            if isinstance(artist_val, list):
+                artist_list = cast(list[Any], artist_val)
+                meta_artist = ", ".join(str(x) for x in artist_list)
+            elif artist_val is not None:
+                meta_artist = str(artist_val)
+
+            # Album
+            album_val = metadata.get("album")
+            if album_val is not None:
+                meta_album = str(album_val)
+
+            # Art URL
+            art_url_val = metadata.get("artUrl")
+            if art_url_val is not None:
+                meta_art_url = str(art_url_val)
+
         sources.append(
             Source(
                 id=s.get("id", ""),
@@ -520,6 +552,10 @@ def _parse_server_status(data: dict[str, Any]) -> ServerState:
                 sample_format=properties.get("sampleFormat", query.get("sampleformat", "")),
                 uri_scheme=uri.get("scheme", ""),
                 uri_raw=uri.get("raw", ""),
+                meta_title=meta_title,
+                meta_artist=meta_artist,
+                meta_album=meta_album,
+                meta_art_url=meta_art_url,
             )
         )
 

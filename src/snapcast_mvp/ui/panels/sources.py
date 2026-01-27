@@ -87,11 +87,15 @@ class SourcesPanel(QWidget):
         details_layout.setSpacing(4)
 
         self._detail_status = QLabel()
+        self._detail_now_playing = QLabel()
+        self._detail_now_playing.setWordWrap(True)
+        self._detail_now_playing.setStyleSheet("color: #ffffff; font-size: 10pt;")
         self._detail_type = QLabel()
         self._detail_codec = QLabel()
         self._detail_format = QLabel()
 
         details_layout.addWidget(self._detail_status)
+        details_layout.addWidget(self._detail_now_playing)
         details_layout.addWidget(self._detail_type)
         details_layout.addWidget(self._detail_codec)
         details_layout.addWidget(self._detail_format)
@@ -141,6 +145,25 @@ class SourcesPanel(QWidget):
         else:
             self._detail_status.setText(f"Status: {status}")
         self._detail_status.setTextFormat(Qt.TextFormat.RichText)
+
+        # Now Playing (track metadata)
+        if source.has_metadata:
+            # Show title on first line, artist/album on second if available
+            if source.meta_album:
+                self._detail_now_playing.setText(
+                    f"<b>{source.meta_title}</b><br/>"
+                    f"<span style='color: #b0b0b0;'>{source.meta_artist}</span><br/>"
+                    f"<span style='color: #808080; font-style: italic;'>{source.meta_album}</span>"
+                )
+            else:
+                self._detail_now_playing.setText(
+                    f"<b>{source.meta_title}</b><br/>"
+                    f"<span style='color: #b0b0b0;'>{source.meta_artist}</span>"
+                )
+            self._detail_now_playing.setTextFormat(Qt.TextFormat.RichText)
+            self._detail_now_playing.setVisible(True)
+        else:
+            self._detail_now_playing.setVisible(False)
 
         # Type (scheme)
         scheme = source.uri_scheme or source.stream_type or "unknown"
