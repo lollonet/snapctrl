@@ -53,10 +53,14 @@ class TestClientCard:
         qtbot.addWidget(card)
         card.show()
 
+        # Connected: filled circle with green color
         assert "●" in card._status_indicator.text()
+        assert "#4CAF50" in card._status_indicator.styleSheet()  # Green
 
+        # Disconnected: filled circle with red color
         card.set_connected(False)
-        assert "○" in card._status_indicator.text()
+        assert "●" in card._status_indicator.text()
+        assert "#F44336" in card._status_indicator.styleSheet()  # Red
 
     def test_update_from_client(self, qtbot: QtBot) -> None:
         """Test updating from Client model."""
@@ -83,7 +87,9 @@ class TestClientCard:
         # When muted, slider value is 0 (stored volume is in _volume_before_mute)
         assert card._volume_slider.volume == 0
         assert card._volume_slider.is_muted
-        assert "○" in card._status_indicator.text()
+        # Disconnected: filled circle with red color
+        assert "●" in card._status_indicator.text()
+        assert "#F44336" in card._status_indicator.styleSheet()  # Red
 
     def test_update_from_client_not_muted(self, qtbot: QtBot) -> None:
         """Test updating from Client model when not muted."""

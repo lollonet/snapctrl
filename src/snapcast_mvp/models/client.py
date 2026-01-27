@@ -1,6 +1,25 @@
 """Client model representing a Snapcast audio endpoint."""
 
+import time
 from dataclasses import dataclass
+
+# Time thresholds for last_seen display (in seconds)
+_SECONDS_PER_MINUTE = 60
+_SECONDS_PER_HOUR = 3600
+_SECONDS_PER_DAY = 86400
+
+
+def _format_time_ago(seconds: int) -> str:
+    """Format seconds as human-readable time ago string."""
+    if seconds < 2:  # noqa: PLR2004
+        return "just now"
+    if seconds < _SECONDS_PER_MINUTE:
+        return f"{seconds}s ago"
+    if seconds < _SECONDS_PER_HOUR:
+        return f"{seconds // _SECONDS_PER_MINUTE}m ago"
+    if seconds < _SECONDS_PER_DAY:
+        return f"{seconds // _SECONDS_PER_HOUR}h ago"
+    return f"{seconds // _SECONDS_PER_DAY}d ago"
 
 
 @dataclass(frozen=True)
@@ -15,8 +34,13 @@ class Client:
         volume: Volume level 0-100.
         muted: Whether audio is muted.
         connected: Whether client is connected to server.
-        latency: Audio latency in milliseconds.
+        latency: Configured latency offset in milliseconds.
         snapclient_version: Version of snapclient running on client.
+        last_seen_sec: Unix timestamp (seconds) when client was last seen.
+        last_seen_usec: Microseconds part of last seen timestamp.
+        host_os: Operating system of the client device.
+        host_arch: CPU architecture of the client device.
+        host_name: Hostname of the client device.
     """
 
     id: str
@@ -28,6 +52,11 @@ class Client:
     connected: bool = True
     latency: int = 0
     snapclient_version: str = ""
+    last_seen_sec: int = 0
+    last_seen_usec: int = 0
+    host_os: str = ""
+    host_arch: str = ""
+    host_name: str = ""
 
     @property
     def display_name(self) -> str:
@@ -43,3 +72,28 @@ class Client:
     def is_connected(self) -> bool:
         """Alias for connected property."""
         return self.connected
+
+    @property
+    def last_seen_ago(self) -> str:
+        """Return human-readable time since last seen."""
+        if self.last_seen_sec == 0:
+            return "unknown"
+        delta = int(time.time()) - self.last_seen_sec
+        return _format_time_ago(delta)
+
+    @property
+    def display_system(self) -> str:
+        """Return OS and architecture for display."""
+        parts: list[str] = []
+        if self.host_os:
+            parts.append(self.host_os)
+        if self.host_arch:
+            parts.append(self.host_arch)
+        return " / ".join(parts) if parts else ""
+
+    @property
+    def display_latency(self) -> str:
+        """Return latency offset for display."""
+        if self.latency == 0:
+            return "0ms (no offset)"
+        return f"{self.latency}ms"

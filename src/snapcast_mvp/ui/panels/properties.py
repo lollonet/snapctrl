@@ -79,15 +79,45 @@ class PropertiesPanel(QWidget):
             client: Client to display.
         """
         status = "Connected" if client.connected else "Disconnected"
+        status_color = "#80ff80" if client.connected else "#ff8080"
+
+        # Build optional rows
+        rows: list[str] = []
+        rows.append(f"<tr><td><i>Host:</i></td><td>{client.host}</td></tr>")
+        rows.append(
+            f"<tr><td><i>Status:</i></td><td style='color: {status_color};'>{status}</td></tr>"
+        )
+        rows.append(f"<tr><td><i>Volume:</i></td><td>{client.volume}%</td></tr>")
+        rows.append(f"<tr><td><i>Muted:</i></td><td>{'Yes' if client.muted else 'No'}</td></tr>")
+
+        # Latency offset (configured compensation)
+        rows.append(f"<tr><td><i>Latency offset:</i></td><td>{client.display_latency}</td></tr>")
+
+        # Last seen (timing info)
+        if client.last_seen_sec > 0:
+            rows.append(f"<tr><td><i>Last seen:</i></td><td>{client.last_seen_ago}</td></tr>")
+
+        # System info
+        if client.display_system:
+            rows.append(f"<tr><td><i>System:</i></td><td>{client.display_system}</td></tr>")
+
+        # Snapclient version
+        if client.snapclient_version:
+            rows.append(f"<tr><td><i>Snapclient:</i></td><td>{client.snapclient_version}</td></tr>")
+
+        # MAC address
+        if client.mac:
+            rows.append(f"<tr><td><i>MAC:</i></td><td>{client.mac}</td></tr>")
+
+        # Client ID (less prominent at bottom)
+        rows.append(
+            f"<tr><td><i>ID:</i></td><td style='font-size: 8pt;'>{client.id[:16]}...</td></tr>"
+        )
+
         html = f"""
             <h3>{client.name or client.host}</h3>
             <table cellpadding="4">
-            <tr><td><i>ID:</i></td><td>{client.id}</td></tr>
-            <tr><td><i>Host:</i></td><td>{client.host}</td></tr>
-            <tr><td><i>Status:</i></td><td>{status}</td></tr>
-            <tr><td><i>Volume:</i></td><td>{client.volume}%</td></tr>
-            <tr><td><i>Muted:</i></td><td>{"Yes" if client.muted else "No"}</td></tr>
-            <tr><td><i>Latency:</i></td><td>{client.latency}ms</td></tr>
+            {"".join(rows)}
             </table>
         """
         self._content.setText(html)
@@ -101,12 +131,34 @@ class PropertiesPanel(QWidget):
             source: Source to display.
         """
         status = "Playing" if source.is_playing else "Idle"
+        status_color = "#80ff80" if source.is_playing else "#808080"
+
+        rows: list[str] = []
+        rows.append(
+            f"<tr><td><i>Status:</i></td><td style='color: {status_color};'>{status}</td></tr>"
+        )
+
+        # Stream type / scheme
+        scheme = source.uri_scheme or source.stream_type
+        if scheme:
+            rows.append(f"<tr><td><i>Type:</i></td><td>{scheme}</td></tr>")
+
+        # Codec
+        if source.codec:
+            rows.append(f"<tr><td><i>Codec:</i></td><td>{source.codec}</td></tr>")
+
+        # Sample format
+        fmt = source.display_format
+        if fmt:
+            rows.append(f"<tr><td><i>Format:</i></td><td>{fmt}</td></tr>")
+
+        # Stream ID
+        rows.append(f"<tr><td><i>ID:</i></td><td>{source.id}</td></tr>")
+
         html = f"""
             <h3>{source.name}</h3>
             <table cellpadding="4">
-            <tr><td><i>ID:</i></td><td>{source.id}</td></tr>
-            <tr><td><i>Status:</i></td><td>{status}</td></tr>
-            <tr><td><i>Type:</i></td><td>{source.stream_type}</td></tr>
+            {"".join(rows)}
             </table>
         """
         self._content.setText(html)
