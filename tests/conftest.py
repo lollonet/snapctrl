@@ -11,6 +11,7 @@ import pytest
 try:
     import websockets
     from websockets.server import WebSocketServerProtocol
+
     HAS_WEBSOCKETS = True
 except ImportError:
     HAS_WEBSOCKETS = False

@@ -225,3 +225,52 @@ class TestParseServerStatus:
         source = state.sources[0]
         assert source.is_playing is True
         assert source.stream_type == "flac"
+
+
+class TestSetClientMute:
+    """Tests for set_client_mute method."""
+
+    @pytest.mark.asyncio
+    async def test_set_client_mute_sends_correct_payload(self) -> None:
+        """Test that set_client_mute sends only the muted flag."""
+        client = SnapcastClient("localhost")
+        client._connected = True
+        client._writer = MagicMock()
+        client._writer.write = MagicMock()
+        client._writer.drain = AsyncMock()
+
+        # Mock call to capture the parameters
+        with patch.object(client, "call", new_callable=AsyncMock) as mock_call:
+            await client.set_client_mute("client-123", True)
+
+            mock_call.assert_called_once_with(
+                "Client.SetVolume",
+                {"id": "client-123", "volume": {"muted": True}},
+            )
+
+    @pytest.mark.asyncio
+    async def test_set_client_mute_unmute(self) -> None:
+        """Test that set_client_mute can unmute."""
+        client = SnapcastClient("localhost")
+        client._connected = True
+
+        with patch.object(client, "call", new_callable=AsyncMock) as mock_call:
+            await client.set_client_mute("client-456", False)
+
+            mock_call.assert_called_once_with(
+                "Client.SetVolume",
+                {"id": "client-456", "volume": {"muted": False}},
+            )
+
+    @pytest.mark.asyncio
+    async def test_set_client_mute_propagates_errors(self) -> None:
+        """Test that set_client_mute propagates errors from call."""
+        client = SnapcastClient("localhost")
+        client._connected = True
+
+        err = ConnectionError("Lost connection")
+        with (
+            patch.object(client, "call", new_callable=AsyncMock, side_effect=err),
+            pytest.raises(ConnectionError, match="Lost connection"),
+        ):
+            await client.set_client_mute("client-123", True)

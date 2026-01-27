@@ -1,8 +1,13 @@
 """Configuration manager using QSettings for persistent storage."""
 
+import logging
+from typing import cast
+
 from PySide6.QtCore import QSettings
 
 from snapcast_mvp.models.profile import ServerProfile
+
+logger = logging.getLogger(__name__)
 
 # Settings keys
 _KEY_SERVERS = "servers"
@@ -46,24 +51,37 @@ class ConfigManager:
         Returns:
             List of ServerProfile objects, or empty list if none saved.
         """
-        data = self._settings.value(_KEY_SERVERS, [], list)
+        raw_data = self._settings.value(_KEY_SERVERS, [], list)
         profiles: list[ServerProfile] = []
 
-        for item in data:
-            if isinstance(item, dict):
-                try:
-                    profiles.append(
-                        ServerProfile(
-                            id=item.get("id", ""),
-                            name=item.get("name", ""),
-                            host=item.get("host", ""),
-                            port=item.get("port", 1705),
-                            auto_connect=item.get("auto_connect", False),
-                        )
+        if not isinstance(raw_data, list):
+            return profiles
+
+        # Cast to list[object] after isinstance check to satisfy type checker
+        data = cast(list[object], raw_data)
+        for raw_item in data:
+            if not isinstance(raw_item, dict):
+                continue
+            # After isinstance check, we know it's a dict
+            item = cast(dict[str, object], raw_item)
+            try:
+                id_val = item.get("id", "")
+                name_val = item.get("name", "")
+                host_val = item.get("host", "")
+                port_val = item.get("port", 1705)
+                auto_val = item.get("auto_connect", False)
+                profiles.append(
+                    ServerProfile(
+                        id=str(id_val) if id_val else "",
+                        name=str(name_val) if name_val else "",
+                        host=str(host_val) if host_val else "",
+                        port=int(port_val) if isinstance(port_val, int) else 1705,
+                        auto_connect=bool(auto_val),
                     )
-                except (KeyError, TypeError):
-                    # Skip invalid entries
-                    continue
+                )
+            except (KeyError, TypeError, ValueError) as e:
+                logger.warning("Skipping invalid server profile entry: %s", e)
+                continue
 
         return profiles
 
@@ -137,7 +155,7 @@ class ConfigManager:
             Server ID string, or None if no last server.
         """
         value = self._settings.value(_KEY_LAST_SERVER, None, str)
-        return value if value else None
+        return str(value) if value else None
 
     def set_last_server_id(self, server_id: str) -> None:
         """Set the last connected server ID.

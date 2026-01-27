@@ -86,15 +86,21 @@ class VolumeSlider(QWidget):
         if self._muted:
             # Save current volume and mute
             self._volume_before_mute = self._slider.value()
+            self._slider.blockSignals(True)
             self._slider.setValue(0)
+            self._slider.blockSignals(False)
+            self._volume_label.setText("M")
             self._mute_button.setText("🔇")
         else:
             # Restore volume and unmute
+            self._slider.blockSignals(True)
             self._slider.setValue(self._volume_before_mute)
+            self._slider.blockSignals(False)
+            self._volume_label.setText(f"{self._volume_before_mute}%")
             self._mute_button.setText("🔊")
 
+        # Only emit mute_toggled - the handler should use the stored volume
         self.mute_toggled.emit(self._muted)
-        self.volume_changed.emit(self._volume_before_mute if not self._muted else 0)
 
     @property
     def volume(self) -> int:
@@ -129,7 +135,7 @@ class VolumeSlider(QWidget):
             self._slider.blockSignals(False)
 
     def set_muted(self, muted: bool) -> None:
-        """Set the mute state.
+        """Set the mute state without emitting signals (for external updates).
 
         Args:
             muted: Whether to mute.
@@ -153,32 +159,27 @@ class VolumeSlider(QWidget):
             self._volume_label.setText(f"{self._volume_before_mute}%")
             self._mute_button.setText("🔊")
 
-        self.mute_toggled.emit(muted)
-        self.volume_changed.emit(0 if muted else self._volume_before_mute)
-
     def set_volume_and_mute(self, volume: int, muted: bool) -> None:
-        """Set both volume and mute state atomically.
+        """Set both volume and mute state atomically without emitting signals.
+
+        Used for external state updates (e.g., from server).
 
         Args:
             volume: Volume value.
             muted: Whether to mute.
         """
         self._muted = muted
+        self._volume_before_mute = volume
 
         if muted:
-            self._volume_before_mute = volume
             self._slider.blockSignals(True)
             self._slider.setValue(0)
             self._slider.blockSignals(False)
             self._volume_label.setText("M")
             self._mute_button.setText("🔇")
         else:
-            self._volume_before_mute = volume
             self._slider.blockSignals(True)
             self._slider.setValue(volume)
             self._slider.blockSignals(False)
             self._volume_label.setText(f"{volume}%")
             self._mute_button.setText("🔊")
-
-        self.mute_toggled.emit(muted)
-        self.volume_changed.emit(volume if not muted else 0)

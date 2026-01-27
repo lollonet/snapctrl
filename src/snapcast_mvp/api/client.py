@@ -364,6 +364,24 @@ class SnapcastClient:
             },
         )
 
+    async def set_client_mute(self, client_id: str, muted: bool) -> None:
+        """Set client mute state only (Client.SetVolume with muted only).
+
+        This sends only the muted flag without changing the volume value.
+        Use this when toggling mute to avoid sending redundant volume data.
+
+        Args:
+            client_id: ID of the client.
+            muted: Whether client is muted.
+        """
+        await self.call(
+            "Client.SetVolume",
+            {
+                "id": client_id,
+                "volume": {"muted": muted},
+            },
+        )
+
     async def set_group_mute(self, group_id: str, muted: bool) -> None:
         """Set group mute state (Group.SetMute).
 

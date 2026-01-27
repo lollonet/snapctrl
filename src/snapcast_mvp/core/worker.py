@@ -103,6 +103,30 @@ class SnapcastWorker(QThread):
                 self._loop,
             )
 
+    def set_client_mute(self, client_id: str, muted: bool) -> None:
+        """Set client mute state only (without changing volume).
+
+        Thread-safe call from main thread. Errors are emitted via error_occurred signal.
+
+        Args:
+            client_id: ID of the client.
+            muted: Whether muted.
+        """
+        if self._loop and self._loop.is_running() and self._client:
+            asyncio.run_coroutine_threadsafe(
+                self._safe_set_client_mute(client_id, muted),
+                self._loop,
+            )
+
+    async def _safe_set_client_mute(self, client_id: str, muted: bool) -> None:
+        """Set client mute with error handling."""
+        if not self._client or not self._client.is_connected:
+            return
+        try:
+            await self._client.set_client_mute(client_id, muted)
+        except Exception as e:
+            self.error_occurred.emit(e)
+
     def set_group_mute(self, group_id: str, muted: bool) -> None:
         """Set group mute state.
 
