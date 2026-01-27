@@ -202,6 +202,16 @@ class GroupsPanel(QWidget):
         if group_id in self._group_cards:
             self._group_cards[group_id].set_client_volume(client_id, volume)
 
+    def set_all_client_volumes(self, group_id: str, volumes: dict[str, int]) -> None:
+        """Update volumes for all clients in a group (visual follow for group slider).
+
+        Args:
+            group_id: ID of the group.
+            volumes: Dict mapping client_id -> volume (0-100).
+        """
+        if group_id in self._group_cards:
+            self._group_cards[group_id].set_all_client_volumes(volumes)
+
     def set_client_muted(self, group_id: str, client_id: str, muted: bool) -> None:
         """Update mute state for a specific client card.
 

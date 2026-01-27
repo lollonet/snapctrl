@@ -395,6 +395,19 @@ class GroupCard(QWidget):
         if client_id in self._client_cards:
             self._client_cards[client_id].set_volume(volume)
 
+    def set_all_client_volumes(self, volumes: dict[str, int]) -> None:
+        """Update volumes for all client cards (visual follow for group slider).
+
+        This updates the visual display without emitting signals.
+        Use when the group slider moves to show clients following.
+
+        Args:
+            volumes: Dict mapping client_id -> volume (0-100).
+        """
+        for client_id, volume in volumes.items():
+            if client_id in self._client_cards:
+                self._client_cards[client_id].set_volume(volume)
+
     def set_client_muted(self, client_id: str, muted: bool) -> None:
         """Update mute state for a specific client card.
 

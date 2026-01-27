@@ -143,15 +143,18 @@ def main() -> int:  # noqa: PLR0915
 
         logger.debug(f"Group volume: {group_id} -> {volume} (scale={scale:.2f})")
 
-        # Apply proportional volume to all clients
-        # Note: We don't update client slider UI here - the server will send
-        # notifications when volumes change and the UI will update reactively.
+        # Calculate new volumes and update both UI and server
+        new_volumes: dict[str, int] = {}
         for client_id in group.client_ids:
             base_vol = group_base_volumes[group_id].get(client_id, 50)
             new_vol = min(100, max(0, int(base_vol * scale)))
+            new_volumes[client_id] = new_vol
             client = state_store.get_client(client_id)
             muted = client.muted if client else False
             worker.set_client_volume(client_id, new_vol, muted)
+
+        # Update client sliders visually (signals blocked, no cascade)
+        window.groups_panel.set_all_client_volumes(group_id, new_volumes)
 
     def on_group_mute_toggled(group_id: str, muted: bool) -> None:
         logger.debug(f"Group mute: {group_id} -> {muted}")
