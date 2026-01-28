@@ -181,7 +181,24 @@ class StateStore(QObject):
 
         self._groups = new_groups
         self._clients = new_clients
-        self._sources = new_sources
+
+        # Merge sources: preserve metadata we've added (from MpdMonitor etc.)
+        # when Snapcast server sends updates with empty metadata
+        merged_sources: dict[str, Source] = {}
+        for source_id, new_source in new_sources.items():
+            old_source = self._sources.get(source_id)
+            if old_source and old_source.has_metadata and not new_source.has_metadata:
+                # Preserve our metadata if server sends empty metadata
+                merged_sources[source_id] = replace(
+                    new_source,
+                    meta_title=old_source.meta_title,
+                    meta_artist=old_source.meta_artist,
+                    meta_album=old_source.meta_album,
+                    meta_art_url=old_source.meta_art_url,
+                )
+            else:
+                merged_sources[source_id] = new_source
+        self._sources = merged_sources
 
         # Now emit signals (handlers can safely read any property)
         if groups_changed:
@@ -191,7 +208,7 @@ class StateStore(QObject):
             self.clients_changed.emit(state.clients)
 
         if sources_changed:
-            self.sources_changed.emit(state.sources)
+            self.sources_changed.emit(list(merged_sources.values()))
 
         # Emit connection state if changed (including initial connection)
         if connection_changed:

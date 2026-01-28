@@ -74,6 +74,13 @@ class SourcesPanel(QWidget):
         # Pending fallback art result (data, mime_type, source)
         self._pending_fallback_art: tuple[bytes, str, str] | None = None
 
+        # Flag to cancel fallback when valid art arrives
+        self._art_loaded: bool = False
+
+        # Generation counter to cancel stale fallback requests
+        self._fallback_generation: int = 0
+        self._pending_fallback_generation: int = 0
+
         # Fallback album art provider chain: iTunes -> MusicBrainz
         self._art_provider = FallbackAlbumArtProvider(
             [
@@ -242,7 +249,16 @@ class SourcesPanel(QWidget):
         """
         if not self._current_artist:
             self._show_album_art_placeholder()
+            self._art_loaded = False
             return
+
+        # Skip if valid art already loaded (don't overwrite with fallback)
+        if self._art_loaded:
+            return
+
+        # Increment generation to invalidate any pending fallback requests
+        self._fallback_generation += 1
+        current_generation = self._fallback_generation
 
         # Show placeholder while fetching
         self._show_album_art_placeholder()
@@ -258,8 +274,9 @@ class SourcesPanel(QWidget):
             try:
                 art = loop.run_until_complete(self._art_provider.fetch(artist, album, title))
                 if art and art.is_valid:
-                    # Store result and schedule UI update on main thread
+                    # Store result with generation and schedule UI update on main thread
                     self._pending_fallback_art = (art.data, art.mime_type, art.source)
+                    self._pending_fallback_generation = current_generation
                     QTimer.singleShot(0, self._apply_fallback_art)
             except Exception as e:  # noqa: BLE001
                 logger.debug("Fallback album art failed: %s", e)
@@ -273,6 +290,22 @@ class SourcesPanel(QWidget):
     def _apply_fallback_art(self) -> None:
         """Apply fallback album art to UI (called on main thread)."""
         if self._pending_fallback_art is None:
+            return
+
+        # Skip if this is a stale request (new fallback was started)
+        if self._pending_fallback_generation != self._fallback_generation:
+            self._pending_fallback_art = None
+            logger.debug(
+                "Skipping stale fallback art (gen %d != %d)",
+                self._pending_fallback_generation,
+                self._fallback_generation,
+            )
+            return
+
+        # Skip if valid art already loaded (prevents race condition)
+        if self._art_loaded:
+            self._pending_fallback_art = None
+            logger.debug("Skipping fallback art - valid art already loaded")
             return
 
         data, _mime_type, source = self._pending_fallback_art
@@ -385,6 +418,8 @@ class SourcesPanel(QWidget):
                     }
                 """)
                 self._pending_art_url = ""
+                # Mark art as loaded to prevent fallback overwriting
+                self._art_loaded = True
                 logger.debug("Loaded album art from %s (%d bytes)", url, len(image_data))
                 return
 
@@ -433,6 +468,8 @@ class SourcesPanel(QWidget):
                     border-radius: 4px;
                 }
             """)
+            # Mark art as loaded to prevent fallback overwriting
+            self._art_loaded = True
             return True
         except (ValueError, binascii.Error) as e:
             logger.debug("Invalid album art data URI format: %s", e)
@@ -535,9 +572,14 @@ class SourcesPanel(QWidget):
             if source.id == current_id:
                 selected_item = item
 
-        # Restore selection
+        # Restore selection and refresh details
         if selected_item:
             self._list.setCurrentItem(selected_item)
+            # Force refresh details in case source data changed (e.g., art_url updated)
+            if current_id:
+                source = self._get_source_by_id(current_id)
+                if source:
+                    self._update_details(source)
 
     def clear_sources(self) -> None:
         """Clear all sources from the list."""

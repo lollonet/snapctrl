@@ -302,14 +302,7 @@ def main() -> int:  # noqa: PLR0915
                 meta_artist=track.display_artist,
                 meta_album=track.album,
             )
-        else:
-            # Clear metadata when stopped
-            state_store.update_source_metadata(
-                mpd_source.id,
-                meta_title="",
-                meta_artist="",
-                meta_album="",
-            )
+        # Don't clear metadata when stopped - keep last known track info
 
     def on_mpd_art_changed(uri: str, data: bytes, mime_type: str) -> None:
         """Handle album art from MPD."""
@@ -329,12 +322,22 @@ def main() -> int:  # noqa: PLR0915
 
         logger.debug(f"MPD album art: {len(data)} bytes for {uri}")
 
-        # Update source metadata with art URL
+        # Get CURRENT metadata from state store (might have been updated by track_changed)
+        current_source = state_store.find_source_by_name("MPD")
+        if current_source:
+            meta_title = current_source.meta_title
+            meta_artist = current_source.meta_artist
+            meta_album = current_source.meta_album
+        else:
+            meta_title = mpd_source.meta_title
+            meta_artist = mpd_source.meta_artist
+            meta_album = mpd_source.meta_album
+
         state_store.update_source_metadata(
             mpd_source.id,
-            meta_title=mpd_source.meta_title,
-            meta_artist=mpd_source.meta_artist,
-            meta_album=mpd_source.meta_album,
+            meta_title=meta_title,
+            meta_artist=meta_artist,
+            meta_album=meta_album,
             meta_art_url=data_uri,
         )
 
