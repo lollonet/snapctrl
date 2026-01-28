@@ -343,11 +343,71 @@ class MpdClient:
                 return None
             raise
 
+    async def _fetch_full_art(
+        self,
+        fetch_func: str,
+        uri: str,
+    ) -> MpdAlbumArt | None:
+        """Fetch complete album art, handling chunked responses.
+
+        MPD returns album art in chunks (default 8KB). This method
+        fetches all chunks and concatenates them.
+
+        Args:
+            fetch_func: Command name ("readpicture" or "albumart").
+            uri: The file URI to get art for.
+
+        Returns:
+            Complete MpdAlbumArt if available, None otherwise.
+        """
+        # Fetch first chunk to get total size
+        try:
+            header_lines, data = await self._binary_command(fetch_func, uri, "0")
+            if not data:
+                return None
+        except MpdError as e:
+            if e.code == MPD_ERROR_NO_EXIST:
+                return None
+            raise
+
+        # Parse header for total size and mime type
+        art = parse_binary_response(header_lines, data, uri)
+        if not art or not art.is_valid:
+            return None
+
+        # If we have all the data, return it
+        if art.size <= len(art.data):
+            return art
+
+        # Need to fetch more chunks
+        all_data = bytearray(art.data)
+        offset = len(art.data)
+
+        while offset < art.size:
+            try:
+                _, chunk = await self._binary_command(fetch_func, uri, str(offset))
+                if not chunk:
+                    break
+                all_data.extend(chunk)
+                offset += len(chunk)
+            except MpdError:
+                break
+
+        # Return complete art with all data
+        return MpdAlbumArt(
+            uri=art.uri,
+            data=bytes(all_data),
+            mime_type=art.mime_type,
+            size=art.size,
+        )
+
     async def get_album_art(self, uri: str) -> MpdAlbumArt | None:
         """Get album art, trying readpicture first, then albumart.
 
         This is the recommended method to get album art as it tries
         embedded art first (more reliable) then folder art.
+
+        Handles chunked responses - MPD returns art in 8KB chunks.
 
         Args:
             uri: The file URI to get art for.
@@ -356,12 +416,12 @@ class MpdClient:
             MpdAlbumArt if available from either source, None otherwise.
         """
         # Try embedded art first (more reliable)
-        art = await self.readpicture(uri)
+        art = await self._fetch_full_art("readpicture", uri)
         if art and art.is_valid:
             return art
 
         # Fall back to folder art
-        art = await self.albumart(uri)
+        art = await self._fetch_full_art("albumart", uri)
         if art and art.is_valid:
             return art
 

@@ -274,6 +274,43 @@ class TestMpdClientAlbumArt:
                 assert art is not None
                 assert art.is_valid
 
+    @pytest.mark.asyncio
+    async def test_get_album_art_chunked(self, mock_connection) -> None:
+        """Test get_album_art handles chunked responses (large images)."""
+        # Simulate a large image that comes in 3 chunks
+        chunk1 = b"\xff\xd8\xff" + b"A" * 100  # First chunk
+        chunk2 = b"B" * 100  # Second chunk
+        chunk3 = b"C" * 50  # Third chunk (smaller, last)
+        total_size = len(chunk1) + len(chunk2) + len(chunk3)
+
+        responses = [
+            b"OK MPD 0.23.5\n",
+            # First chunk with total size
+            f"size: {total_size}\ntype: image/jpeg\nbinary: {len(chunk1)}\n".encode()
+            + chunk1
+            + b"\nOK\n",
+            # Second chunk
+            f"size: {total_size}\ntype: image/jpeg\nbinary: {len(chunk2)}\n".encode()
+            + chunk2
+            + b"\nOK\n",
+            # Third chunk
+            f"size: {total_size}\ntype: image/jpeg\nbinary: {len(chunk3)}\n".encode()
+            + chunk3
+            + b"\nOK\n",
+        ]
+        reader, writer = mock_connection(responses)
+
+        with patch("asyncio.open_connection", return_value=(reader, writer)):
+            async with MpdClient("localhost") as client:
+                art = await client.get_album_art("music/test.mp3")
+
+                assert art is not None
+                assert art.is_valid
+                assert art.size == total_size
+                assert len(art.data) == total_size
+                assert art.data == chunk1 + chunk2 + chunk3
+                assert art.mime_type == "image/jpeg"
+
 
 class TestMpdClientPlayback:
     """Tests for playback control commands."""
