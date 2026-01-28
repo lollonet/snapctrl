@@ -262,6 +262,8 @@ def main() -> int:  # noqa: PLR0915
     window.groups_panel.volume_changed.connect(on_group_volume_changed)
     window.groups_panel.mute_toggled.connect(on_group_mute_toggled)
     window.groups_panel.source_changed.connect(on_source_changed)
+    window.groups_panel.client_rename_requested.connect(worker.rename_client)
+    window.groups_panel.group_rename_requested.connect(worker.rename_group)
 
     # Set up ping monitor for network RTT measurement
     ping_monitor = PingMonitor(interval_sec=15.0)

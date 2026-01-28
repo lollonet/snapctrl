@@ -421,6 +421,30 @@ class SnapcastClient:
             {"id": group_id, "stream_id": stream_id},
         )
 
+    async def set_client_name(self, client_id: str, name: str) -> None:
+        """Set client name (Client.SetName).
+
+        Args:
+            client_id: ID of the client.
+            name: New display name.
+        """
+        await self.call(
+            "Client.SetName",
+            {"id": client_id, "name": name},
+        )
+
+    async def set_group_name(self, group_id: str, name: str) -> None:
+        """Set group name (Group.SetName).
+
+        Args:
+            group_id: ID of the group.
+            name: New display name.
+        """
+        await self.call(
+            "Group.SetName",
+            {"id": group_id, "name": name},
+        )
+
 
 def _parse_server_status(data: dict[str, Any]) -> ServerState:
     """Parse Server.GetStatus response into ServerState.
