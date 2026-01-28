@@ -14,6 +14,8 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+      - name: Verify spec file exists
+        run: test -f SnapCTRL.spec
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
@@ -39,6 +41,8 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+      - name: Verify spec file exists
+        run: Test-Path SnapCTRL-windows.spec -ErrorAction Stop
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
@@ -66,6 +70,8 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+      - name: Verify spec file exists
+        run: test -f SnapCTRL-linux.spec
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
