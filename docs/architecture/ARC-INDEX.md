@@ -2,10 +2,14 @@
 
 | ID | Title | Status |
 |----|-------|--------|
-| [ARC-001](ARC-001.context.md) | System Context | Draft |
+| [ARC-001](ARC-001.context.md) | System Context | Done |
 
-## TODO
-- [ ] ARC-002: Component Architecture
-- [ ] ARC-003: Data Flow
-- [ ] ARC-004: Error Handling
-- [ ] ARC-005: Threading Model
+## Related Documents
+
+- [02-ARCHITECTURE.md](../02-ARCHITECTURE.md) - Component architecture and data flow
+- [03-DATA-MODELS.md](../03-DATA-MODELS.md) - Data models and state management
+
+## Planned
+
+- [ ] ARC-002: Error Handling Strategy
+- [ ] ARC-003: Threading Model (QThread + asyncio)

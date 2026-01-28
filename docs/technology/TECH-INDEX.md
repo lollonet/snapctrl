@@ -2,9 +2,10 @@
 
 | ID | Title | Status |
 |----|-------|--------|
-| [TECH-001](../technology/TECH-001.runtime.md) | Runtime Technology Stack | Draft |
+| [TECH-001](TECH-001.runtime.md) | Runtime Technology Stack | Done |
 
-## TODO
-- [ ] TECH-002: Build & Packaging
-- [ ] TECH-003: Testing Infrastructure
-- [ ] TECH-004: CI/CD Pipeline
+## Related Documents
+
+- [BUILDING.md](../BUILDING.md) - Build & packaging instructions
+- [07-TESTING.md](../07-TESTING.md) - Testing strategy
+- [06-INFRASTRUCTURE.md](../06-INFRASTRUCTURE.md) - CI/CD pipeline
