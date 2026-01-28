@@ -2,6 +2,7 @@
 
 > Native desktop controller for Snapcast multi-room audio systems.
 
+[![SnapForge](https://img.shields.io/badge/part%20of-SnapForge-blue)](https://github.com/lollonet/snapforge)
 [![Python](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![Qt](https://img.shields.io/badge/Qt-6.8+-green.svg)](https://www.qt.io/)
 [![CI](https://github.com/lollonet/snapctrl/actions/workflows/ci.yml/badge.svg)](https://github.com/lollonet/snapctrl/actions/workflows/ci.yml)
@@ -21,15 +22,18 @@ SnapCTRL is a cross-platform desktop application that provides an intuitive GUI 
 
 ### Current Status
 
-| Component        | Status                     | Tests         |
-| ---------------- | -------------------------- | ------------- |
-| Data Models      | ✅ Complete                 | 100%          |
-| TCP API Client   | ✅ Complete                 | 127 tests     |
-| State Management | ✅ Complete                 | 20 tests      |
-| UI Widgets       | ✅ Complete                 | 58 tests      |
-| UI Panels        | ✅ Complete                 | -             |
-| Integration      | ✅ Complete                 | 20 tests      |
-| **Total**        | **UI Foundation Complete** | **225 tests** |
+| Component        | Status       |
+| ---------------- | ------------ |
+| Data Models      | ✅ Complete   |
+| TCP API Client   | ✅ Complete   |
+| State Management | ✅ Complete   |
+| UI Widgets       | ✅ Complete   |
+| UI Panels        | ✅ Complete   |
+| MPD Integration  | ✅ Complete   |
+| Album Art        | ✅ Complete   |
+| Integration      | ✅ Complete   |
+
+Run `pytest tests/ -v` for current test count (300+ tests).
 
 ## Requirements
 
@@ -54,7 +58,10 @@ pip install -e .
 ## Usage
 
 ```bash
-# Run the application
+# Run the application (after pip install)
+snapctrl
+
+# Or run as Python module
 python -m snapcast_mvp
 ```
 
