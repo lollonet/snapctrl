@@ -4,8 +4,9 @@ import base64
 import binascii
 import logging
 
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import Qt, QUrl, Signal
 from PySide6.QtGui import QPixmap
+from PySide6.QtNetwork import QNetworkAccessManager, QNetworkReply, QNetworkRequest
 from PySide6.QtWidgets import (
     QFrame,
     QHBoxLayout,
@@ -50,6 +51,11 @@ class SourcesPanel(QWidget):
         """Initialize the sources panel."""
         super().__init__()
         self._sources: list[Source] = []
+
+        # Network manager for fetching HTTP album art
+        self._network_manager = QNetworkAccessManager(self)
+        self._network_manager.finished.connect(self._on_http_art_finished)
+        self._pending_art_url: str = ""  # Track pending request
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -195,15 +201,94 @@ class SourcesPanel(QWidget):
         Args:
             art_url: Album art URL (data URI or http URL).
         """
-        if not art_url or not art_url.startswith("data:"):
+        if not art_url:
             self._show_album_art_placeholder()
             return
 
-        if self._load_data_uri_image(art_url):
+        # Handle data URIs
+        if art_url.startswith("data:"):
+            if self._load_data_uri_image(art_url):
+                return
+            self._show_album_art_placeholder()
             return
 
-        # Failed to load - show placeholder
+        # Handle HTTP/HTTPS URLs
+        if art_url.startswith(("http://", "https://")):
+            self._fetch_http_art(art_url)
+            return
+
+        # Unknown URL scheme
+        logger.debug("Unsupported album art URL scheme: %s", art_url[:50])
         self._show_album_art_placeholder()
+
+    def _fetch_http_art(self, url: str) -> None:
+        """Fetch album art from HTTP URL.
+
+        Args:
+            url: HTTP/HTTPS URL to fetch.
+        """
+        # Skip if already fetching this URL
+        if url == self._pending_art_url:
+            return
+
+        self._pending_art_url = url
+        request = QNetworkRequest(QUrl(url))
+        self._network_manager.get(request)
+        logger.debug("Fetching album art from: %s", url)
+
+    def _on_http_art_finished(self, reply: QNetworkReply) -> None:
+        """Handle completed HTTP album art request.
+
+        Args:
+            reply: The network reply containing image data.
+        """
+        url = reply.url().toString()
+
+        # Check for errors
+        if reply.error() != QNetworkReply.NetworkError.NoError:
+            logger.warning("Failed to fetch album art from %s: %s", url, reply.errorString())
+            if url == self._pending_art_url:
+                self._show_album_art_placeholder()
+                self._pending_art_url = ""
+            reply.deleteLater()
+            return
+
+        # Only process if this is still the current request
+        if url != self._pending_art_url:
+            reply.deleteLater()
+            return
+
+        # Load the image
+        image_data = reply.readAll().data()
+        reply.deleteLater()
+
+        if not image_data:
+            self._show_album_art_placeholder()
+            self._pending_art_url = ""
+            return
+
+        pixmap = QPixmap()
+        if not pixmap.loadFromData(image_data):
+            logger.warning("Failed to decode album art from %s", url)
+            self._show_album_art_placeholder()
+            self._pending_art_url = ""
+            return
+
+        # Display the image
+        scaled = pixmap.scaled(
+            ALBUM_ART_SIZE,
+            ALBUM_ART_SIZE,
+            Qt.AspectRatioMode.KeepAspectRatio,
+            Qt.TransformationMode.SmoothTransformation,
+        )
+        self._album_art.setPixmap(scaled)
+        self._album_art.setStyleSheet("""
+            QLabel {
+                border-radius: 4px;
+            }
+        """)
+        self._pending_art_url = ""
+        logger.debug("Loaded album art from %s (%d bytes)", url, len(image_data))
 
     def _load_data_uri_image(self, art_url: str) -> bool:
         """Load image from data URI.
