@@ -26,7 +26,7 @@ The app MUST display the current state of the Snapcast server.
 - [ ] Show each client's name, host, and online status
 - [ ] Display available audio sources
 - [ ] Show which source each group is playing
-- [ ] Update in real-time via WebSocket notifications
+- [ ] Update in real-time via TCP notifications
 
 **Priority:** P0 (MVP)
 **Domain:** Display
@@ -192,14 +192,14 @@ The app MUST provide a system tray icon.
 
 | ID | Title | Priority | Domain | Status |
 |----|-------|----------|--------|--------|
-| REQ-001 | Server Connection | P0 | Connection | Draft |
-| REQ-002 | Server State Display | P0 | Display | Draft |
-| REQ-003 | Group Volume Control | P0 | Control | Draft |
-| REQ-004 | Client Volume Control | P1 | Control | Draft |
-| REQ-005 | Source Switching | P0 | Control | Draft |
-| REQ-006 | Client Details View | P1 | Display | Draft |
+| REQ-001 | Server Connection | P0 | Connection | Done |
+| REQ-002 | Server State Display | P0 | Display | Done |
+| REQ-003 | Group Volume Control | P0 | Control | Done |
+| REQ-004 | Client Volume Control | P1 | Control | Done |
+| REQ-005 | Source Switching | P0 | Control | Done |
+| REQ-006 | Client Details View | P1 | Display | Done |
 | REQ-007 | Connection Profiles | P1 | Connection | Draft |
-| REQ-008 | Auto-Reconnection | P1 | Connection | Draft |
+| REQ-008 | Auto-Reconnection | P1 | Connection | Done |
 | REQ-009 | System Theme Support | P1 | UI/UX | Draft |
 | REQ-010 | System Tray Integration | P1 | UI/UX | Draft |
 

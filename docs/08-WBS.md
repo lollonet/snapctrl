@@ -106,17 +106,18 @@
 
 ---
 
-### Week 10: MPD Integration (Current)
+### Week 10: MPD Integration
 | Task | Estimate | Status |
 |------|----------|--------|
-| MPD async client module | 1d | 📦 |
-| Track metadata fetching (currentsong, status) | 0.5d | 📦 |
-| Album art fetching (albumart, readpicture) | 0.5d | 📦 |
-| MPD monitor Qt integration | 0.5d | 📦 |
-| Integration with SourcesPanel | 0.5d | 📦 |
-| Tests | 1d | 📦 |
+| MPD async client module | 1d | ✅ |
+| Track metadata fetching (currentsong, status) | 0.5d | ✅ |
+| Album art fetching (albumart, readpicture) | 0.5d | ✅ |
+| MPD monitor Qt integration | 0.5d | ✅ |
+| Integration with SourcesPanel | 0.5d | ✅ |
+| Album art fallback (iTunes, MusicBrainz) | 0.5d | ✅ |
+| Tests | 1d | ✅ |
 
-**Deliverable:** MPD track metadata + cover art in sources panel
+**Deliverable:** MPD track metadata + cover art in sources panel ✅
 
 ---
 
@@ -210,11 +211,12 @@
 
 **Current Progress:** 10 of 16 weeks complete (62%)
 
-**Test Coverage:** 231 tests passing
-- 127 unit tests
-- 24 integration tests
-- 58 UI tests
-- 22 live server tests
+**Test Coverage:** 360 tests passing
+- Models, protocol, API: 150+ tests
+- Integration tests: 30+ tests
+- UI tests: 60+ tests
+- Live server tests: 20+ tests
+- MPD/album art tests: 17+ tests
 
 ---
 
