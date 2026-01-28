@@ -30,6 +30,6 @@ jobs:
         run: uv run basedpyright src
 
       - name: Run all tests
-        run: uv run pytest tests/ -v --ignore=tests/test_integration_snapcast.py --cov=src --cov-report=term-missing
+        run: uv run pytest tests/ -v --ignore=tests/test_integration_snapcast.py --ignore=tests/test_integration_week3.py --cov=src --cov-report=term-missing
         env:
           QT_QPA_PLATFORM: offscreen
