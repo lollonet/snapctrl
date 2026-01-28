@@ -82,7 +82,7 @@ Snapcast is a powerful multi-room audio solution, but controlling it typically r
 ## Non-Negotiables
 
 1. **Native look and feel** on each platform
-2. **Real-time updates** via WebSocket
+2. **Real-time updates** via TCP (JSON-RPC)
 3. **Offline graceful degradation** (show last known state)
 4. **Type-safe** codebase (strict type checking)
 5. **Test coverage** ≥ 70% for core modules

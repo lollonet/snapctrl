@@ -11,7 +11,7 @@ Layout:
 from typing import TYPE_CHECKING
 
 from PySide6.QtCore import Slot
-from PySide6.QtWidgets import QHBoxLayout, QMainWindow, QSplitter, QWidget
+from PySide6.QtWidgets import QHBoxLayout, QLabel, QMainWindow, QSplitter, QWidget
 
 from snapcast_mvp.core.state import StateStore
 from snapcast_mvp.models.client import Client
@@ -106,6 +106,15 @@ class MainWindow(QMainWindow):
 
         # Add splitter to main layout
         main_layout.addWidget(splitter)
+
+        # Connection status bar
+        self._status_label = QLabel("Connecting...")
+        self._status_label.setStyleSheet(
+            "background-color: #555555; color: #ffffff; padding: 4px 8px;"
+            " font-size: 9pt; border-radius: 2px;"
+        )
+        self.statusBar().addPermanentWidget(self._status_label)
+        self.statusBar().setStyleSheet("background-color: #1e1e1e;")
 
     def _setup_style(self) -> None:
         """Set up basic styling."""
@@ -304,6 +313,28 @@ class MainWindow(QMainWindow):
             if client:
                 rtt = results.get(self._selected_client_id)
                 self._properties_panel.set_client(client, network_rtt=rtt)
+
+    def set_connection_status(self, connected: bool, message: str = "") -> None:
+        """Update the connection status indicator.
+
+        Args:
+            connected: Whether the server is connected.
+            message: Optional status message.
+        """
+        if connected:
+            text = message or "Connected"
+            self._status_label.setText(text)
+            self._status_label.setStyleSheet(
+                "background-color: #2d5a2d; color: #80ff80; padding: 4px 8px;"
+                " font-size: 9pt; border-radius: 2px;"
+            )
+        else:
+            text = message or "Disconnected"
+            self._status_label.setText(text)
+            self._status_label.setStyleSheet(
+                "background-color: #5a2d2d; color: #ff8080; padding: 4px 8px;"
+                " font-size: 9pt; border-radius: 2px;"
+            )
 
     def get_ping_result(self, client_id: str) -> float | None:
         """Get ping RTT for a client.

@@ -114,6 +114,15 @@ def main() -> int:  # noqa: PLR0915
 
     def on_connected() -> None:
         logger.info("Connected to server")
+        window.set_connection_status(True, "Connected")
+
+    def on_disconnected() -> None:
+        logger.warning("Disconnected from server")
+        window.set_connection_status(False, "Disconnected - reconnecting...")
+
+    def on_connection_lost() -> None:
+        logger.warning("Connection lost")
+        window.set_connection_status(False, "Connection lost - reconnecting...")
 
     def on_error(err: object) -> None:
         logger.error(f"Error: {err}")
@@ -152,7 +161,9 @@ def main() -> int:  # noqa: PLR0915
     worker.state_received.connect(on_state_received)
     worker.connected.connect(on_connected)
     worker.disconnected.connect(state_store.clear)
+    worker.disconnected.connect(on_disconnected)
     worker.connection_lost.connect(state_store.clear)
+    worker.connection_lost.connect(on_connection_lost)
     worker.error_occurred.connect(on_error)
     worker.notification_received.connect(on_notification)
 

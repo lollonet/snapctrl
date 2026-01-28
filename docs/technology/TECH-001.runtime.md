@@ -10,7 +10,7 @@
 |-----------|-----------|---------|-----------|
 | **Language** | Python | 3.11+ | Rapid development, Qt bindings |
 | **UI Framework** | PySide6 | 6.8+ | Official Qt6 bindings, LGPL |
-| **Networking** | websockets | 14.0+ | Async WebSocket, JSON-RPC |
+| **Networking** | asyncio TCP | - | Async TCP sockets, JSON-RPC |
 | **Threading** | QThread + asyncio | - | Non-blocking I/O in Qt |
 | **Config** | QSettings | - | Native platform storage |
 
@@ -33,7 +33,7 @@ SnapCTRL
 │   ├── QtCore (signals, threads)
 │   ├── QtGui (icons, styling)
 │   └── QtWidgets (UI widgets)
-├── websockets (async WebSocket client)
+├── asyncio (async TCP client, stdlib)
 └── (dev dependencies)
     ├── pytest
     ├── pytest-qt
@@ -56,4 +56,4 @@ SnapCTRL
 | Startup time | < 2s | `time snapctrl` |
 | Memory usage | < 200MB | Task Manager / htop |
 | Volume latency | < 100ms | End-to-end timing |
-| WebSocket msg | < 50ms | Round-trip time |
+| TCP msg | < 50ms | Round-trip time |

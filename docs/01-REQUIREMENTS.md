@@ -168,7 +168,7 @@ The app MUST provide a system tray icon.
 | Startup time | < 2 seconds |
 | Volume change latency | < 100ms |
 | Memory usage | < 200MB |
-| WebSocket message handling | < 50ms |
+| TCP message handling | < 50ms |
 
 ### NFR-002: Platform Support
 - Windows 10/11 (MSIX installer)
