@@ -245,6 +245,7 @@ class GroupCard(QWidget):
                 "New name:",
                 text=self._group.name,
             )
+            new_name = new_name.strip()
             if ok and new_name and new_name != self._group.name:
                 self.rename_requested.emit(self._group.id, new_name)
 

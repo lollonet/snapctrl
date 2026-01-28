@@ -126,6 +126,7 @@ def main() -> int:  # noqa: PLR0915
 
     def on_error(err: object) -> None:
         logger.error(f"Error: {err}")
+        window.statusBar().showMessage(f"Error: {err}", 5000)
 
     # Debounce timer for notifications to avoid UI flickering during volume changes
     notification_timer: QTimer | None = None

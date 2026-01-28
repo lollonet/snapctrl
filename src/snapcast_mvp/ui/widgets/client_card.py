@@ -236,6 +236,7 @@ class ClientCard(QFrame):
                 "New name:",
                 text=self._name,
             )
+            new_name = new_name.strip()
             if ok and new_name and new_name != self._name:
                 self.rename_requested.emit(self._client_id, new_name)
 
