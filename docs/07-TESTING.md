@@ -10,7 +10,7 @@
        ┌┴────────┴┐
        │  UI Tests │ 20% (pytest-qt)
       ┌┴──────────┴┐
-      │ Integration│ 25% (mocked WebSocket)
+      │ Integration│ 25% (mocked TCP)
      ┌┴────────────┴┐
      │   Unit Tests  │ 50% (pure functions)
     └────────────────┘
@@ -29,9 +29,9 @@
 
 | Scenario | Test |
 |----------|------|
-| Connect → GetStatus → Parse | Mock WebSocket server |
+| Connect → GetStatus → Parse | Mock TCP server |
 | Volume change → RPC call | Verify request format |
-| Reconnection on drop | Simulate WebSocket close |
+| Reconnection on drop | Simulate TCP disconnect |
 | State updates → UI signals | Connect state to test receiver |
 
 ## UI Tests (20%)
@@ -76,18 +76,22 @@ def state_store():
     return StateStore()
 ```
 
-## Mock WebSocket
+## Mock TCP Server
 
 ```python
 # tests/helpers/mock_server.py
 class MockSnapcastServer:
-    """In-process WebSocket server for testing."""
+    """In-process TCP server for testing."""
 
-    async def handle(self, websocket):
-        async for message in websocket:
-            request = json.loads(message)
+    async def handle(self, reader, writer):
+        while True:
+            data = await reader.readline()
+            if not data:
+                break
+            request = json.loads(data.decode())
             response = self._dispatch(request["method"])
-            await websocket.send(json.dumps(response))
+            writer.write(json.dumps(response).encode() + b"\r\n")
+            await writer.drain()
 ```
 
 ---

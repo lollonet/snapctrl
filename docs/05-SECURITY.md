@@ -7,7 +7,7 @@
 | Unauthorized server access | Low | Local network only, no auth in Snapcast |
 | Malformed server response | Medium | Validate JSON schema, handle exceptions |
 | Config file tampering | Low | QSettings uses native secure storage |
-| WebSocket injection | Low | Read-only protocol, no exec |
+| TCP injection | Low | Read-only protocol, no exec |
 
 ## Security Requirements
 
@@ -27,7 +27,7 @@
    - Config files: platform AppData locations
 
 4. **Network Security**
-   - WebSocket only (ws://, no wss:// required for local)
+   - TCP only (plain TCP, local network assumed trusted)
    - Connection timeout: 10 seconds
    - Retry limits to prevent DoS
 
