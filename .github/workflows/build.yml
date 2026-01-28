@@ -1,60 +1,84 @@
-name: Build Executable
+name: Build & Release
 
 on:
+  push:
+    tags: ['v*']
   workflow_dispatch:
-    inputs:
-      platform:
-        description: 'Target platform'
-        required: true
-        default: 'windows'
-        type: choice
-        options:
-          - windows
-          - linux
-          - macos
+
+permissions:
+  contents: write
 
 jobs:
-  build-windows:
-    if: inputs.platform == 'windows'
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-      - run: pip install pyinstaller PySide6
-      - run: pyinstaller --onefile --name snapctrl --noconsole --hidden-import=PySide6.QtCore --hidden-import=PySide6.QtGui --hidden-import=PySide6.QtWidgets --hidden-import=zeroconf src/snapcast_mvp/__main__.py
-      - uses: actions/upload-artifact@v4
-        with:
-          name: snapctrl-windows
-          path: dist/snapctrl.exe
-
-  build-linux:
-    if: inputs.platform == 'linux'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-      - run: pip install pyinstaller PySide6
-      - run: pyinstaller --onefile --name snapctrl --noconsole --hidden-import=PySide6.QtCore --hidden-import=PySide6.QtGui --hidden-import=PySide6.QtWidgets --hidden-import=zeroconf src/snapcast_mvp/__main__.py
-      - uses: actions/upload-artifact@v4
-        with:
-          name: snapctrl-linux
-          path: dist/snapctrl
-
   build-macos:
-    if: inputs.platform == 'macos'
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - run: pip install pyinstaller PySide6
-      - run: pyinstaller --onefile --name snapctrl --windowed --hidden-import=PySide6.QtCore --hidden-import=PySide6.QtGui --hidden-import=PySide6.QtWidgets --hidden-import=zeroconf src/snapcast_mvp/__main__.py
+      - name: Install dependencies
+        run: pip install pyinstaller PySide6 zeroconf
+      - name: Build with PyInstaller
+        run: pyinstaller SnapCTRL.spec
+      - name: Zip app bundle
+        run: cd dist && zip -r SnapCTRL-macos.zip SnapCTRL.app
       - uses: actions/upload-artifact@v4
         with:
-          name: snapctrl-macos
-          path: dist/snapctrl
+          name: SnapCTRL-macos
+          path: dist/SnapCTRL-macos.zip
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: pip install pyinstaller PySide6 zeroconf
+      - name: Build with PyInstaller
+        run: pyinstaller SnapCTRL-windows.spec
+      - name: Zip output
+        run: Compress-Archive -Path dist\SnapCTRL -DestinationPath dist\SnapCTRL-windows.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SnapCTRL-windows
+          path: dist/SnapCTRL-windows.zip
+
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y libegl1
+      - name: Install Python dependencies
+        run: pip install pyinstaller PySide6 zeroconf
+      - name: Build with PyInstaller
+        run: pyinstaller SnapCTRL-linux.spec
+      - name: Zip output
+        run: cd dist && zip -r SnapCTRL-linux.zip SnapCTRL
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SnapCTRL-linux
+          path: dist/SnapCTRL-linux.zip
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [build-macos, build-windows, build-linux]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            artifacts/SnapCTRL-macos.zip
+            artifacts/SnapCTRL-windows.zip
+            artifacts/SnapCTRL-linux.zip
