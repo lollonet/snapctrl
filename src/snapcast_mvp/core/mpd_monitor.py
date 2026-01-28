@@ -2,6 +2,10 @@
 
 This module provides a Qt-integrated monitor that polls MPD for
 current track metadata and album art, emitting signals when changes occur.
+
+When MPD has no embedded album art, falls back to external providers:
+1. iTunes Search API
+2. MusicBrainz Cover Art Archive
 """
 
 from __future__ import annotations
@@ -14,6 +18,11 @@ from typing import TYPE_CHECKING
 
 from PySide6.QtCore import QObject, Signal
 
+from snapcast_mvp.api.album_art import (
+    FallbackAlbumArtProvider,
+    ITunesAlbumArtProvider,
+    MusicBrainzAlbumArtProvider,
+)
 from snapcast_mvp.api.mpd import MpdClient, MpdConnectionError, MpdError
 
 if TYPE_CHECKING:
@@ -92,6 +101,14 @@ class MpdMonitor(QObject):
 
         # Simple in-memory art cache: uri -> (data, mime_type)
         self._art_cache: dict[str, tuple[bytes, str]] = {}
+
+        # Fallback album art provider chain: iTunes -> MusicBrainz
+        self._art_provider = FallbackAlbumArtProvider(
+            [
+                ITunesAlbumArtProvider(),
+                MusicBrainzAlbumArtProvider(),
+            ]
+        )
 
     @property
     def host(self) -> str:
@@ -187,7 +204,7 @@ class MpdMonitor(QObject):
 
             # Fetch album art if track changed and has a file
             if track_changed and track and track.file:
-                await self._fetch_album_art(client, track.file)
+                await self._fetch_album_art(client, track)
 
         except MpdError as e:
             logger.warning("Error polling MPD: %s", e)
@@ -221,8 +238,20 @@ class MpdMonitor(QObject):
             return True
         return False
 
-    async def _fetch_album_art(self, client: MpdClient, uri: str) -> None:
-        """Fetch album art for the given file URI."""
+    async def _fetch_album_art(self, client: MpdClient, track: MpdTrack) -> None:
+        """Fetch album art for the given track.
+
+        Tries sources in order:
+        1. Cache (if already fetched)
+        2. MPD embedded art (readpicture/albumart)
+        3. Fallback providers (iTunes, MusicBrainz)
+
+        Args:
+            client: Connected MPD client.
+            track: Current track with file URI and metadata.
+        """
+        uri = track.file
+
         # Check cache first
         if uri in self._art_cache:
             data, mime_type = self._art_cache[uri]
@@ -231,19 +260,43 @@ class MpdMonitor(QObject):
                 self.art_changed.emit(uri, data, mime_type)
             return
 
+        # Try MPD embedded art first
         try:
             art = await client.get_album_art(uri)
             if art and art.is_valid:
-                # Cache the art
                 self._cache_art(uri, art.data, art.mime_type)
                 self._last_art_uri = uri
                 self.art_changed.emit(uri, art.data, art.mime_type)
-            elif uri != self._last_art_uri:
-                # No art available, emit empty
-                self._last_art_uri = uri
-                self.art_changed.emit(uri, b"", "")
+                return
         except MpdError as e:
-            logger.debug("Could not fetch album art for %s: %s", uri, e)
+            logger.debug("MPD album art not available for %s: %s", uri, e)
+
+        # Fallback to external providers (iTunes, MusicBrainz)
+        if track.artist:
+            try:
+                fallback_art = await self._art_provider.fetch(
+                    artist=track.artist,
+                    album=track.album,
+                    title=track.title,
+                )
+                if fallback_art and fallback_art.is_valid:
+                    self._cache_art(uri, fallback_art.data, fallback_art.mime_type)
+                    self._last_art_uri = uri
+                    self.art_changed.emit(uri, fallback_art.data, fallback_art.mime_type)
+                    logger.info(
+                        "Album art from %s for %s - %s",
+                        fallback_art.source,
+                        track.artist,
+                        track.album or track.title,
+                    )
+                    return
+            except Exception as e:  # noqa: BLE001
+                logger.debug("Fallback album art failed for %s: %s", uri, e)
+
+        # No art available from any source
+        if uri != self._last_art_uri:
+            self._last_art_uri = uri
+            self.art_changed.emit(uri, b"", "")
 
     def _cache_art(self, uri: str, data: bytes, mime_type: str) -> None:
         """Cache album art, evicting old entries if needed."""

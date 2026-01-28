@@ -158,6 +158,7 @@ def main() -> int:  # noqa: PLR0915
 
     # Create main window
     window = MainWindow(state_store=state_store)
+    window.sources_panel.set_server_host(host)
     # Show hostname (FQDN) and IP in title if discovered via mDNS
     if hostname:
         window.setWindowTitle(f"SnapCTRL - {hostname} ({host}):{port}")
