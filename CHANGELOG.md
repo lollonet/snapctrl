@@ -9,22 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Mute-Only API** ([#2](https://github.com/lollonet/snapcast-mvp/pull/2)) - Jan 27
+- **Mute-Only API** ([#2](https://github.com/lollonet/snapctrl/pull/2)) - Jan 27
   - `set_client_mute()` method for mute operations without volume data
   - Prevents duplicate API calls when toggling mute
   - CLI entry point with host/port argument parsing
 
-- **mDNS Autodiscovery** ([#3](https://github.com/lollonet/snapcast-mvp/pull/3)) - Jan 27
+- **mDNS Autodiscovery** ([#3](https://github.com/lollonet/snapctrl/pull/3)) - Jan 27
   - Automatic Snapcast server discovery on local network
   - Zero-configuration startup when no arguments provided
   - Shows FQDN and IP in window title (e.g., "raspy.local (192.168.63.3)")
 
-- **Source Details Panel** ([#5](https://github.com/lollonet/snapcast-mvp/pull/5)) - Jan 27
+- **Source Details Panel** ([#5](https://github.com/lollonet/snapctrl/pull/5)) - Jan 27
   - Status indicator (Playing/Idle) with color coding
   - Stream type, codec, and sample format display
   - Human-readable format (e.g., "48kHz/16bit/stereo")
 
-- **Enhanced Client Properties** ([#5](https://github.com/lollonet/snapcast-mvp/pull/5)) - Jan 27
+- **Enhanced Client Properties** ([#5](https://github.com/lollonet/snapctrl/pull/5)) - Jan 27
   - System info (OS and architecture)
   - Last seen timestamp with human-readable format
   - Network RTT ping measurement (updated every 15 seconds)
@@ -60,21 +60,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- **Source Selection** ([#4](https://github.com/lollonet/snapcast-mvp/pull/4)) - Jan 27
+- **Source Selection** ([#4](https://github.com/lollonet/snapctrl/pull/4)) - Jan 27
   - Dropdown now correctly changes stream on server
   - Fixed API parameter naming (`stream_id` instead of `streamId`)
 
-- **Group Volume Sync** ([#4](https://github.com/lollonet/snapcast-mvp/pull/4)) - Jan 27
+- **Group Volume Sync** ([#4](https://github.com/lollonet/snapctrl/pull/4)) - Jan 27
   - Slider shows actual average volume (not fixed 50%)
   - Client sliders follow group slider visually
   - Syncs with external changes (mobile app) after 1s inactivity
   - Auto-mute when volume reaches 0
 
-- **Signal Handling** ([#2](https://github.com/lollonet/snapcast-mvp/pull/2)) - Jan 27
+- **Signal Handling** ([#2](https://github.com/lollonet/snapctrl/pull/2)) - Jan 27
   - Fixed VolumeSlider signal cascading on mute toggle
   - Blocks signals during programmatic updates
 
-- **Connection Status** ([#4](https://github.com/lollonet/snapcast-mvp/pull/4)) - Jan 27
+- **Connection Status** ([#4](https://github.com/lollonet/snapctrl/pull/4)) - Jan 27
   - Green/red color indicators for connected/disconnected
   - Properties panel updates when client selected
 
@@ -85,6 +85,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **HTTP Album Art URLs** - Jan 28
   - Support for Snapcast image cache URLs
   - URL hostname rewriting (internal hostname → connection IP)
+
+- **MPD Album Art Race Conditions** ([#6](https://github.com/lollonet/snapctrl/pull/6)) - Jan 28
+  - Generation counter to cancel stale fallback requests
+  - `_art_loaded` flag prevents fallback overwriting valid art
+  - Metadata preservation when Snapcast sends empty updates
+
+### Documentation
+
+- **Project Rename** - Jan 28
+  - All docs updated from "Snapcast MVP" to "SnapCTRL"
+  - Fixed critical error: "WebSocket port 1704" → "TCP port 1705"
+  - Updated requirement statuses (7 Done, 3 Draft)
+  - Created missing ADR directory
+  - Fixed architecture and technology index structure
 
 ### Changed
 
@@ -116,9 +130,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **CI/CD**
   - GitHub Actions with uv package manager
   - Claude Code Review integration
-  - 230+ tests passing
+  - 360+ tests passing
 
 ### Fixed
 
-- Encapsulation violations in GroupCard and SnapcastClient ([#1](https://github.com/lollonet/snapcast-mvp/pull/1))
+- Encapsulation violations in GroupCard and SnapcastClient ([#1](https://github.com/lollonet/snapctrl/pull/1))
 - Server port: 1704 → 1705 (correct TCP control port)
