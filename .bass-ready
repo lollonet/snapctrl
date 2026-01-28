@@ -1,7 +1,7 @@
 # BassCodeBase Ready Marker
 # This file indicates the project is ready for `bass adopt`
 
-Project: snapcast-mvp
+Project: snapctrl
 Created: 2025-01-24
 Mode: interview + basscodebase export
 
