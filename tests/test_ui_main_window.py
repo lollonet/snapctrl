@@ -14,7 +14,7 @@ class TestMainWindowBasics:
         """Test that main window can be created."""
         window = MainWindow()
         qtbot.addWidget(window)
-        assert window.windowTitle() == "Snapcast MVP"
+        assert window.windowTitle() == "SnapCTRL"
         assert window.minimumWidth() == 900
         assert window.minimumHeight() == 600
 

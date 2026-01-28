@@ -1,5 +1,11 @@
-"""Network ping monitor for measuring RTT to Snapcast clients."""
+"""Network ping monitor for measuring RTT to Snapcast clients.
 
+Note: RTT measurement may not work for all clients. Some network configurations
+(firewalls, ICMP blocking, VPNs) can prevent ping responses even when the client
+is reachable for audio streaming.
+"""
+
+import logging
 import platform
 import re
 import subprocess
@@ -7,6 +13,8 @@ import threading
 import time
 
 from PySide6.QtCore import QObject, Signal
+
+logger = logging.getLogger(__name__)
 
 
 def _parse_ping_output(output: str) -> float | None:
@@ -69,8 +77,14 @@ def ping_host_sync(host: str, timeout: float = 2.0) -> float | None:
         )
         if result.returncode == 0:
             return _parse_ping_output(result.stdout)
-    except (subprocess.TimeoutExpired, OSError, subprocess.SubprocessError):
-        pass
+        # Ping failed (host unreachable, network error, etc.)
+        logger.debug("Ping to %s failed with return code %d", host, result.returncode)
+    except subprocess.TimeoutExpired:
+        logger.debug("Ping to %s timed out after %.1fs", host, timeout)
+    except OSError as e:
+        logger.warning("Ping command failed for %s: %s", host, e)
+    except subprocess.SubprocessError as e:
+        logger.debug("Ping subprocess error for %s: %s", host, e)
 
     return None
 

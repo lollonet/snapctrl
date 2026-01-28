@@ -7,6 +7,7 @@ multiple providers in order until one succeeds.
 from __future__ import annotations
 
 import logging
+import urllib.error
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
@@ -113,8 +114,14 @@ class FallbackAlbumArtProvider(AlbumArtProvider):
                         album or title,
                     )
                     return art
+            except (urllib.error.URLError, TimeoutError, OSError) as e:
+                # Network errors are expected when providers are unavailable
+                logger.debug("%s network error for %s - %s: %s", provider.name, artist, album, e)
             except Exception as e:  # noqa: BLE001
-                logger.debug("%s failed for %s - %s: %s", provider.name, artist, album, e)
+                # Unexpected errors should be logged at warning level
+                logger.warning(
+                    "%s unexpected error for %s - %s: %s", provider.name, artist, album, e
+                )
 
         logger.debug("No album art found for %s - %s", artist, album or title)
         return None

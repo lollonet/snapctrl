@@ -66,7 +66,7 @@ class MainWindow(QMainWindow):
 
     def _setup_ui(self) -> None:
         """Set up the user interface."""
-        self.setWindowTitle("Snapcast MVP")
+        self.setWindowTitle("SnapCTRL")
         self.setMinimumSize(900, 600)
 
         # Create central widget with main layout

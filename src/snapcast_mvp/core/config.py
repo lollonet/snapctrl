@@ -19,9 +19,9 @@ class ConfigManager:
     """Wrapper around QSettings for type-safe config access.
 
     QSettings stores config in platform-specific locations:
-    - Windows: HKEY_CURRENT_USER\\Software\\SnapcastMVP\\SnapcastController
-    - macOS: ~/Library/Preferences/com.SnapcastMVP.SnapcastController.plist
-    - Linux: ~/.config/SnapcastMVP/SnapcastController.conf
+    - Windows: HKEY_CURRENT_USER\\Software\\SnapCTRL\\SnapCTRL
+    - macOS: ~/Library/Preferences/com.SnapCTRL.SnapCTRL.plist
+    - Linux: ~/.config/SnapCTRL/SnapCTRL.conf
 
     Example:
         config = ConfigManager()
@@ -29,9 +29,7 @@ class ConfigManager:
         config.save_server_profiles(profiles)
     """
 
-    def __init__(
-        self, organization: str = "SnapcastMVP", application: str = "SnapcastController"
-    ) -> None:
+    def __init__(self, organization: str = "SnapCTRL", application: str = "SnapCTRL") -> None:
         """Initialize the config manager.
 
         Args:

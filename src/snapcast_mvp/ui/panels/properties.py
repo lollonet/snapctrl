@@ -93,6 +93,7 @@ class PropertiesPanel(QWidget):
         rows.append(f"<tr><td><i>Muted:</i></td><td>{'Yes' if client.muted else 'No'}</td></tr>")
 
         # Network RTT (ping) - prominently displayed
+        # Note: RTT may not work for all clients due to firewalls, ICMP blocking, or VPNs
         if network_rtt is not None:
             rtt_str = format_rtt(network_rtt)
             rtt_color = get_rtt_color(network_rtt)
@@ -101,7 +102,11 @@ class PropertiesPanel(QWidget):
                 f"<td style='color: {rtt_color};'>{rtt_str}</td></tr>"
             )
         elif client.connected:
-            rows.append("<tr><td><i>Network RTT:</i></td><td>measuring...</td></tr>")
+            # RTT measurement pending or failed (ICMP may be blocked)
+            rows.append(
+                "<tr><td><i>Network RTT:</i></td>"
+                "<td style='color: #808080;'>N/A (ping blocked?)</td></tr>"
+            )
 
         # Latency offset (configured compensation)
         rows.append(f"<tr><td><i>Latency offset:</i></td><td>{client.display_latency}</td></tr>")

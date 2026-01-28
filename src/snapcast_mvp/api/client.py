@@ -21,7 +21,7 @@ from snapcast_mvp.models.client import Client
 from snapcast_mvp.models.group import Group
 from snapcast_mvp.models.server import Server
 from snapcast_mvp.models.server_state import ServerState
-from snapcast_mvp.models.source import Source
+from snapcast_mvp.models.source import Source, SourceStatus
 
 logger = logging.getLogger(__name__)
 
@@ -300,10 +300,10 @@ class SnapcastClient:
             # Wait for response
             response = await asyncio.wait_for(future, timeout=self._timeout)
 
-            # Check for error
+            # Check for error - include request ID for debugging
             if not response.is_success:
                 err = response.error or JsonRpcError(-1, "Unknown error")
-                raise RuntimeError(str(err))
+                raise RuntimeError(f"Request {req_id} failed: {err}")
 
             return response
         except TimeoutError:
@@ -508,7 +508,7 @@ def _parse_server_status(data: dict[str, Any]) -> ServerState:
     sources: list[Source] = []
 
     for s in streams_data:
-        status_str = s.get("status", "idle")
+        status_str = SourceStatus.from_string(s.get("status", "idle"))
         uri = s.get("uri", {})
         query = uri.get("query", {})
         properties = s.get("properties", {})

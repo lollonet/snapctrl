@@ -180,6 +180,13 @@ class MpdMonitor(QObject):
                 self.error_occurred.emit(str(e))
                 await self._sleep_interruptible(DEFAULT_RECONNECT_DELAY)
 
+            except (OSError, asyncio.CancelledError) as e:
+                # Expected errors during shutdown or network issues
+                logger.debug("MPD monitor interrupted: %s", e)
+                self.connection_changed.emit(False)
+                if self._running:
+                    await self._sleep_interruptible(DEFAULT_RECONNECT_DELAY)
+
             except Exception as e:  # noqa: BLE001
                 logger.exception("Unexpected error in MPD monitor: %s", e)
                 self.error_occurred.emit(f"Unexpected error: {e}")
@@ -290,8 +297,11 @@ class MpdMonitor(QObject):
                         track.album or track.title,
                     )
                     return
+            except (OSError, TimeoutError) as e:
+                # Network errors are expected when external services are unavailable
+                logger.debug("Fallback album art network error for %s: %s", uri, e)
             except Exception as e:  # noqa: BLE001
-                logger.debug("Fallback album art failed for %s: %s", uri, e)
+                logger.warning("Fallback album art unexpected error for %s: %s", uri, e)
 
         # No art available from any source
         if uri != self._last_art_uri:

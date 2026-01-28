@@ -1,6 +1,24 @@
 """Source model for audio streams."""
 
 from dataclasses import dataclass
+from enum import StrEnum
+
+
+class SourceStatus(StrEnum):
+    """Stream status values reported by Snapcast server."""
+
+    IDLE = "idle"
+    PLAYING = "playing"
+    UNKNOWN = "unknown"
+
+    @classmethod
+    def from_string(cls, value: str) -> "SourceStatus":
+        """Convert string to SourceStatus, defaulting to UNKNOWN."""
+        try:
+            return cls(value.lower())
+        except ValueError:
+            return cls.UNKNOWN
+
 
 # Sample format has 3 parts: rate:bits:channels (e.g., "48000:16:2")
 _SAMPLE_FORMAT_PARTS = 3
@@ -27,7 +45,7 @@ class Source:
 
     id: str
     name: str = ""
-    status: str = "idle"
+    status: str = SourceStatus.IDLE
     stream_type: str = ""
     codec: str = ""
     sample_format: str = ""
@@ -41,12 +59,12 @@ class Source:
     @property
     def is_playing(self) -> bool:
         """Return True if stream is currently playing."""
-        return self.status == "playing"
+        return self.status == SourceStatus.PLAYING
 
     @property
     def is_idle(self) -> bool:
         """Return True if stream is idle."""
-        return self.status == "idle"
+        return self.status == SourceStatus.IDLE
 
     @property
     def type(self) -> str:

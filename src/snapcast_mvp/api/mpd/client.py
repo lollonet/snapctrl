@@ -120,8 +120,10 @@ class MpdClient:
             try:
                 self._writer.close()
                 await self._writer.wait_closed()
-            except Exception:  # noqa: BLE001
-                pass  # Ignore errors during disconnect
+            except (OSError, TimeoutError, asyncio.CancelledError) as e:
+                logger.debug("Expected error during MPD disconnect: %s", e)
+            except Exception as e:  # noqa: BLE001
+                logger.warning("Unexpected error during MPD disconnect: %s", e)
             finally:
                 self._writer = None
                 self._reader = None

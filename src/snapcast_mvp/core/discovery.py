@@ -78,7 +78,8 @@ class SnapcastServiceListener(ServiceListener):
                 # Try IPv6
                 try:
                     addresses.append(socket.inet_ntop(socket.AF_INET6, addr))
-                except OSError:
+                except OSError as e:
+                    logger.debug("Could not parse address for %s: %s", name, e)
                     continue
 
         if not addresses:
