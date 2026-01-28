@@ -11,6 +11,7 @@ permissions:
 jobs:
   build-macos:
     runs-on: macos-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -20,15 +21,22 @@ jobs:
         run: pip install pyinstaller PySide6 zeroconf
       - name: Build with PyInstaller
         run: pyinstaller SnapCTRL.spec
+      - name: Add build metadata
+        run: |
+          echo "Commit: ${{ github.sha }}" > dist/SnapCTRL.app/Contents/BUILD_INFO.txt
+          echo "Ref: ${{ github.ref_name }}" >> dist/SnapCTRL.app/Contents/BUILD_INFO.txt
+          echo "Built: $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> dist/SnapCTRL.app/Contents/BUILD_INFO.txt
       - name: Zip app bundle
         run: cd dist && zip -r SnapCTRL-macos.zip SnapCTRL.app
       - uses: actions/upload-artifact@v4
         with:
           name: SnapCTRL-macos
           path: dist/SnapCTRL-macos.zip
+          retention-days: 7
 
   build-windows:
     runs-on: windows-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -38,15 +46,24 @@ jobs:
         run: pip install pyinstaller PySide6 zeroconf
       - name: Build with PyInstaller
         run: pyinstaller SnapCTRL-windows.spec
+      - name: Add build metadata
+        run: |
+          @"
+          Commit: ${{ github.sha }}
+          Ref: ${{ github.ref_name }}
+          Built: $(Get-Date -Format o)
+          "@ | Out-File -FilePath dist\SnapCTRL\BUILD_INFO.txt -Encoding utf8
       - name: Zip output
         run: Compress-Archive -Path dist\SnapCTRL -DestinationPath dist\SnapCTRL-windows.zip
       - uses: actions/upload-artifact@v4
         with:
           name: SnapCTRL-windows
           path: dist/SnapCTRL-windows.zip
+          retention-days: 7
 
   build-linux:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -58,22 +75,31 @@ jobs:
         run: pip install pyinstaller PySide6 zeroconf
       - name: Build with PyInstaller
         run: pyinstaller SnapCTRL-linux.spec
+      - name: Add build metadata
+        run: |
+          echo "Commit: ${{ github.sha }}" > dist/SnapCTRL/BUILD_INFO.txt
+          echo "Ref: ${{ github.ref_name }}" >> dist/SnapCTRL/BUILD_INFO.txt
+          echo "Built: $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> dist/SnapCTRL/BUILD_INFO.txt
       - name: Zip output
         run: cd dist && zip -r SnapCTRL-linux.zip SnapCTRL
       - uses: actions/upload-artifact@v4
         with:
           name: SnapCTRL-linux
           path: dist/SnapCTRL-linux.zip
+          retention-days: 7
 
   release:
     if: startsWith(github.ref, 'refs/tags/v')
     needs: [build-macos, build-windows, build-linux]
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/download-artifact@v4
         with:
           path: artifacts
           merge-multiple: true
+      - name: Generate checksums
+        run: cd artifacts && sha256sum *.zip > SHA256SUMS
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -82,3 +108,4 @@ jobs:
             artifacts/SnapCTRL-macos.zip
             artifacts/SnapCTRL-windows.zip
             artifacts/SnapCTRL-linux.zip
+            artifacts/SHA256SUMS
