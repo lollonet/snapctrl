@@ -1,5 +1,6 @@
 """Main entry point for the SnapCTRL application."""
 
+import base64
 import logging
 import sys
 import time
@@ -9,11 +10,14 @@ from PySide6.QtCore import QTimer
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QApplication, QMessageBox
 
+from snapcast_mvp.api.mpd import MpdTrack
 from snapcast_mvp.api.protocol import JsonRpcNotification
 from snapcast_mvp.core.discovery import ServerDiscovery
+from snapcast_mvp.core.mpd_monitor import MpdMonitor
 from snapcast_mvp.core.ping import PingMonitor
 from snapcast_mvp.core.state import StateStore
 from snapcast_mvp.core.worker import SnapcastWorker
+from snapcast_mvp.models.source import Source
 from snapcast_mvp.ui.main_window import MainWindow
 
 # Enable logging
@@ -272,6 +276,78 @@ def main() -> int:  # noqa: PLR0915
     # Start ping monitor
     ping_monitor.start()
 
+    # Set up MPD monitor for track metadata
+    # MPD typically runs on the same host as Snapcast server
+    mpd_monitor = MpdMonitor(host=host, port=6600)
+
+    def find_mpd_source() -> Source | None:
+        """Find the MPD source by name or scheme."""
+        mpd_source = state_store.find_source_by_name("MPD")
+        if not mpd_source:
+            mpd_source = state_store.find_source_by_scheme("pipe")
+        return mpd_source
+
+    def on_mpd_track_changed(track: MpdTrack | None) -> None:
+        """Handle MPD track change by updating the MPD source metadata."""
+        mpd_source = find_mpd_source()
+        if not mpd_source:
+            return
+
+        if track and track.has_metadata:
+            logger.debug(f"MPD track: {track.title} - {track.artist}")
+            state_store.update_source_metadata(
+                mpd_source.id,
+                meta_title=track.display_title,
+                meta_artist=track.display_artist,
+                meta_album=track.album,
+            )
+        else:
+            # Clear metadata when stopped
+            state_store.update_source_metadata(
+                mpd_source.id,
+                meta_title="",
+                meta_artist="",
+                meta_album="",
+            )
+
+    def on_mpd_art_changed(uri: str, data: bytes, mime_type: str) -> None:
+        """Handle album art from MPD."""
+        if not data:
+            return
+
+        mpd_source = find_mpd_source()
+        if not mpd_source:
+            return
+
+        # Convert to data URI for display
+        if mime_type:
+            data_uri = f"data:{mime_type};base64,{base64.b64encode(data).decode()}"
+        else:
+            # Guess JPEG if no mime type
+            data_uri = f"data:image/jpeg;base64,{base64.b64encode(data).decode()}"
+
+        logger.debug(f"MPD album art: {len(data)} bytes for {uri}")
+
+        # Update source metadata with art URL
+        state_store.update_source_metadata(
+            mpd_source.id,
+            meta_title=mpd_source.meta_title,
+            meta_artist=mpd_source.meta_artist,
+            meta_album=mpd_source.meta_album,
+            meta_art_url=data_uri,
+        )
+
+    def on_mpd_error(error: str) -> None:
+        """Handle MPD connection errors."""
+        logger.warning(f"MPD error: {error}")
+
+    mpd_monitor.track_changed.connect(on_mpd_track_changed)
+    mpd_monitor.art_changed.connect(on_mpd_art_changed)
+    mpd_monitor.error_occurred.connect(on_mpd_error)
+
+    # Start MPD monitor
+    mpd_monitor.start()
+
     # Start worker thread
     worker.start()
 
@@ -279,6 +355,7 @@ def main() -> int:  # noqa: PLR0915
     exit_code = app.exec()
 
     # Cleanup
+    mpd_monitor.stop()
     ping_monitor.stop()
     worker.stop()
     worker.wait()

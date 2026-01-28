@@ -6,6 +6,7 @@ state changes. UI widgets connect to these signals to update themselves.
 This follows the Observer pattern via Qt's signal/slot mechanism.
 """
 
+import logging
 from dataclasses import replace
 
 from PySide6.QtCore import QObject, Signal
@@ -15,6 +16,8 @@ from snapcast_mvp.models.group import Group
 from snapcast_mvp.models.server import Server
 from snapcast_mvp.models.server_state import ServerState
 from snapcast_mvp.models.source import Source
+
+logger = logging.getLogger(__name__)
 
 
 class StateStore(QObject):
@@ -246,6 +249,95 @@ class StateStore(QObject):
                 new_state_groups = [updated if g.id == group_id else g for g in self._state.groups]
                 self._state = replace(self._state, groups=new_state_groups)
                 self.state_changed.emit(self._state)
+
+    def update_source_metadata(
+        self,
+        source_id: str,
+        *,
+        meta_title: str = "",
+        meta_artist: str = "",
+        meta_album: str = "",
+        meta_art_url: str = "",
+    ) -> None:
+        """Update a source's track metadata.
+
+        This is used to inject metadata from external sources (e.g., MPD).
+
+        Args:
+            source_id: The source ID to update.
+            meta_title: Track title.
+            meta_artist: Track artist.
+            meta_album: Track album.
+            meta_art_url: Album art URL (data URI or http).
+        """
+        source = self._sources.get(source_id)
+        if not source:
+            logger.debug(
+                "Cannot update metadata: source '%s' not found (available: %s)",
+                source_id,
+                list(self._sources.keys()),
+            )
+            return
+
+        # Update source with new metadata
+        updated = replace(
+            source,
+            meta_title=meta_title,
+            meta_artist=meta_artist,
+            meta_album=meta_album,
+            meta_art_url=meta_art_url,
+        )
+        self._sources[source_id] = updated
+
+        # Emit sources changed
+        self.sources_changed.emit(list(self._sources.values()))
+
+        # Update state if we have it
+        if self._state:
+            new_state_sources = tuple(
+                updated if s.id == source_id else s for s in self._state.sources
+            )
+            self._state = replace(self._state, sources=new_state_sources)
+            self.state_changed.emit(self._state)
+
+    def find_source_by_name(self, name: str) -> Source | None:
+        """Find a source by name (case-insensitive).
+
+        Args:
+            name: Source name to search for.
+
+        Returns:
+            The Source if found, else None.
+        """
+        return self._find_source_by_attribute("name", name)
+
+    def find_source_by_scheme(self, scheme: str) -> Source | None:
+        """Find a source by URI scheme.
+
+        Args:
+            scheme: URI scheme (e.g., "pipe", "librespot", "airplay").
+
+        Returns:
+            The first matching Source, or None.
+        """
+        return self._find_source_by_attribute("uri_scheme", scheme)
+
+    def _find_source_by_attribute(self, attribute: str, value: str) -> Source | None:
+        """Find a source by matching an attribute value (case-insensitive).
+
+        Args:
+            attribute: The attribute name to check.
+            value: The value to match.
+
+        Returns:
+            The Source if found, else None.
+        """
+        value_lower = value.lower()
+        for source in self._sources.values():
+            source_value = getattr(source, attribute, "")
+            if source_value.lower() == value_lower:
+                return source
+        return None
 
     def clear(self) -> None:
         """Clear all state (disconnected)."""

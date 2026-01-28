@@ -329,3 +329,227 @@ class TestSignalOrdering:
         assert "clients" in signals_received
         assert "sources" in signals_received
         assert "state" in signals_received
+
+
+class TestSourceMetadata:
+    """Test source metadata updates."""
+
+    @pytest.fixture
+    def state_with_sources(self, state: StateStore) -> StateStore:
+        """Return a StateStore with sources including uri_scheme."""
+        server = Server(name="TestServer", host="192.168.1.100", port=1705)
+        sources = [
+            Source(
+                id="mpd_source",
+                name="MPD",
+                status="playing",
+                stream_type="pipe",
+                uri_scheme="pipe",
+            ),
+            Source(
+                id="spotify_source",
+                name="Spotify",
+                status="idle",
+                stream_type="librespot",
+                uri_scheme="librespot",
+            ),
+            Source(
+                id="airplay_source",
+                name="AirPlay",
+                status="idle",
+                stream_type="airplay",
+                uri_scheme="airplay",
+            ),
+        ]
+        server_state = ServerState(
+            server=server,
+            groups=[],
+            clients=[],
+            sources=sources,
+            connected=True,
+            version="0.34.0",
+            host="TestServer",
+            mac="00:11:22:33:44:55",
+        )
+        state.update_from_server_state(server_state)
+        return state
+
+    def test_update_source_metadata(self, state_with_sources: StateStore, qtbot: QtBot) -> None:
+        """Test updating source metadata."""
+        with qtbot.wait_signal(state_with_sources.sources_changed, timeout=100) as blocker:
+            state_with_sources.update_source_metadata(
+                "mpd_source",
+                meta_title="Test Song",
+                meta_artist="Test Artist",
+                meta_album="Test Album",
+                meta_art_url="data:image/jpeg;base64,abc123",
+            )
+
+        sources = blocker.args[0]
+        mpd = next(s for s in sources if s.id == "mpd_source")
+        assert mpd.meta_title == "Test Song"
+        assert mpd.meta_artist == "Test Artist"
+        assert mpd.meta_album == "Test Album"
+        assert mpd.meta_art_url == "data:image/jpeg;base64,abc123"
+
+    def test_update_source_metadata_partial(
+        self, state_with_sources: StateStore, qtbot: QtBot
+    ) -> None:
+        """Test updating only some metadata fields."""
+        with qtbot.wait_signal(state_with_sources.sources_changed, timeout=100):
+            state_with_sources.update_source_metadata(
+                "mpd_source",
+                meta_title="Only Title",
+            )
+
+        source = state_with_sources.get_source("mpd_source")
+        assert source is not None
+        assert source.meta_title == "Only Title"
+        assert source.meta_artist == ""
+        assert source.meta_album == ""
+
+    def test_update_source_metadata_clears_metadata(
+        self, state_with_sources: StateStore, qtbot: QtBot
+    ) -> None:
+        """Test clearing metadata by setting empty strings."""
+        # First set some metadata
+        state_with_sources.update_source_metadata(
+            "mpd_source",
+            meta_title="Song",
+            meta_artist="Artist",
+        )
+
+        # Then clear it
+        with qtbot.wait_signal(state_with_sources.sources_changed, timeout=100):
+            state_with_sources.update_source_metadata(
+                "mpd_source",
+                meta_title="",
+                meta_artist="",
+            )
+
+        source = state_with_sources.get_source("mpd_source")
+        assert source is not None
+        assert source.meta_title == ""
+        assert source.meta_artist == ""
+
+    def test_update_source_metadata_nonexistent_source(
+        self, state_with_sources: StateStore
+    ) -> None:
+        """Test updating metadata for nonexistent source (should be safe)."""
+        # Should not crash
+        state_with_sources.update_source_metadata(
+            "nonexistent",
+            meta_title="Test",
+        )
+
+    def test_update_source_metadata_before_state_set(self, state: StateStore) -> None:
+        """Test updating metadata before any state is set (should be safe)."""
+        # Should not crash
+        state.update_source_metadata(
+            "any_source",
+            meta_title="Test",
+        )
+
+
+class TestSourceLookups:
+    """Test source lookup methods."""
+
+    @pytest.fixture
+    def state_with_sources(self, state: StateStore) -> StateStore:
+        """Return a StateStore with various sources."""
+        server = Server(name="TestServer", host="192.168.1.100", port=1705)
+        sources = [
+            Source(
+                id="mpd_source",
+                name="MPD",
+                status="playing",
+                stream_type="pipe",
+                uri_scheme="pipe",
+            ),
+            Source(
+                id="spotify_source",
+                name="Spotify Connect",
+                status="idle",
+                stream_type="librespot",
+                uri_scheme="librespot",
+            ),
+            Source(
+                id="airplay_source",
+                name="AirPlay",
+                status="idle",
+                stream_type="airplay",
+                uri_scheme="airplay",
+            ),
+        ]
+        server_state = ServerState(
+            server=server,
+            groups=[],
+            clients=[],
+            sources=sources,
+            connected=True,
+            version="0.34.0",
+            host="TestServer",
+            mac="00:11:22:33:44:55",
+        )
+        state.update_from_server_state(server_state)
+        return state
+
+    def test_find_source_by_name(self, state_with_sources: StateStore) -> None:
+        """Test finding source by exact name."""
+        source = state_with_sources.find_source_by_name("MPD")
+        assert source is not None
+        assert source.id == "mpd_source"
+
+    def test_find_source_by_name_case_insensitive(self, state_with_sources: StateStore) -> None:
+        """Test that name lookup is case-insensitive."""
+        source1 = state_with_sources.find_source_by_name("mpd")
+        source2 = state_with_sources.find_source_by_name("Mpd")
+        source3 = state_with_sources.find_source_by_name("MPD")
+
+        assert source1 is not None
+        assert source2 is not None
+        assert source3 is not None
+        assert source1.id == source2.id == source3.id == "mpd_source"
+
+    def test_find_source_by_name_not_found(self, state_with_sources: StateStore) -> None:
+        """Test finding nonexistent source by name."""
+        source = state_with_sources.find_source_by_name("Nonexistent")
+        assert source is None
+
+    def test_find_source_by_name_partial_no_match(self, state_with_sources: StateStore) -> None:
+        """Test that partial names don't match."""
+        # Actual name is "Spotify Connect", not "Spotify"
+        source = state_with_sources.find_source_by_name("Spotify")
+        assert source is None
+
+    def test_find_source_by_scheme(self, state_with_sources: StateStore) -> None:
+        """Test finding source by URI scheme."""
+        source = state_with_sources.find_source_by_scheme("pipe")
+        assert source is not None
+        assert source.id == "mpd_source"
+
+    def test_find_source_by_scheme_case_insensitive(self, state_with_sources: StateStore) -> None:
+        """Test that scheme lookup is case-insensitive."""
+        source1 = state_with_sources.find_source_by_scheme("PIPE")
+        source2 = state_with_sources.find_source_by_scheme("Pipe")
+        source3 = state_with_sources.find_source_by_scheme("pipe")
+
+        assert source1 is not None
+        assert source2 is not None
+        assert source3 is not None
+        assert source1.id == source2.id == source3.id == "mpd_source"
+
+    def test_find_source_by_scheme_not_found(self, state_with_sources: StateStore) -> None:
+        """Test finding nonexistent source by scheme."""
+        source = state_with_sources.find_source_by_scheme("meta")
+        assert source is None
+
+    def test_find_source_by_name_empty_state(self, state: StateStore) -> None:
+        """Test finding source when state is empty."""
+        source = state.find_source_by_name("MPD")
+        assert source is None
+
+    def test_find_source_by_scheme_empty_state(self, state: StateStore) -> None:
+        """Test finding source by scheme when state is empty."""
+        source = state.find_source_by_scheme("pipe")
+        assert source is None

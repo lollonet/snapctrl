@@ -7,14 +7,10 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from snapcast_mvp.core.ping import format_rtt, get_rtt_color
 from snapcast_mvp.models.client import Client
 from snapcast_mvp.models.group import Group
 from snapcast_mvp.models.source import Source
-
-# RTT color thresholds (milliseconds)
-_RTT_GOOD_THRESHOLD = 50  # Green below this
-_RTT_WARN_THRESHOLD = 100  # Yellow below this, red above
-_RTT_PRECISION_THRESHOLD = 10  # Show decimal precision below this
 
 
 class PropertiesPanel(QWidget):
@@ -98,18 +94,8 @@ class PropertiesPanel(QWidget):
 
         # Network RTT (ping) - prominently displayed
         if network_rtt is not None:
-            if network_rtt < _RTT_PRECISION_THRESHOLD:
-                rtt_str = f"{network_rtt:.1f}ms"
-            else:
-                rtt_str = f"{int(network_rtt)}ms"
-
-            if network_rtt < _RTT_GOOD_THRESHOLD:
-                rtt_color = "#80ff80"  # Green - good
-            elif network_rtt < _RTT_WARN_THRESHOLD:
-                rtt_color = "#ffff80"  # Yellow - warning
-            else:
-                rtt_color = "#ff8080"  # Red - high latency
-
+            rtt_str = format_rtt(network_rtt)
+            rtt_color = get_rtt_color(network_rtt)
             rows.append(
                 f"<tr><td><i>Network RTT:</i></td>"
                 f"<td style='color: {rtt_color};'>{rtt_str}</td></tr>"

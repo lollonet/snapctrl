@@ -1,8 +1,14 @@
 """Sources panel - displays list of audio sources."""
 
+import base64
+import binascii
+import logging
+
 from PySide6.QtCore import Qt, Signal
+from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import (
     QFrame,
+    QHBoxLayout,
     QLabel,
     QListWidget,
     QListWidgetItem,
@@ -11,6 +17,14 @@ from PySide6.QtWidgets import (
 )
 
 from snapcast_mvp.models.source import Source
+
+logger = logging.getLogger(__name__)
+
+# Album art display size
+ALBUM_ART_SIZE = 80
+
+# Maximum album art data size (10MB base64 ≈ 7.5MB decoded)
+MAX_ALBUM_ART_B64_SIZE = 10 * 1024 * 1024
 
 
 class SourcesPanel(QWidget):
@@ -87,15 +101,41 @@ class SourcesPanel(QWidget):
         details_layout.setSpacing(4)
 
         self._detail_status = QLabel()
+
+        # Now Playing section with album art
+        self._now_playing_frame = QWidget()
+        now_playing_layout = QHBoxLayout(self._now_playing_frame)
+        now_playing_layout.setContentsMargins(0, 0, 0, 0)
+        now_playing_layout.setSpacing(8)
+
+        # Album art
+        self._album_art = QLabel()
+        self._album_art.setFixedSize(ALBUM_ART_SIZE, ALBUM_ART_SIZE)
+        self._album_art.setStyleSheet("""
+            QLabel {
+                background-color: #1a1a1a;
+                border-radius: 4px;
+            }
+        """)
+        self._album_art.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._album_art.setScaledContents(True)
+        now_playing_layout.addWidget(self._album_art)
+
+        # Text info (title, artist, album)
         self._detail_now_playing = QLabel()
         self._detail_now_playing.setWordWrap(True)
         self._detail_now_playing.setStyleSheet("color: #ffffff; font-size: 10pt;")
+        self._detail_now_playing.setAlignment(
+            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
+        )
+        now_playing_layout.addWidget(self._detail_now_playing, 1)
+
         self._detail_type = QLabel()
         self._detail_codec = QLabel()
         self._detail_format = QLabel()
 
         details_layout.addWidget(self._detail_status)
-        details_layout.addWidget(self._detail_now_playing)
+        details_layout.addWidget(self._now_playing_frame)
         details_layout.addWidget(self._detail_type)
         details_layout.addWidget(self._detail_codec)
         details_layout.addWidget(self._detail_format)
@@ -136,6 +176,86 @@ class SourcesPanel(QWidget):
                 return source
         return None
 
+    def _show_album_art_placeholder(self) -> None:
+        """Show the 'No Art' placeholder for album art."""
+        self._album_art.clear()
+        self._album_art.setStyleSheet("""
+            QLabel {
+                background-color: #1a1a1a;
+                border-radius: 4px;
+                color: #404040;
+            }
+        """)
+        self._album_art.setText("No\nArt")
+        self._album_art.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+    def _set_album_art(self, art_url: str) -> None:
+        """Set the album art image.
+
+        Args:
+            art_url: Album art URL (data URI or http URL).
+        """
+        if not art_url or not art_url.startswith("data:"):
+            self._show_album_art_placeholder()
+            return
+
+        if self._load_data_uri_image(art_url):
+            return
+
+        # Failed to load - show placeholder
+        self._show_album_art_placeholder()
+
+    def _load_data_uri_image(self, art_url: str) -> bool:
+        """Load image from data URI.
+
+        Args:
+            art_url: Data URI containing base64 image data.
+
+        Returns:
+            True if successfully loaded, False otherwise.
+        """
+        try:
+            # Parse data URI: data:mime_type;base64,<data>
+            _header, data_b64 = art_url.split(",", 1)
+
+            # Check size limit to prevent memory exhaustion
+            if len(data_b64) > MAX_ALBUM_ART_B64_SIZE:
+                logger.warning("Album art too large (%d bytes), skipping", len(data_b64))
+                return False
+
+            image_data = base64.b64decode(data_b64)
+            pixmap = QPixmap()
+            pixmap.loadFromData(image_data)
+
+            if pixmap.isNull():
+                return False
+
+            scaled = pixmap.scaled(
+                ALBUM_ART_SIZE,
+                ALBUM_ART_SIZE,
+                Qt.AspectRatioMode.KeepAspectRatio,
+                Qt.TransformationMode.SmoothTransformation,
+            )
+            self._album_art.setPixmap(scaled)
+            self._album_art.setStyleSheet("""
+                QLabel {
+                    border-radius: 4px;
+                }
+            """)
+            return True
+        except (ValueError, binascii.Error) as e:
+            logger.debug("Invalid album art data URI format: %s", e)
+        except MemoryError:
+            logger.error("Out of memory loading album art")
+        except OSError as e:
+            logger.warning("System error loading album art: %s", e)
+        except Exception as e:  # noqa: BLE001
+            logger.warning(
+                "Unexpected error loading album art: %s", type(e).__name__, exc_info=True
+            )
+
+        return False
+
     def _update_details(self, source: Source) -> None:
         """Update the details panel with source info."""
         # Status with color
@@ -146,7 +266,7 @@ class SourcesPanel(QWidget):
             self._detail_status.setText(f"Status: {status}")
         self._detail_status.setTextFormat(Qt.TextFormat.RichText)
 
-        # Now Playing (track metadata)
+        # Now Playing (track metadata with album art)
         if source.has_metadata:
             # Show title on first line, artist/album on second if available
             if source.meta_album:
@@ -161,9 +281,13 @@ class SourcesPanel(QWidget):
                     f"<span style='color: #b0b0b0;'>{source.meta_artist}</span>"
                 )
             self._detail_now_playing.setTextFormat(Qt.TextFormat.RichText)
-            self._detail_now_playing.setVisible(True)
+
+            # Update album art
+            self._set_album_art(source.meta_art_url)
+
+            self._now_playing_frame.setVisible(True)
         else:
-            self._detail_now_playing.setVisible(False)
+            self._now_playing_frame.setVisible(False)
 
         # Type (scheme)
         scheme = source.uri_scheme or source.stream_type or "unknown"

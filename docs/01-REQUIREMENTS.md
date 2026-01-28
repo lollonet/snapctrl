@@ -1,9 +1,9 @@
-# Snapcast MVP - Requirements
+# SnapCTRL - Requirements
 
 ## Functional Requirements
 
 ### REQ-001: Server Connection
-The app MUST connect to a Snapcast server via WebSocket on port 1704 (default).
+The app MUST connect to a Snapcast server via TCP on port 1705 (default control port).
 
 **Acceptance Criteria:**
 - [ ] Connect using IP address or hostname
