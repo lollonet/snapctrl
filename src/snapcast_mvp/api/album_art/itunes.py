@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 ITUNES_SEARCH_URL = "https://itunes.apple.com/search"
 
 # User agent for API requests
-USER_AGENT = "SnapCTRL/1.0 (https://github.com/lollonet/snapcast-mvp)"
+USER_AGENT = "SnapCTRL/1.0 (https://github.com/lollonet/snapctrl)"
 
 # Request timeout in seconds
 REQUEST_TIMEOUT = 5

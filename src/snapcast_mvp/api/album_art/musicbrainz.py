@@ -26,7 +26,7 @@ MUSICBRAINZ_API_URL = "https://musicbrainz.org/ws/2"
 COVER_ART_URL = "https://coverartarchive.org"
 
 # User agent (MusicBrainz requires contact info)
-USER_AGENT = "SnapCTRL/1.0 (https://github.com/lollonet/snapcast-mvp)"
+USER_AGENT = "SnapCTRL/1.0 (https://github.com/lollonet/snapctrl)"
 
 # Request timeout in seconds
 REQUEST_TIMEOUT = 5

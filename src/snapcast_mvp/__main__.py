@@ -83,7 +83,7 @@ def main() -> int:  # noqa: PLR0915
                 "No Server Found",
                 "Could not find a Snapcast server on the network.\n\n"
                 "Please specify a server address:\n"
-                "  snapcast-mvp <host> [port]",
+                "  snapctrl <host> [port]",
             )
             return 1
 

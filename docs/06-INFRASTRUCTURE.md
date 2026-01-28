@@ -15,7 +15,7 @@ Type Checking: basedpyright 1.21+
 ## Project Structure
 
 ```
-snapcast-mvp/
+snapctrl/
 ├── .github/
 │   └── workflows/
 │       ├── ci.yml                 # Lint, format, test (unit only)

@@ -750,7 +750,7 @@ wheels = [
 ]
 
 [[package]]
-name = "snapcast-mvp"
+name = "snapctrl"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [

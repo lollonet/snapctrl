@@ -23,11 +23,11 @@ jobs:
         with:
           python-version: '3.12'
       - run: pip install pyinstaller PySide6
-      - run: pyinstaller --onefile --name snapcast-mvp --noconsole --hidden-import=PySide6.QtCore --hidden-import=PySide6.QtGui --hidden-import=PySide6.QtWidgets --hidden-import=zeroconf src/snapcast_mvp/__main__.py
+      - run: pyinstaller --onefile --name snapctrl --noconsole --hidden-import=PySide6.QtCore --hidden-import=PySide6.QtGui --hidden-import=PySide6.QtWidgets --hidden-import=zeroconf src/snapcast_mvp/__main__.py
       - uses: actions/upload-artifact@v4
         with:
-          name: snapcast-mvp-windows
-          path: dist/snapcast-mvp.exe
+          name: snapctrl-windows
+          path: dist/snapctrl.exe
 
   build-linux:
     if: inputs.platform == 'linux'
@@ -38,11 +38,11 @@ jobs:
         with:
           python-version: '3.12'
       - run: pip install pyinstaller PySide6
-      - run: pyinstaller --onefile --name snapcast-mvp --noconsole --hidden-import=PySide6.QtCore --hidden-import=PySide6.QtGui --hidden-import=PySide6.QtWidgets --hidden-import=zeroconf src/snapcast_mvp/__main__.py
+      - run: pyinstaller --onefile --name snapctrl --noconsole --hidden-import=PySide6.QtCore --hidden-import=PySide6.QtGui --hidden-import=PySide6.QtWidgets --hidden-import=zeroconf src/snapcast_mvp/__main__.py
       - uses: actions/upload-artifact@v4
         with:
-          name: snapcast-mvp-linux
-          path: dist/snapcast-mvp
+          name: snapctrl-linux
+          path: dist/snapctrl
 
   build-macos:
     if: inputs.platform == 'macos'
@@ -53,8 +53,8 @@ jobs:
         with:
           python-version: '3.12'
       - run: pip install pyinstaller PySide6
-      - run: pyinstaller --onefile --name snapcast-mvp --windowed --hidden-import=PySide6.QtCore --hidden-import=PySide6.QtGui --hidden-import=PySide6.QtWidgets --hidden-import=zeroconf src/snapcast_mvp/__main__.py
+      - run: pyinstaller --onefile --name snapctrl --windowed --hidden-import=PySide6.QtCore --hidden-import=PySide6.QtGui --hidden-import=PySide6.QtWidgets --hidden-import=zeroconf src/snapcast_mvp/__main__.py
       - uses: actions/upload-artifact@v4
         with:
-          name: snapcast-mvp-macos
-          path: dist/snapcast-mvp
+          name: snapctrl-macos
+          path: dist/snapctrl

@@ -1,5 +1,5 @@
 [project]
-name = "snapcast-mvp"
+name = "snapctrl"
 version = "0.1.0"
 description = "Native desktop controller for Snapcast multi-room audio"
 readme = "README.md"
@@ -37,7 +37,7 @@ dev = [
 ]
 
 [project.scripts]
-snapcast-mvp = "snapcast_mvp.__main__:main"
+snapctrl = "snapcast_mvp.__main__:main"
 
 [build-system]
 requires = ["hatchling"]
