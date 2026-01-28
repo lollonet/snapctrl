@@ -268,7 +268,8 @@ class MainWindow(QMainWindow):
         if self._selected_client_id and self._state:
             client = self._state.get_client(self._selected_client_id)
             if client:
-                self._properties_panel.set_client(client)
+                rtt = self._ping_results.get(self._selected_client_id)
+                self._properties_panel.set_client(client, network_rtt=rtt)
 
     @property
     def sources_panel(self) -> SourcesPanel:
