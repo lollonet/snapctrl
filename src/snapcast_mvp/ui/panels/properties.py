@@ -95,7 +95,7 @@ class PropertiesPanel(QWidget):
         # Network RTT (ping) - prominently displayed
         # Note: RTT may not work for all clients due to firewalls, ICMP blocking, or VPNs
         if network_rtt is not None:
-            rtt_str = format_rtt(network_rtt)
+            rtt_str = format_rtt(network_rtt).replace("<", "&lt;")
             rtt_color = get_rtt_color(network_rtt)
             rows.append(
                 f"<tr><td><i>Network RTT:</i></td>"
