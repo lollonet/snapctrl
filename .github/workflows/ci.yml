@@ -8,20 +8,28 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, raspy]
     steps:
       - uses: actions/checkout@v4
 
-      - uses: astral-sh/setup-uv@v3
+      - name: Install uv
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
 
-      - name: Install dependencies (without dev extras)
-        run: uv sync
+      - name: Install dependencies
+        run: uv sync --all-extras
 
-      - name: Install pytest and dev tools
-        run: uv pip install pytest pytest-cov pytest-asyncio ruff
-
-      - name: Run ruff
+      - name: Run ruff check
         run: uv run ruff check src tests
 
-      - name: Run tests (skip UI tests that require Qt, skip integration tests that need live server)
-        run: uv run pytest tests/ -v --ignore=tests/test_ui_widgets.py --ignore=tests/test_ui_panels.py --ignore=tests/test_ui_main_window.py --ignore=tests/test_ui_client_card.py --ignore=tests/test_core_state.py --ignore=tests/test_integration_week3.py --ignore=tests/test_integration_snapcast.py --cov=src --cov-report=term-missing
+      - name: Run ruff format check
+        run: uv run ruff format --check src tests
+
+      - name: Run type check
+        run: uv run basedpyright src
+
+      - name: Run all tests
+        run: uv run pytest tests/ -v --ignore=tests/test_integration_snapcast.py --cov=src --cov-report=term-missing
+        env:
+          QT_QPA_PLATFORM: offscreen
