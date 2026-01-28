@@ -1,15 +1,15 @@
-# Snapcast MVP
+# SnapCTRL
 
 > Native desktop controller for Snapcast multi-room audio systems.
 
 [![Python](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![Qt](https://img.shields.io/badge/Qt-6.8+-green.svg)](https://www.qt.io/)
-[![CI](https://github.com/lollonet/snapcast-mvp/actions/workflows/ci.yml/badge.svg)](https://github.com/lollonet/snapcast-mvp/actions/workflows/ci.yml)
+[![CI](https://github.com/lollonet/snapctrl/actions/workflows/ci.yml/badge.svg)](https://github.com/lollonet/snapctrl/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 ## Overview
 
-Snapcast MVP is a cross-platform desktop application that provides an intuitive GUI for controlling Snapcast servers. Built with Python and PySide6 (Qt6), it connects to your Snapcast server via TCP and allows real-time control of groups, clients, and audio sources.
+SnapCTRL is a cross-platform desktop application that provides an intuitive GUI for controlling Snapcast servers. Built with Python and PySide6 (Qt6), it connects to your Snapcast server via TCP and allows real-time control of groups, clients, and audio sources.
 
 ### Features
 
@@ -41,8 +41,8 @@ Snapcast MVP is a cross-platform desktop application that provides an intuitive 
 
 ```bash
 # Clone the repository
-git clone https://github.com/lollonet/snapcast-mvp.git
-cd snapcast-mvp
+git clone https://github.com/lollonet/snapctrl.git
+cd snapctrl
 
 # Install with uv (recommended)
 uv pip install -e .

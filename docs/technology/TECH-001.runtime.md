@@ -28,7 +28,7 @@
 ## Dependency Graph
 
 ```
-snapcast-mvp
+SnapCTRL
 ├── PySide6 (Qt6 bindings)
 │   ├── QtCore (signals, threads)
 │   ├── QtGui (icons, styling)
@@ -53,7 +53,7 @@ snapcast-mvp
 
 | Metric | Target | Measurement |
 |--------|--------|-------------|
-| Startup time | < 2s | `time snapcast-mvp` |
+| Startup time | < 2s | `time snapctrl` |
 | Memory usage | < 200MB | Task Manager / htop |
 | Volume latency | < 100ms | End-to-end timing |
 | WebSocket msg | < 50ms | Round-trip time |

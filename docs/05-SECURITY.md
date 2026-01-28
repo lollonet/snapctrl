@@ -1,4 +1,4 @@
-# Snapcast MVP - Security
+# SnapCTRL - Security
 
 ## Threat Model
 

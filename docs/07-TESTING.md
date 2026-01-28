@@ -1,4 +1,4 @@
-# Snapcast MVP - Testing Strategy
+# SnapCTRL - Testing Strategy
 
 ## Coverage Target: 85%
 

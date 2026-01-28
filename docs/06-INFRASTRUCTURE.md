@@ -1,4 +1,4 @@
-# Snapcast MVP - Infrastructure
+# SnapCTRL - Infrastructure
 
 ## Development Environment
 
@@ -109,9 +109,9 @@ uv run basedpyright src/
 
 | Platform | Tool | Output |
 |----------|------|--------|
-| Windows | PyInstaller | snapcast-mvp.exe |
-| macOS | briefcase | Snapcast MVP.app |
-| Linux | PyInstaller | snapcast-mvp (AppImage) |
+| Windows | PyInstaller | SnapCTRL.exe |
+| macOS | briefcase | SnapCTRL.app |
+| Linux | PyInstaller | SnapCTRL (AppImage) |
 
 ---
 

@@ -36,8 +36,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Windows .ico icon (multi-resolution)
   - macOS .app bundle with .dmg packaging
 
-- **App Branding** - Jan 27
-  - Renamed from "Snapcast MVP" to "SnapCTRL"
+- **App Rebranding** - Jan 27
+  - Project renamed to "SnapCTRL"
   - Custom app icon (SVG, ICNS, ICO)
   - macOS app bundle with proper Info.plist
 
