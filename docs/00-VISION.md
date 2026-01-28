@@ -1,10 +1,11 @@
-# Snapcast MVP - Vision Document
+# SnapCTRL - Vision Document
 
 ## Project Overview
 
-**Name**: Snapcast MVP
-**Status**: Inception
+**Name**: SnapCTRL (formerly Snapcast MVP)
+**Status**: Active Development
 **Created**: 2025-01-24
+**Updated**: 2026-01-28
 **Timeline**: ~3 months (12 weeks)
 **Target Platforms**: Windows, macOS, Linux
 
@@ -31,8 +32,10 @@ Snapcast is a powerful multi-room audio solution, but controlling it typically r
 
 **Success means**:
 - A user can open the app and immediately see what's playing where
+- See track metadata (title, artist, album, cover art) for each source
 - Volume adjustments happen instantly with visual feedback
 - Switching audio sources between rooms is intuitive
+- Zero-configuration startup via mDNS autodiscovery
 - The app feels responsive and native on each platform
 
 ---

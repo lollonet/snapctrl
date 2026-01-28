@@ -41,6 +41,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Custom app icon (SVG, ICNS, ICO)
   - macOS app bundle with proper Info.plist
 
+- **Now Playing Metadata** - Jan 28
+  - Display track title, artist, and album for playing sources
+  - Album art display (80x80px with rounded corners)
+  - Metadata from Snapcast server streams
+
+- **MPD Protocol Integration** - Jan 28
+  - Full MPD client with async TCP connection
+  - Track metadata (title, artist, album) via `currentsong`
+  - Album art via `readpicture` and `albumart` commands
+  - MpdMonitor for real-time track change detection (2s polling)
+
+- **Album Art Fallback Chain** - Jan 28
+  - iTunes Search API for broad coverage
+  - MusicBrainz Cover Art Archive as fallback
+  - Triggers on source selection and track change
+  - Handles Snapcast HTTP server bugs gracefully
+
 ### Fixed
 
 - **Source Selection** ([#4](https://github.com/lollonet/snapcast-mvp/pull/4)) - Jan 27
@@ -60,6 +77,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Connection Status** ([#4](https://github.com/lollonet/snapcast-mvp/pull/4)) - Jan 27
   - Green/red color indicators for connected/disconnected
   - Properties panel updates when client selected
+
+- **Album Art Chunked Retrieval** - Jan 28
+  - MPD returns album art in 8KB chunks
+  - Now fetches all chunks for complete images
+
+- **HTTP Album Art URLs** - Jan 28
+  - Support for Snapcast image cache URLs
+  - URL hostname rewriting (internal hostname → connection IP)
 
 ### Changed
 

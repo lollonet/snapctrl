@@ -6,6 +6,7 @@ Each message is a JSON-RPC request/response delimited by newlines.
 
 import asyncio
 import json
+import logging
 from collections.abc import Callable
 from contextlib import suppress
 from typing import Any, cast
@@ -21,6 +22,8 @@ from snapcast_mvp.models.group import Group
 from snapcast_mvp.models.server import Server
 from snapcast_mvp.models.server_state import ServerState
 from snapcast_mvp.models.source import Source
+
+logger = logging.getLogger(__name__)
 
 # Type aliases for event handlers
 ConnectionHandler = Callable[[], None]
@@ -235,7 +238,8 @@ class SnapcastClient:
                 if loop.is_running():
                     loop.call_soon(self._on_notification, notification)
             except RuntimeError:
-                pass
+                # No event loop running - this happens during shutdown
+                logger.debug("Cannot emit notification: no event loop running")
 
     def _emit_disconnect(self) -> None:
         """Emit disconnect to handler."""
@@ -245,7 +249,8 @@ class SnapcastClient:
                 if loop.is_running():
                     loop.call_soon(self._on_disconnect)
             except RuntimeError:
-                pass
+                # No event loop running - this happens during shutdown
+                logger.debug("Cannot emit disconnect: no event loop running")
 
     def _emit_error(self, error: Exception) -> None:
         """Emit error to handler."""
@@ -255,7 +260,8 @@ class SnapcastClient:
                 if loop.is_running():
                     loop.call_soon(self._on_error, error)
             except RuntimeError:
-                pass
+                # No event loop running - this happens during shutdown
+                logger.debug("Cannot emit error: no event loop running")
 
     def _next_id(self) -> int:
         """Generate next request ID."""

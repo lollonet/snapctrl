@@ -186,8 +186,22 @@ class PingMonitor(QObject):
         self.results_updated.emit(results)
 
 
-# RTT display thresholds
-_RTT_PRECISION_THRESHOLD = 10  # Show decimal precision below this
+class RttThresholds:
+    """RTT display thresholds for categorizing network latency.
+
+    These values are chosen based on typical home network performance
+    and audio streaming requirements:
+    - <50ms: Excellent for real-time audio sync (green)
+    - 50-100ms: Acceptable but may cause minor sync issues (yellow)
+    - >100ms: High latency, likely to cause audible sync problems (red)
+    """
+
+    # Show decimal precision below 10ms (sub-10ms is excellent)
+    PRECISION = 10
+    # Green indicator below 50ms (good for real-time audio)
+    GOOD = 50
+    # Yellow 50-100ms, red above 100ms (audio may stutter)
+    WARN = 100
 
 
 def format_rtt(rtt_ms: float | None) -> str:
@@ -203,6 +217,22 @@ def format_rtt(rtt_ms: float | None) -> str:
         return "N/A"
     if rtt_ms < 1:
         return "<1ms"
-    if rtt_ms < _RTT_PRECISION_THRESHOLD:
+    if rtt_ms < RttThresholds.PRECISION:
         return f"{rtt_ms:.1f}ms"
     return f"{int(rtt_ms)}ms"
+
+
+def get_rtt_color(rtt_ms: float) -> str:
+    """Get the display color for an RTT value.
+
+    Args:
+        rtt_ms: RTT in milliseconds.
+
+    Returns:
+        HTML color code: green for good, yellow for warning, red for high latency.
+    """
+    if rtt_ms < RttThresholds.GOOD:
+        return "#80ff80"  # Green - good
+    if rtt_ms < RttThresholds.WARN:
+        return "#ffff80"  # Yellow - warning
+    return "#ff8080"  # Red - high latency

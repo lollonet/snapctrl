@@ -1,10 +1,10 @@
-# Snapcast MVP - Architecture
+# SnapCTRL - Architecture
 
 ## System Overview
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                         Snapcast MVP                            │
+│                         SnapCTRL                            │
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                   │
 │  ┌─────────────┐    ┌──────────────┐    ┌─────────────────┐    │
@@ -58,14 +58,22 @@ src/snapcast_mvp/
 ├── api/                     # API layer
 │   ├── __init__.py
 │   ├── client.py            # SnapcastClient (asyncio TCP)
-│   └── protocol.py          # JSON-RPC types
+│   ├── protocol.py          # JSON-RPC types
+│   └── mpd/                  # MPD client module
+│       ├── __init__.py
+│       ├── client.py        # MpdClient (asyncio TCP)
+│       ├── protocol.py      # MPD protocol parsing
+│       └── types.py         # MpdTrack, MpdStatus dataclasses
 │
 ├── core/                    # Business logic
 │   ├── __init__.py
 │   ├── state.py             # StateStore (Qt signals)
 │   ├── worker.py            # SnapcastWorker (QThread)
 │   ├── config.py            # ConfigManager (QSettings wrapper)
-│   └── controller.py        # Controller (UI → API bridge)
+│   ├── controller.py        # Controller (UI → API bridge)
+│   ├── discovery.py         # mDNS autodiscovery
+│   ├── ping_monitor.py      # Network RTT monitoring
+│   └── mpd_monitor.py       # MPD metadata polling
 │
 └── ui/                      # Qt UI layer
     ├── __init__.py
@@ -261,4 +269,4 @@ QT_QPA_PLATFORM=offscreen uv run pytest  # tests
 
 *Next: [Data Models](03-DATA-MODELS.md) →*
 
-*Last updated: 2025-01-26*
+*Last updated: 2026-01-28*

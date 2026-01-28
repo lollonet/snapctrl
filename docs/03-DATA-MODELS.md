@@ -1,4 +1,4 @@
-# Snapcast MVP - Data Models
+# SnapCTRL - Data Models
 
 ## Overview
 
@@ -89,7 +89,17 @@ class Source:
     id: str
     name: str = ""
     status: str = "idle"       # idle, playing
-    stream_type: str = ""      # flac, spotify, airplay, etc.
+    stream_type: str = ""      # pipe, librespot, airplay, meta, etc.
+    codec: str = ""            # flac, pcm, opus, ogg, etc.
+    sample_format: str = ""    # e.g., "48000:16:2"
+    uri_scheme: str = ""       # pipe, librespot, airplay, meta, etc.
+    uri_raw: str = ""          # Raw URI string for debugging
+
+    # Track metadata (from Snapcast or MPD)
+    meta_title: str = ""
+    meta_artist: str = ""
+    meta_album: str = ""
+    meta_art_url: str = ""
 
     @property
     def is_playing(self) -> bool:
@@ -100,6 +110,26 @@ class Source:
     def is_idle(self) -> bool:
         """Return True if stream is idle."""
         return self.status == "idle"
+
+    @property
+    def display_codec(self) -> str:
+        """Return codec for display, with fallback."""
+        return self.codec or self.stream_type or "unknown"
+
+    @property
+    def display_format(self) -> str:
+        """Return sample format in human-readable form (e.g., '48kHz/16bit/stereo')."""
+        # Implementation parses sample_format string
+
+    @property
+    def has_metadata(self) -> bool:
+        """Return True if source has track metadata."""
+        return bool(self.meta_title or self.meta_artist)
+
+    @property
+    def display_now_playing(self) -> str:
+        """Return formatted 'Now Playing' string."""
+        # Returns "Title — Artist" if metadata available
 ```
 
 ### ServerState
@@ -177,4 +207,4 @@ class ServerState:
 
 *Next: [UI/UX Design](04-UI-UX.md) →*
 
-*Last updated: 2025-01-26*
+*Last updated: 2026-01-28*

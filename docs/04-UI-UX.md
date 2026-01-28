@@ -1,4 +1,4 @@
-# Snapcast MVP - UI/UX Design
+# SnapCTRL - UI/UX Design
 
 ## Layout: Tri-Pane Dashboard
 

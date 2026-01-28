@@ -1,4 +1,4 @@
-# Snapcast MVP - Work Breakdown Structure (12 Weeks)
+# SnapCTRL - Work Breakdown Structure (12 Weeks)
 
 ## Legend
 - 🎯 Milestone
@@ -87,7 +87,7 @@
 
 ---
 
-### Week 9: Client Controls
+### Week 9: Client Controls + Enhancements
 | Task | Estimate | Status |
 |------|----------|--------|
 | ClientCard widget | 1d | ✅ |
@@ -95,8 +95,28 @@
 | Mute toggle functionality | 0.5d | ✅ |
 | Connection status indicator | 0.5d | ✅ |
 | Integration tests | 1d | ✅ |
+| mDNS autodiscovery (PR #3) | 0.5d | ✅ |
+| Source details panel (PR #5) | 1d | ✅ |
+| Network RTT ping measurement (PR #5) | 0.5d | ✅ |
+| Now Playing metadata display | 0.5d | ✅ |
+| Cross-platform build configuration | 1d | ✅ |
+| App rebranding to SnapCTRL | 0.5d | ✅ |
 
 **🎯 Milestone: UI Foundation Complete** - Full UI with control capabilities
+
+---
+
+### Week 10: MPD Integration (Current)
+| Task | Estimate | Status |
+|------|----------|--------|
+| MPD async client module | 1d | 📦 |
+| Track metadata fetching (currentsong, status) | 0.5d | 📦 |
+| Album art fetching (albumart, readpicture) | 0.5d | 📦 |
+| MPD monitor Qt integration | 0.5d | 📦 |
+| Integration with SourcesPanel | 0.5d | 📦 |
+| Tests | 1d | 📦 |
+
+**Deliverable:** MPD track metadata + cover art in sources panel
 
 ---
 
@@ -188,14 +208,14 @@
 | 2 | Advanced UI | DnD, menus, connection | 🔧 Next |
 | 3 | Polish | Production-ready app | 🔧 Future |
 
-**Current Progress:** 9 of 16 weeks complete (56%)
+**Current Progress:** 10 of 16 weeks complete (62%)
 
-**Test Coverage:** 225 tests passing
+**Test Coverage:** 231 tests passing
 - 127 unit tests
-- 20 integration tests
+- 24 integration tests
 - 58 UI tests
-- 20 live server tests
+- 22 live server tests
 
 ---
 
-*Last updated: 2025-01-26*
+*Last updated: 2026-01-28*
