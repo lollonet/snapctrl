@@ -162,9 +162,7 @@ class TestServerDiscovery:
 
     @patch("snapcast_mvp.core.discovery.Zeroconf")
     @patch("snapcast_mvp.core.discovery.ServiceBrowser")
-    def test_start_idempotent(
-        self, mock_browser_cls: MagicMock, mock_zc_cls: MagicMock
-    ) -> None:
+    def test_start_idempotent(self, mock_browser_cls: MagicMock, mock_zc_cls: MagicMock) -> None:
         """Test start is idempotent (doesn't create multiple browsers)."""
         discovery = ServerDiscovery()
         discovery.start()
@@ -177,9 +175,7 @@ class TestServerDiscovery:
 
     @patch("snapcast_mvp.core.discovery.Zeroconf")
     @patch("snapcast_mvp.core.discovery.ServiceBrowser")
-    def test_stop_cleans_up(
-        self, mock_browser_cls: MagicMock, mock_zc_cls: MagicMock
-    ) -> None:
+    def test_stop_cleans_up(self, mock_browser_cls: MagicMock, mock_zc_cls: MagicMock) -> None:
         """Test stop cleans up resources."""
         discovery = ServerDiscovery()
         discovery.start()
@@ -210,8 +206,9 @@ class TestDiscoveryIntegration:
     @pytest.mark.asyncio
     async def test_discover_one_timeout(self) -> None:
         """Test discover_one returns None on timeout."""
-        with patch("snapcast_mvp.core.discovery.Zeroconf"), patch(
-            "snapcast_mvp.core.discovery.ServiceBrowser"
+        with (
+            patch("snapcast_mvp.core.discovery.Zeroconf"),
+            patch("snapcast_mvp.core.discovery.ServiceBrowser"),
         ):
             # With mocked Zeroconf, no servers will be found
             result = ServerDiscovery.discover_one(timeout=0.1)
@@ -220,8 +217,9 @@ class TestDiscoveryIntegration:
     @pytest.mark.asyncio
     async def test_discover_all_returns_list(self) -> None:
         """Test discover_all returns a list."""
-        with patch("snapcast_mvp.core.discovery.Zeroconf"), patch(
-            "snapcast_mvp.core.discovery.ServiceBrowser"
+        with (
+            patch("snapcast_mvp.core.discovery.Zeroconf"),
+            patch("snapcast_mvp.core.discovery.ServiceBrowser"),
         ):
             result = ServerDiscovery.discover_all(timeout=0.1)
             assert isinstance(result, list)
