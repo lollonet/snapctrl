@@ -1,15 +1,18 @@
 # Architecture Index
 
+Detailed architecture context documents. For the main architecture overview, see [02-ARCHITECTURE.md](../02-ARCHITECTURE.md).
+
 | ID | Title | Status |
 |----|-------|--------|
 | [ARC-001](ARC-001.context.md) | System Context | Done |
 
-## Related Documents
+## Coverage
 
-- [02-ARCHITECTURE.md](../02-ARCHITECTURE.md) - Component architecture and data flow
-- [03-DATA-MODELS.md](../03-DATA-MODELS.md) - Data models and state management
+The main [02-ARCHITECTURE.md](../02-ARCHITECTURE.md) covers:
+- Component architecture and module structure
+- Data flow (startup, connection, volume change)
+- Threading model (QThread + asyncio)
+- Error handling strategy
+- Quality gates
 
-## Planned
-
-- [ ] ARC-002: Error Handling Strategy
-- [ ] ARC-003: Threading Model (QThread + asyncio)
+This folder contains supplementary context documents for specific architectural aspects.
