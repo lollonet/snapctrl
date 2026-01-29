@@ -53,13 +53,30 @@ class Client:
     volume: int = 50           # 0-100
     muted: bool = False
     connected: bool = True
-    latency: int = 0           # milliseconds
+    latency: int = 0           # milliseconds offset
     snapclient_version: str = ""
+    last_seen_sec: int = 0     # Unix timestamp (seconds)
+    last_seen_usec: int = 0    # Microseconds part
+    host_os: str = ""          # e.g., "Linux"
+    host_arch: str = ""        # e.g., "aarch64"
+    host_name: str = ""        # Device hostname
 
     @property
     def display_name(self) -> str:
         """Return name or host as fallback for display."""
         return self.name or self.host
+
+    @property
+    def last_seen_ago(self) -> str:
+        """Return human-readable time since last seen."""
+
+    @property
+    def display_system(self) -> str:
+        """Return 'OS (arch)' string, e.g., 'Linux (aarch64)'."""
+
+    @property
+    def display_latency(self) -> str:
+        """Return latency as string with ms suffix, e.g., '+30 ms'."""
 ```
 
 ### Group
@@ -72,7 +89,7 @@ class Group:
     name: str = ""
     stream_id: str = ""        # Current source ID
     muted: bool = False
-    client_ids: tuple[str, ...] = ()
+    client_ids: list[str] = field(default_factory=list)
 
     @property
     def client_count(self) -> int:
@@ -118,8 +135,10 @@ class Source:
 
     @property
     def display_format(self) -> str:
-        """Return sample format in human-readable form (e.g., '48kHz/16bit/stereo')."""
-        # Implementation parses sample_format string
+        """Return sample format in human-readable form (e.g., '48kHz/16bit/stereo').
+
+        Parses sample_format string like '48000:16:2' into readable components.
+        """
 
     @property
     def has_metadata(self) -> bool:
@@ -183,6 +202,38 @@ class ServerState:
 
 ---
 
+### SourceStatus (Enum)
+
+```python
+class SourceStatus(str, Enum):
+    """Status of an audio source/stream."""
+    IDLE = "idle"
+    PLAYING = "playing"
+    UNKNOWN = "unknown"
+```
+
+### MPD Models
+
+See `src/snapcast_mvp/api/mpd/types.py` for the full definitions.
+
+```python
+@dataclass(frozen=True)
+class MpdTrack:
+    """Track metadata from MPD."""
+    title: str = ""
+    artist: str = ""
+    album: str = ""
+    file: str = ""
+
+@dataclass(frozen=True)
+class MpdAlbumArt:
+    """Album art data from MPD or external providers."""
+    data: bytes = b""
+    mime_type: str = ""
+```
+
+---
+
 ## JSON-RPC Mapping
 
 | Snapcast Response | Model | Notes |
@@ -207,4 +258,4 @@ class ServerState:
 
 *Next: [UI/UX Design](04-UI-UX.md) →*
 
-*Last updated: 2026-01-28*
+*Last updated: 2026-01-29*

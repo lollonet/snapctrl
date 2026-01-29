@@ -14,11 +14,21 @@ SnapCTRL is a cross-platform desktop application that provides an intuitive GUI 
 
 ### Features
 
-- **Connection Management**: Connect to any Snapcast server (manual configuration)
+- **Connection Management**: Connect to any Snapcast server via TCP (port 1705)
+- **mDNS Autodiscovery**: Automatic server detection on local network via zeroconf
 - **Real-time State**: Live updates from server via JSON-RPC over TCP
 - **Group Control**: Volume, mute, and stream selection per group
 - **Client Control**: Individual volume and mute for each client
-- **Multi-room Support**: View and control all groups and clients
+- **Per-Client Latency**: Interactive latency adjustment for connected clients
+- **Context Menus & Rename**: Right-click to rename clients and groups
+- **Now Playing Metadata**: Track title, artist, album from Snapcast streams
+- **MPD Integration**: Track metadata and album art via MPD protocol
+- **Album Art**: Fallback chain — MPD → iTunes → MusicBrainz
+- **System Tray**: Minimize-to-tray with quick volume sliders
+- **Dark/Light Theme**: Automatic system theme detection and runtime switching
+- **Auto-Reconnection**: Exponential backoff (2s–30s), infinite retry
+- **Network RTT Ping**: Color-coded latency monitoring per client
+- **Cross-Platform Builds**: PyInstaller packaging for macOS, Windows, Linux
 
 ### Current Status
 
@@ -33,13 +43,14 @@ SnapCTRL is a cross-platform desktop application that provides an intuitive GUI 
 | Album Art        | ✅ Complete   |
 | Integration      | ✅ Complete   |
 
-Run `pytest tests/ -v` for current test count (300+ tests).
+Run `pytest tests/ -v` for current test count (400+ tests).
 
 ## Requirements
 
 - Python 3.11+
 - PySide6 6.8+
-- A running Snapcast server (v0.34+ tested)
+- zeroconf (for mDNS autodiscovery)
+- A running Snapcast server (v0.27+ tested)
 
 ## Installation
 
@@ -49,7 +60,7 @@ git clone https://github.com/lollonet/snapctrl.git
 cd snapctrl
 
 # Install with uv (recommended)
-uv pip install -e .
+uv sync
 
 # Or with pip
 pip install -e .
@@ -88,19 +99,21 @@ QT_QPA_PLATFORM=offscreen uv run pytest tests/ -v
 uv run basedpyright src/
 ```
 
-### Test Coverage
+### Test Coverage (401 tests)
 
-- **127 unit tests**: Models, protocol, core components
-- **20 integration tests**: State + worker integration
-- **58 UI tests**: Widgets, panels, main window
-- **20 live server tests**: Real Snapcast server integration
+- **Models, protocol, API**: 150+ tests
+- **Core (state, config, ping, discovery)**: 80+ tests
+- **UI tests**: 100+ tests (widgets, panels, tray, theme)
+- **Integration tests**: 30+ tests
+- **Live server tests**: 20+ tests
+- **MPD/album art tests**: 17+ tests
 
 ## Architecture
 
-- **Models**: Frozen dataclasses for immutable state (Client, Group, Server, Source)
-- **API**: Asyncio TCP client with JSON-RPC 2.0 protocol
-- **Core**: StateStore with Qt signals, QThread worker for background I/O
-- **UI**: PySide6 widgets with reactive signal/slot connections
+- **Models**: Frozen dataclasses for immutable state (Client, Group, Server, Source, ServerProfile)
+- **API**: Asyncio TCP client with JSON-RPC 2.0, MPD protocol client, album art provider chain
+- **Core**: StateStore with Qt signals, QThread worker, mDNS discovery, ping monitor, MPD monitor
+- **UI**: PySide6 tri-pane layout, system tray, dark/light theme auto-detection
 
 See [docs/02-ARCHITECTURE.md](docs/02-ARCHITECTURE.md) for details.
 
@@ -108,8 +121,8 @@ See [docs/02-ARCHITECTURE.md](docs/02-ARCHITECTURE.md) for details.
 
 - [x] Month 1: Foundation (Models, API, State, Configuration)
 - [x] Month 2: UI Foundation (Widgets, Panels, MainWindow)
-- [ ] Month 2: Advanced UI (Drag & drop, context menus, client renaming)
-- [ ] Month 3: Polish (Theming, settings dialog, auto-discovery)
+- [x] Month 2: Advanced UI (Context menus, rename, latency, MPD, tray, theme)
+- [ ] Month 3: Polish (Drag & drop, settings dialog, keyboard shortcuts)
 
 ## Contributing
 
