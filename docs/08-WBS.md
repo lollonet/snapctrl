@@ -127,10 +127,10 @@
 | Task | Estimate | Status |
 |------|----------|--------|
 | Drag clients between groups | 1d | 🔧 |
-| Context menu for groups | 0.5d | 🔧 |
-| Context menu for clients | 0.5d | 🔧 |
-| Client rename functionality | 1d | 🔧 |
-| Tests | 1d | 🔧 |
+| Context menu for groups | 0.5d | ✅ |
+| Context menu for clients | 0.5d | ✅ |
+| Client rename functionality | 1d | ✅ |
+| Tests | 1d | ✅ |
 
 ---
 
@@ -139,8 +139,8 @@
 |------|----------|--------|
 | ConnectionDialog (add/edit servers) | 1d | 🔧 |
 | Server selector in toolbar | 0.5d | 🔧 |
-| Connection status indicator | 0.5d | 🔧 |
-| Auto-reconnection logic | 1d | 🔧 |
+| Connection status indicator | 0.5d | ✅ |
+| Auto-reconnection logic | 1d | ✅ |
 | Tests | 1d | 🔧 |
 
 ---
@@ -191,9 +191,9 @@
 ### Week 16: Release
 | Task | Estimate | Status |
 |------|----------|--------|
-| Packaging (Windows, macOS, Linux) | 2d | 🔧 |
+| Packaging (Windows, macOS, Linux) | 2d | ✅ |
 | Beta testing | 1d | 🔧 |
-| Release v0.1.0 | 1d | 🎯 |
+| Release v0.1.0 | 1d | ✅ |
 | GitHub release announcement | 0.5d | 🔧 |
 
 **🎯 Milestone: MVP Release** 🚀
@@ -206,18 +206,18 @@
 |-------|-------|-------------|--------|
 | 1 | Foundation | API + State working | ✅ Complete |
 | 2 | Core UI | Full control capabilities | ✅ UI Complete |
-| 2 | Advanced UI | DnD, menus, connection | 🔧 Next |
+| 2 | Advanced UI | DnD, menus, connection | 📦 In Progress |
 | 3 | Polish | Production-ready app | 🔧 Future |
 
-**Current Progress:** 10 of 16 weeks complete (62%)
+**Current Progress:** ~70% complete (context menus, rename, release pipeline done)
 
-**Test Coverage:** 360 tests passing
+**Test Coverage:** 369 tests passing
 - Models, protocol, API: 150+ tests
 - Integration tests: 30+ tests
-- UI tests: 60+ tests
+- UI tests: 70+ tests
 - Live server tests: 20+ tests
 - MPD/album art tests: 17+ tests
 
 ---
 
-*Last updated: 2026-01-28*
+*Last updated: 2026-01-29*
