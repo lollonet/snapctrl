@@ -148,11 +148,11 @@
 ### Week 12: System Integration
 | Task | Estimate | Status |
 |------|----------|--------|
-| System tray icon | 1d | 🔧 |
-| Tray menu (Show/Hide, Quit) | 0.5d | 🔧 |
-| Quick volume in tray | 1d | 🔧 |
-| Dark/light theme detection | 0.5d | 🔧 |
-| Theme styling | 1d | 🔧 |
+| System tray icon | 1d | ✅ |
+| Tray menu (Show/Hide, Quit) | 0.5d | ✅ |
+| Quick volume in tray | 1d | ✅ |
+| Dark/light theme detection | 0.5d | ✅ |
+| Theme styling | 1d | ✅ |
 
 ---
 
@@ -209,12 +209,12 @@
 | 2 | Advanced UI | DnD, menus, connection | 📦 In Progress |
 | 3 | Polish | Production-ready app | 🔧 Future |
 
-**Current Progress:** ~70% complete (context menus, rename, release pipeline done)
+**Current Progress:** ~75% complete (system tray, theme system, context menus, rename, release pipeline done)
 
-**Test Coverage:** 369 tests passing
+**Test Coverage:** 393 tests passing
 - Models, protocol, API: 150+ tests
 - Integration tests: 30+ tests
-- UI tests: 70+ tests
+- UI tests: 95+ tests (incl. tray + theme)
 - Live server tests: 20+ tests
 - MPD/album art tests: 17+ tests
 

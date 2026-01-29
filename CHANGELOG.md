@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **System Tray Icon** ([#13](https://github.com/lollonet/snapctrl/pull/13)) - Jan 29
+  - Show/Hide window toggle (double-click or menu)
+  - Group status entries with average volume percentages
+  - Now Playing metadata from sources
+  - Quick volume slider embedded in tray menu (QWidgetAction)
+  - Quit action; close-to-tray behavior (hide instead of quit)
+  - Debounced menu rebuild on state changes (500ms)
+
+- **Centralized Theme System** ([#13](https://github.com/lollonet/snapctrl/pull/13)) - Jan 29
+  - ThemeManager singleton with dark/light palette auto-detection (Qt 6.5+ colorScheme API)
+  - ThemePalette dataclass with 22 named color fields
+  - Runtime theme switching on macOS dark mode toggle
+  - Replaced ~40 hardcoded hex setStyleSheet calls across 7 UI files with palette lookups
+
 - **Mute-Only API** ([#2](https://github.com/lollonet/snapctrl/pull/2)) - Jan 27
   - `set_client_mute()` method for mute operations without volume data
   - Prevents duplicate API calls when toggling mute
