@@ -274,3 +274,65 @@ class TestSetClientMute:
             pytest.raises(ConnectionError, match="Lost connection"),
         ):
             await client.set_client_mute("client-123", True)
+
+
+class TestSetClientName:
+    """Tests for set_client_name method."""
+
+    @pytest.mark.asyncio
+    async def test_set_client_name_sends_correct_payload(self) -> None:
+        """Test that set_client_name sends Client.SetName with correct params."""
+        client = SnapcastClient("localhost")
+        client._connected = True
+
+        with patch.object(client, "call", new_callable=AsyncMock) as mock_call:
+            await client.set_client_name("client-123", "Living Room")
+
+            mock_call.assert_called_once_with(
+                "Client.SetName",
+                {"id": "client-123", "name": "Living Room"},
+            )
+
+    @pytest.mark.asyncio
+    async def test_set_client_name_propagates_errors(self) -> None:
+        """Test that set_client_name propagates errors from call."""
+        client = SnapcastClient("localhost")
+        client._connected = True
+
+        err = ConnectionError("Lost connection")
+        with (
+            patch.object(client, "call", new_callable=AsyncMock, side_effect=err),
+            pytest.raises(ConnectionError, match="Lost connection"),
+        ):
+            await client.set_client_name("client-123", "New Name")
+
+
+class TestSetGroupName:
+    """Tests for set_group_name method."""
+
+    @pytest.mark.asyncio
+    async def test_set_group_name_sends_correct_payload(self) -> None:
+        """Test that set_group_name sends Group.SetName with correct params."""
+        client = SnapcastClient("localhost")
+        client._connected = True
+
+        with patch.object(client, "call", new_callable=AsyncMock) as mock_call:
+            await client.set_group_name("group-abc", "Kitchen")
+
+            mock_call.assert_called_once_with(
+                "Group.SetName",
+                {"id": "group-abc", "name": "Kitchen"},
+            )
+
+    @pytest.mark.asyncio
+    async def test_set_group_name_propagates_errors(self) -> None:
+        """Test that set_group_name propagates errors from call."""
+        client = SnapcastClient("localhost")
+        client._connected = True
+
+        err = ConnectionError("Lost connection")
+        with (
+            patch.object(client, "call", new_callable=AsyncMock, side_effect=err),
+            pytest.raises(ConnectionError, match="Lost connection"),
+        ):
+            await client.set_group_name("group-abc", "New Group")

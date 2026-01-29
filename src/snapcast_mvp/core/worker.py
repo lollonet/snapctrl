@@ -177,6 +177,56 @@ class SnapcastWorker(QThread):
         except Exception as e:
             self.error_occurred.emit(e)
 
+    def rename_client(self, client_id: str, name: str) -> None:
+        """Rename a client.
+
+        Thread-safe call from main thread.
+
+        Args:
+            client_id: ID of the client.
+            name: New display name.
+        """
+        if self._loop and self._loop.is_running() and self._client:
+            asyncio.run_coroutine_threadsafe(
+                self._safe_rename_client(client_id, name),
+                self._loop,
+            )
+
+    async def _safe_rename_client(self, client_id: str, name: str) -> None:
+        """Rename client with error handling and status refresh."""
+        if not self._client or not self._client.is_connected:
+            return
+        try:
+            await self._client.set_client_name(client_id, name)
+            await self._fetch_status()
+        except Exception as e:
+            self.error_occurred.emit(e)
+
+    def rename_group(self, group_id: str, name: str) -> None:
+        """Rename a group.
+
+        Thread-safe call from main thread.
+
+        Args:
+            group_id: ID of the group.
+            name: New display name.
+        """
+        if self._loop and self._loop.is_running() and self._client:
+            asyncio.run_coroutine_threadsafe(
+                self._safe_rename_group(group_id, name),
+                self._loop,
+            )
+
+    async def _safe_rename_group(self, group_id: str, name: str) -> None:
+        """Rename group with error handling and status refresh."""
+        if not self._client or not self._client.is_connected:
+            return
+        try:
+            await self._client.set_group_name(group_id, name)
+            await self._fetch_status()
+        except Exception as e:
+            self.error_occurred.emit(e)
+
     def run(self) -> None:
         """Run the worker thread (entry point)."""
         # Create new event loop for this thread

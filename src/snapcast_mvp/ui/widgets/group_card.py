@@ -1,11 +1,13 @@
 """Group card widget - displays a group with volume control and source selection."""
 
 from PySide6.QtCore import QEvent, QObject, Signal
-from PySide6.QtGui import QMouseEvent
+from PySide6.QtGui import QContextMenuEvent, QMouseEvent
 from PySide6.QtWidgets import (
     QComboBox,
     QHBoxLayout,
+    QInputDialog,
     QLabel,
+    QMenu,
     QPushButton,
     QVBoxLayout,
     QWidget,
@@ -37,6 +39,10 @@ class GroupCard(QWidget):
     source_changed = Signal(str, str)  # group_id, stream_id
     expand_toggled = Signal(str, bool)  # group_id, expanded
     clicked = Signal()  # emitted when card is clicked
+
+    # Rename signals
+    rename_requested = Signal(str, str)  # group_id, new_name
+    client_rename_requested = Signal(str, str)  # client_id, new_name
 
     # Signals for client control (forwarded from client cards)
     client_volume_changed = Signal(str, int)  # client_id, volume
@@ -221,6 +227,27 @@ class GroupCard(QWidget):
         """
         super().mousePressEvent(event)
         self.clicked.emit()
+
+    # noinspection PyMethodOverriding
+    def contextMenuEvent(self, event: QContextMenuEvent) -> None:  # noqa: N802
+        """Show context menu on right-click.
+
+        Args:
+            event: The context menu event.
+        """
+        menu = QMenu(self)
+        rename_action = menu.addAction("Rename Group...")
+        action = menu.exec(event.globalPos())
+        if action == rename_action and self._group:
+            new_name, ok = QInputDialog.getText(
+                self,
+                "Rename Group",
+                "New name:",
+                text=self._group.name,
+            )
+            new_name = new_name.strip()
+            if ok and new_name and new_name != self._group.name:
+                self.rename_requested.emit(self._group.id, new_name)
 
     def eventFilter(self, watched: QObject, event: QEvent) -> bool:  # noqa: N802
         """Filter events from child widgets to handle clicks on name label.
@@ -409,6 +436,7 @@ class GroupCard(QWidget):
             card.volume_changed.connect(self.client_volume_changed.emit)
             card.mute_toggled.connect(self.client_mute_toggled.emit)
             card.clicked.connect(self.client_clicked.emit)
+            card.rename_requested.connect(self.client_rename_requested.emit)
 
             self._client_cards[client.id] = card
             self._clients_layout.addWidget(card)
@@ -533,6 +561,7 @@ class GroupCard(QWidget):
         card.volume_changed.connect(self.client_volume_changed.emit)
         card.mute_toggled.connect(self.client_mute_toggled.emit)
         card.clicked.connect(self.client_clicked.emit)
+        card.rename_requested.connect(self.client_rename_requested.emit)
 
         self._client_cards[client_id] = card
         self._clients_layout.addWidget(card)

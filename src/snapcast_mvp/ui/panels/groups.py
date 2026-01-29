@@ -32,6 +32,10 @@ class GroupsPanel(QWidget):
     source_changed = Signal(str, str)  # group_id, stream_id
     group_selected = Signal(str)  # group_id - emitted when a group card is clicked
 
+    # Rename signals (forwarded from group/client cards)
+    group_rename_requested = Signal(str, str)  # group_id, new_name
+    client_rename_requested = Signal(str, str)  # client_id, new_name
+
     # Signals for client control (forwarded from group cards)
     client_volume_changed = Signal(str, int)  # client_id, volume
     client_mute_toggled = Signal(str, bool)  # client_id, muted
@@ -137,6 +141,10 @@ class GroupsPanel(QWidget):
             card.client_volume_changed.connect(self.client_volume_changed.emit)
             card.client_mute_toggled.connect(self.client_mute_toggled.emit)
             card.client_clicked.connect(self.client_selected.emit)
+
+            # Connect rename signals
+            card.rename_requested.connect(self.group_rename_requested.emit)
+            card.client_rename_requested.connect(self.client_rename_requested.emit)
 
             self._group_cards[group.id] = card
             # Insert before the stretch

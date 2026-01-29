@@ -4,11 +4,13 @@ A compact widget for individual client control within a group card.
 """
 
 from PySide6.QtCore import QEvent, QObject, Signal
-from PySide6.QtGui import QMouseEvent
+from PySide6.QtGui import QContextMenuEvent, QMouseEvent
 from PySide6.QtWidgets import (
     QFrame,
     QHBoxLayout,
+    QInputDialog,
     QLabel,
+    QMenu,
 )
 
 from snapcast_mvp.models.client import Client
@@ -33,6 +35,7 @@ class ClientCard(QFrame):
     volume_changed = Signal(str, int)  # client_id, volume
     mute_toggled = Signal(str, bool)  # client_id, muted
     clicked = Signal(str)  # client_id
+    rename_requested = Signal(str, str)  # client_id, new_name
 
     def __init__(
         self,
@@ -215,6 +218,27 @@ class ClientCard(QFrame):
         # Don't call super() - this prevents event propagation to parent GroupCard
         event.accept()  # Mark as handled
         self.clicked.emit(self._client_id)
+
+    # noinspection PyMethodOverriding
+    def contextMenuEvent(self, event: QContextMenuEvent) -> None:  # noqa: N802
+        """Show context menu on right-click.
+
+        Args:
+            event: The context menu event.
+        """
+        menu = QMenu(self)
+        rename_action = menu.addAction("Rename...")
+        action = menu.exec(event.globalPos())
+        if action == rename_action:
+            new_name, ok = QInputDialog.getText(
+                self,
+                "Rename Client",
+                "New name:",
+                text=self._name,
+            )
+            new_name = new_name.strip()
+            if ok and new_name and new_name != self._name:
+                self.rename_requested.emit(self._client_id, new_name)
 
     def eventFilter(self, watched: QObject, event: QEvent) -> bool:  # noqa: N802
         """Filter events from child widgets to handle clicks.
