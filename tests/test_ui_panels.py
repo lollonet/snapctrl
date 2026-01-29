@@ -216,8 +216,12 @@ class TestGroupsPanelRenameSignals:
 
         clients_data = [
             Client(
-                id="c1", host="10.0.0.1", name="Speaker",
-                volume=50, muted=False, connected=True,
+                id="c1",
+                host="10.0.0.1",
+                name="Speaker",
+                volume=50,
+                muted=False,
+                connected=True,
             ),
         ]
         groups = [
