@@ -4,7 +4,7 @@ from unittest.mock import Mock
 
 from pytestqt.qtbot import QtBot
 
-from snapcast_mvp.ui.main_window import MainWindow
+from snapctrl.ui.main_window import MainWindow
 
 
 class TestMainWindowBasics:

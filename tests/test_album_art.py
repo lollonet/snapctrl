@@ -2,7 +2,7 @@
 
 import pytest
 
-from snapcast_mvp.api.album_art import (
+from snapctrl.api.album_art import (
     AlbumArt,
     AlbumArtProvider,
     FallbackAlbumArtProvider,

@@ -73,7 +73,7 @@ pip install -e .
 snapctrl
 
 # Or run as Python module
-python -m snapcast_mvp
+python -m snapctrl
 ```
 
 Set environment variable for headless Qt (useful for testing):

@@ -2,7 +2,7 @@
 
 import pytest
 
-from snapcast_mvp.models.client import Client
+from snapctrl.models.client import Client
 
 
 class TestClient:

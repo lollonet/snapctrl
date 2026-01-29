@@ -214,7 +214,7 @@ class SourceStatus(str, Enum):
 
 ### MPD Models
 
-See `src/snapcast_mvp/api/mpd/types.py` for the full definitions.
+See `src/snapctrl/api/mpd/types.py` for the full definitions.
 
 ```python
 @dataclass(frozen=True)

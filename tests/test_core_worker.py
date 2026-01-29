@@ -2,7 +2,7 @@
 
 import pytest
 
-from snapcast_mvp.core.worker import SnapcastWorker
+from snapctrl.core.worker import SnapcastWorker
 
 
 class TestSnapcastWorkerBasics:

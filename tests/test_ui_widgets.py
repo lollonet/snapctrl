@@ -2,10 +2,10 @@
 
 from pytestqt.qtbot import QtBot
 
-from snapcast_mvp.models.group import Group
-from snapcast_mvp.models.source import Source
-from snapcast_mvp.ui.widgets.group_card import GroupCard
-from snapcast_mvp.ui.widgets.volume_slider import VolumeSlider
+from snapctrl.models.group import Group
+from snapctrl.models.source import Source
+from snapctrl.ui.widgets.group_card import GroupCard
+from snapctrl.ui.widgets.volume_slider import VolumeSlider
 
 
 class TestVolumeSlider:

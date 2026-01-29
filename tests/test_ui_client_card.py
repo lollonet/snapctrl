@@ -2,8 +2,8 @@
 
 from pytestqt.qtbot import QtBot
 
-from snapcast_mvp.models.client import Client
-from snapcast_mvp.ui.widgets.client_card import ClientCard
+from snapctrl.models.client import Client
+from snapctrl.ui.widgets.client_card import ClientCard
 
 
 class TestClientCard:

@@ -4,12 +4,12 @@ from unittest.mock import AsyncMock, Mock
 
 import pytest
 
-from snapcast_mvp.api.client import SnapcastClient
-from snapcast_mvp.core.controller import Controller
-from snapcast_mvp.core.state import StateStore
-from snapcast_mvp.models.client import Client
-from snapcast_mvp.models.group import Group
-from snapcast_mvp.models.source import Source
+from snapctrl.api.client import SnapcastClient
+from snapctrl.core.controller import Controller
+from snapctrl.core.state import StateStore
+from snapctrl.models.client import Client
+from snapctrl.models.group import Group
+from snapctrl.models.source import Source
 
 
 @pytest.fixture

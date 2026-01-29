@@ -3,8 +3,8 @@
 import pytest
 from PySide6.QtCore import QCoreApplication
 
-from snapcast_mvp.api.mpd.types import MpdStatus, MpdTrack
-from snapcast_mvp.core.mpd_monitor import (
+from snapctrl.api.mpd.types import MpdStatus, MpdTrack
+from snapctrl.core.mpd_monitor import (
     DEFAULT_ART_CACHE_SIZE,
     DEFAULT_POLL_INTERVAL,
     DEFAULT_RECONNECT_DELAY,

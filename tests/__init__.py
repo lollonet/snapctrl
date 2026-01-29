@@ -1,1 +1,1 @@
-"""Tests for snapcast_mvp."""
+"""Tests for snapctrl."""

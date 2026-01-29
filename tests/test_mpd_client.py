@@ -5,7 +5,7 @@ from unittest.mock import patch
 
 import pytest
 
-from snapcast_mvp.api.mpd import MpdClient, MpdConnectionError
+from snapctrl.api.mpd import MpdClient, MpdConnectionError
 
 
 class MockStreamReader:

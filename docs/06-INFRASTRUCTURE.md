@@ -21,7 +21,7 @@ snapctrl/
 │       ├── ci.yml                 # Lint, format, test (unit only)
 │       ├── release.yml            # Build & publish on tag push
 │       └── claude-review.yml      # Claude Code Review on PRs
-├── src/snapcast_mvp/
+├── src/snapctrl/
 │   ├── api/                       # TCP API client
 │   ├── core/                      # Business logic
 │   ├── models/                    # Frozen dataclasses

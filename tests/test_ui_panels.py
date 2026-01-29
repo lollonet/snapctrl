@@ -2,12 +2,12 @@
 
 from pytestqt.qtbot import QtBot
 
-from snapcast_mvp.models.client import Client
-from snapcast_mvp.models.group import Group
-from snapcast_mvp.models.source import Source
-from snapcast_mvp.ui.panels.groups import GroupsPanel
-from snapcast_mvp.ui.panels.properties import PropertiesPanel
-from snapcast_mvp.ui.panels.sources import SourcesPanel
+from snapctrl.models.client import Client
+from snapctrl.models.group import Group
+from snapctrl.models.source import Source
+from snapctrl.ui.panels.groups import GroupsPanel
+from snapctrl.ui.panels.properties import PropertiesPanel
+from snapctrl.ui.panels.sources import SourcesPanel
 
 
 class TestSourcesPanel:

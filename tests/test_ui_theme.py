@@ -1,6 +1,6 @@
 """Tests for the centralized theme system."""
 
-from snapcast_mvp.ui.theme import (
+from snapctrl.ui.theme import (
     DARK_PALETTE,
     LIGHT_PALETTE,
     ThemeManager,

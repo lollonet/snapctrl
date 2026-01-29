@@ -28,7 +28,7 @@ check:		## Run all quality checks
 	pytest -v
 
 run:		## Run the application
-	python -m snapcast_mvp
+	python -m snapctrl
 
 clean:		## Clean build artifacts
 	rm -rf .pytest_cache .ruff_cache .coverage htmlcov

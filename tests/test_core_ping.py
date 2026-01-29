@@ -1,6 +1,6 @@
 """Tests for network ping utilities."""
 
-from snapcast_mvp.core.ping import (
+from snapctrl.core.ping import (
     PingMonitor,
     RttThresholds,
     _parse_ping_output,

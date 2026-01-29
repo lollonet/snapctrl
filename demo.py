@@ -5,9 +5,9 @@ import sys
 from PySide6.QtWidgets import QApplication
 from PySide6.QtCore import Qt
 
-from snapcast_mvp.ui.main_window import MainWindow
-from snapcast_mvp.models.group import Group
-from snapcast_mvp.models.source import Source
+from snapctrl.ui.main_window import MainWindow
+from snapctrl.models.group import Group
+from snapctrl.models.source import Source
 
 
 def main():

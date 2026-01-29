@@ -1,6 +1,6 @@
 """Tests for JSON-RPC protocol types."""
 
-from snapcast_mvp.api.protocol import (
+from snapctrl.api.protocol import (
     JsonRpcError,
     JsonRpcNotification,
     JsonRpcRequest,

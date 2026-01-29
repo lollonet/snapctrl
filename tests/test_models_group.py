@@ -2,7 +2,7 @@
 
 import pytest
 
-from snapcast_mvp.models.group import Group
+from snapctrl.models.group import Group
 
 
 class TestGroup:
