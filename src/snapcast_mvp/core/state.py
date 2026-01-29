@@ -245,6 +245,28 @@ class StateStore(QObject):
                 self._state = replace(self._state, clients=new_state_clients)
                 self.state_changed.emit(self._state)
 
+    def update_client_latency(self, client_id: str, latency: int) -> None:
+        """Update a specific client's latency offset in the local state.
+
+        Args:
+            client_id: The client ID.
+            latency: New latency offset in milliseconds.
+        """
+        client = self._clients.get(client_id)
+        if client:
+            updated = replace(client, latency=latency)
+            self._clients[client_id] = updated
+
+            new_clients = list(self._clients.values())
+            self.clients_changed.emit(new_clients)
+
+            if self._state:
+                new_state_clients = [
+                    updated if c.id == client_id else c for c in self._state.clients
+                ]
+                self._state = replace(self._state, clients=new_state_clients)
+                self.state_changed.emit(self._state)
+
     def update_group_mute(self, group_id: str, muted: bool) -> None:
         """Update a specific group's mute state in the local state.
 

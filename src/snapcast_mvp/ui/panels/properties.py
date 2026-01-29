@@ -1,8 +1,10 @@
 """Properties panel - displays details of selected item."""
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
+    QHBoxLayout,
     QLabel,
+    QSpinBox,
     QVBoxLayout,
     QWidget,
 )
@@ -26,6 +28,8 @@ class PropertiesPanel(QWidget):
         panel.clear()
     """
 
+    latency_changed = Signal(str, int)  # client_id, latency_ms
+
     def __init__(self) -> None:
         """Initialize the properties panel."""
         super().__init__()
@@ -48,6 +52,11 @@ class PropertiesPanel(QWidget):
         self._content.setWordWrap(True)
         layout.addWidget(self._content)
 
+        # Latency control (shown for connected clients)
+        self._latency_widget: QWidget | None = None
+        self._latency_spinbox: QSpinBox | None = None
+        self._current_client_id: str | None = None
+
         layout.addStretch()
 
     def clear(self) -> None:
@@ -55,6 +64,7 @@ class PropertiesPanel(QWidget):
         p = theme_manager.palette
         self._content.setText("Select an item to see details")
         self._content.setStyleSheet(f"color: {p.text_disabled}; font-style: italic;")
+        self._remove_latency_widget()
 
     def set_group(self, group: Group) -> None:
         """Display group properties.
@@ -62,6 +72,7 @@ class PropertiesPanel(QWidget):
         Args:
             group: Group to display.
         """
+        self._remove_latency_widget()
         mute_status = "Muted" if group.muted else "Active"
         html = f"""
             <h3>{group.name}</h3>
@@ -112,8 +123,12 @@ class PropertiesPanel(QWidget):
                 f"<td style='color: {p.text_disabled};'>N/A (ping blocked?)</td></tr>"
             )
 
-        # Latency offset (configured compensation)
-        rows.append(f"<tr><td><i>Latency offset:</i></td><td>{client.display_latency}</td></tr>")
+        # Latency offset — shown as interactive spinbox for connected clients,
+        # read-only text for disconnected clients
+        if not client.connected:
+            rows.append(
+                f"<tr><td><i>Latency offset:</i></td><td>{client.display_latency}</td></tr>"
+            )
 
         # Last seen (timing info)
         if client.last_seen_sec > 0:
@@ -146,12 +161,19 @@ class PropertiesPanel(QWidget):
         self._content.setStyleSheet(f"color: {p.text};")
         self._content.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
 
+        # Add interactive latency control for connected clients
+        self._remove_latency_widget()
+        if client.connected:
+            self._current_client_id = client.id
+            self._add_latency_widget(client.latency)
+
     def set_source(self, source: Source) -> None:
         """Display source properties.
 
         Args:
             source: Source to display.
         """
+        self._remove_latency_widget()
         p = theme_manager.palette
         status = "Playing" if source.is_playing else "Idle"
         status_color = p.success if source.is_playing else p.text_disabled
@@ -187,3 +209,48 @@ class PropertiesPanel(QWidget):
         self._content.setText(html)
         self._content.setStyleSheet(f"color: {p.text};")
         self._content.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
+
+    def _add_latency_widget(self, current_latency: int) -> None:
+        """Add an interactive latency spinbox below the content.
+
+        Args:
+            current_latency: Current latency offset in ms.
+        """
+        p = theme_manager.palette
+        self._latency_widget = QWidget()
+        row = QHBoxLayout(self._latency_widget)
+        row.setContentsMargins(4, 0, 4, 0)
+
+        label = QLabel("Latency offset:")
+        label.setStyleSheet(f"color: {p.text}; font-style: italic;")
+        row.addWidget(label)
+
+        spinbox = QSpinBox()
+        spinbox.setRange(-1000, 1000)
+        spinbox.setSingleStep(10)
+        spinbox.setSuffix(" ms")
+        spinbox.setValue(current_latency)
+        spinbox.editingFinished.connect(self._on_latency_editing_finished)
+        row.addWidget(spinbox)
+
+        row.addStretch()
+
+        self._latency_spinbox = spinbox
+
+        # Insert before the stretch (last item in layout)
+        main_layout = self.layout()
+        if main_layout is not None and isinstance(main_layout, QVBoxLayout):
+            main_layout.insertWidget(main_layout.count() - 1, self._latency_widget)
+
+    def _remove_latency_widget(self) -> None:
+        """Remove the latency spinbox widget if present."""
+        self._current_client_id = None
+        if self._latency_widget is not None:
+            self._latency_widget.setParent(None)  # type: ignore[call-overload]
+            self._latency_widget = None
+            self._latency_spinbox = None
+
+    def _on_latency_editing_finished(self) -> None:
+        """Emit latency_changed when the user finishes editing."""
+        if self._current_client_id and self._latency_spinbox:
+            self.latency_changed.emit(self._current_client_id, self._latency_spinbox.value())

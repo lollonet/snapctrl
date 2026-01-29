@@ -177,6 +177,31 @@ class SnapcastWorker(QThread):
         except Exception as e:
             self.error_occurred.emit(e)
 
+    def set_client_latency(self, client_id: str, latency: int) -> None:
+        """Set client latency offset.
+
+        Thread-safe call from main thread.
+
+        Args:
+            client_id: ID of the client.
+            latency: Latency offset in milliseconds.
+        """
+        if self._loop and self._loop.is_running() and self._client:
+            asyncio.run_coroutine_threadsafe(
+                self._safe_set_client_latency(client_id, latency),
+                self._loop,
+            )
+
+    async def _safe_set_client_latency(self, client_id: str, latency: int) -> None:
+        """Set client latency with error handling and status refresh."""
+        if not self._client or not self._client.is_connected:
+            return
+        try:
+            await self._client.set_client_latency(client_id, latency)
+            await self._fetch_status()
+        except Exception as e:
+            self.error_occurred.emit(e)
+
     def rename_client(self, client_id: str, name: str) -> None:
         """Rename a client.
 

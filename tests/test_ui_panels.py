@@ -173,6 +173,88 @@ class TestPropertiesPanel:
         panel.clear()
         assert "Select an item" in panel._content.text()
 
+    def test_latency_spinbox_shown_for_connected_client(self, qtbot: QtBot) -> None:
+        """Test that latency spinbox appears for a connected client."""
+        panel = PropertiesPanel()
+        qtbot.addWidget(panel)
+
+        client = Client(
+            id="c1",
+            host="10.0.0.1",
+            name="Speaker",
+            volume=50,
+            muted=False,
+            connected=True,
+            latency=30,
+        )
+        panel.set_client(client)
+
+        assert panel._latency_spinbox is not None
+        assert panel._latency_spinbox.value() == 30
+
+    def test_latency_spinbox_hidden_for_disconnected_client(self, qtbot: QtBot) -> None:
+        """Test that latency spinbox is not shown for disconnected client."""
+        panel = PropertiesPanel()
+        qtbot.addWidget(panel)
+
+        client = Client(
+            id="c1",
+            host="10.0.0.1",
+            name="Speaker",
+            volume=50,
+            muted=False,
+            connected=False,
+            latency=30,
+        )
+        panel.set_client(client)
+
+        assert panel._latency_spinbox is None
+
+    def test_latency_spinbox_cleared_on_clear(self, qtbot: QtBot) -> None:
+        """Test that latency spinbox is removed when panel is cleared."""
+        panel = PropertiesPanel()
+        qtbot.addWidget(panel)
+
+        client = Client(
+            id="c1",
+            host="10.0.0.1",
+            name="Speaker",
+            volume=50,
+            muted=False,
+            connected=True,
+            latency=0,
+        )
+        panel.set_client(client)
+        assert panel._latency_spinbox is not None
+
+        panel.clear()
+        assert panel._latency_spinbox is None
+
+    def test_latency_signal_emitted(self, qtbot: QtBot) -> None:
+        """Test that latency_changed signal is emitted on editing finished."""
+        panel = PropertiesPanel()
+        qtbot.addWidget(panel)
+
+        client = Client(
+            id="c1",
+            host="10.0.0.1",
+            name="Speaker",
+            volume=50,
+            muted=False,
+            connected=True,
+            latency=0,
+        )
+        panel.set_client(client)
+
+        assert panel._latency_spinbox is not None
+        panel._latency_spinbox.setValue(50)
+
+        received: list[tuple[str, int]] = []
+        panel.latency_changed.connect(lambda cid, lat: received.append((cid, lat)))
+
+        panel._on_latency_editing_finished()  # pyright: ignore[reportPrivateUsage]
+        assert received == [("c1", 50)]
+
 
 class TestGroupsPanelRenameSignals:
     """Test rename signal forwarding in GroupsPanel."""

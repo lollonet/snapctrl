@@ -23,6 +23,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Runtime theme switching on macOS dark mode toggle
   - Replaced ~40 hardcoded hex setStyleSheet calls across 7 UI files with palette lookups
 
+- **Per-Client Latency Adjustment** ([#14](https://github.com/lollonet/snapctrl/pull/14)) - Jan 29
+  - Interactive QSpinBox in Properties Panel (-1000 to +1000 ms, step 10)
+  - `Client.SetLatency` API integration for audio sync fine-tuning
+  - Shown only for connected clients; read-only display for disconnected
+
+## [0.1.0] - 2026-01-29
+
+### Added
+
 - **Mute-Only API** ([#2](https://github.com/lollonet/snapctrl/pull/2)) - Jan 27
   - `set_client_mute()` method for mute operations without volume data
   - Prevents duplicate API calls when toggling mute
@@ -71,6 +80,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - MusicBrainz Cover Art Archive as fallback
   - Triggers on source selection and track change
   - Handles Snapcast HTTP server bugs gracefully
+
+- **Context Menus and Rename** ([#8](https://github.com/lollonet/snapctrl/pull/8)) - Jan 29
+  - Right-click context menus on groups and clients
+  - Inline rename for clients and groups via `Client.SetName` / `Group.SetName`
+
+- **Connection Status Indicator** ([#7](https://github.com/lollonet/snapctrl/pull/7)) - Jan 29
+  - Toolbar indicator with green/red dot and status text
+  - Auto-reconnection with exponential backoff
+
+- **Release Pipeline** ([#9](https://github.com/lollonet/snapctrl/pull/9)) - Jan 29
+  - GitHub Actions builds for macOS, Windows, Linux on tag push
+  - Automatic GitHub Release with platform binaries
 
 ### Fixed
 

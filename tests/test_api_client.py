@@ -336,3 +336,35 @@ class TestSetGroupName:
             pytest.raises(ConnectionError, match="Lost connection"),
         ):
             await client.set_group_name("group-abc", "New Group")
+
+
+class TestSetClientLatency:
+    """Tests for set_client_latency method."""
+
+    @pytest.mark.asyncio
+    async def test_set_client_latency_sends_correct_payload(self) -> None:
+        """Test that set_client_latency sends Client.SetLatency with correct params."""
+        client = SnapcastClient("localhost")
+        client._connected = True
+
+        with patch.object(client, "call", new_callable=AsyncMock) as mock_call:
+            await client.set_client_latency("client-123", 50)
+
+            mock_call.assert_called_once_with(
+                "Client.SetLatency",
+                {"id": "client-123", "latency": 50},
+            )
+
+    @pytest.mark.asyncio
+    async def test_set_client_latency_negative_value(self) -> None:
+        """Test that set_client_latency accepts negative values."""
+        client = SnapcastClient("localhost")
+        client._connected = True
+
+        with patch.object(client, "call", new_callable=AsyncMock) as mock_call:
+            await client.set_client_latency("client-123", -100)
+
+            mock_call.assert_called_once_with(
+                "Client.SetLatency",
+                {"id": "client-123", "latency": -100},
+            )

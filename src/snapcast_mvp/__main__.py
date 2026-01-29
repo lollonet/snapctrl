@@ -278,6 +278,9 @@ def main() -> int:  # noqa: PLR0915
     window.groups_panel.client_rename_requested.connect(worker.rename_client)
     window.groups_panel.group_rename_requested.connect(worker.rename_group)
 
+    # Connect latency control from properties panel
+    window.properties_panel.latency_changed.connect(worker.set_client_latency)
+
     # Connect tray quick volume to group volume handler
     tray.volume_changed.connect(on_group_volume_changed)
 
