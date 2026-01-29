@@ -43,7 +43,7 @@
 ## Module Structure
 
 ```
-src/snapcast_mvp/
+src/snapctrl/
 ├── __init__.py
 ├── __main__.py              # Entry point, signal wiring, mDNS bootstrap
 │

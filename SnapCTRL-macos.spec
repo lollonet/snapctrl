@@ -12,7 +12,7 @@ src_path = project_root / "src"
 resources_path = project_root / "resources"
 
 a = Analysis(
-    [str(src_path / "snapcast_mvp" / "__main__.py")],
+    [str(src_path / "snapctrl" / "__main__.py")],
     pathex=[str(src_path)],
     binaries=[],
     datas=[

@@ -4,12 +4,12 @@ from unittest.mock import patch
 
 from pytestqt.qtbot import QtBot
 
-from snapcast_mvp.core.state import StateStore
-from snapcast_mvp.models.client import Client
-from snapcast_mvp.models.group import Group
-from snapcast_mvp.models.source import Source
-from snapcast_mvp.ui.main_window import MainWindow
-from snapcast_mvp.ui.system_tray import SystemTrayManager
+from snapctrl.core.state import StateStore
+from snapctrl.models.client import Client
+from snapctrl.models.group import Group
+from snapctrl.models.source import Source
+from snapctrl.ui.main_window import MainWindow
+from snapctrl.ui.system_tray import SystemTrayManager
 
 
 def _make_state_with_groups(
@@ -152,7 +152,7 @@ class TestSystemTrayManager:
 
         tray = SystemTrayManager(window, state)
 
-        with patch("snapcast_mvp.ui.system_tray.QApplication") as mock_app_cls:
+        with patch("snapctrl.ui.system_tray.QApplication") as mock_app_cls:
             mock_app_cls.instance.return_value = mock_app_cls
             tray._on_quit()  # pyright: ignore[reportPrivateUsage]
             mock_app_cls.quit.assert_called_once()

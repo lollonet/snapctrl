@@ -2,7 +2,7 @@
 
 import pytest
 
-from snapcast_mvp.models.server import Server
+from snapctrl.models.server import Server
 
 
 class TestServer:

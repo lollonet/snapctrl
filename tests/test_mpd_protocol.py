@@ -2,7 +2,7 @@
 
 import pytest
 
-from snapcast_mvp.api.mpd.protocol import (
+from snapctrl.api.mpd.protocol import (
     MpdError,
     escape_arg,
     format_command,
@@ -11,7 +11,7 @@ from snapcast_mvp.api.mpd.protocol import (
     parse_status,
     parse_track,
 )
-from snapcast_mvp.api.mpd.types import MpdStatus, MpdTrack
+from snapctrl.api.mpd.types import MpdStatus, MpdTrack
 
 
 class TestParseResponse:

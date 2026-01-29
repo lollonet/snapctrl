@@ -2,7 +2,7 @@
 
 import pytest
 
-from snapcast_mvp.models.profile import ServerProfile, create_profile
+from snapctrl.models.profile import ServerProfile, create_profile
 
 
 class TestServerProfile:

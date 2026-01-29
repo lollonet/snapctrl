@@ -8,8 +8,8 @@ Server: raspy (192.168.63.3:1705)
 
 import pytest
 
-from snapcast_mvp.api.client import SnapcastClient
-from snapcast_mvp.models import Client, Group, Server, ServerState, Source
+from snapctrl.api.client import SnapcastClient
+from snapctrl.models import Client, Group, Server, ServerState, Source
 
 # Test server configuration
 SNAPCAST_HOST = "192.168.63.3"

@@ -11,8 +11,8 @@ import os
 import pytest
 from pytestqt.qtbot import QtBot
 
-from snapcast_mvp.core.state import StateStore
-from snapcast_mvp.core.worker import SnapcastWorker
+from snapctrl.core.state import StateStore
+from snapctrl.core.worker import SnapcastWorker
 
 # Real server from integration tests
 SNAPCAST_HOST = os.getenv("SNAPCAST_HOST", "192.168.63.3")

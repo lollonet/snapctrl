@@ -1,4 +1,4 @@
-"""Test fixtures for snapcast_mvp tests."""
+"""Test fixtures for snapctrl tests."""
 
 import asyncio
 import json
@@ -16,7 +16,7 @@ try:
 except ImportError:
     HAS_WEBSOCKETS = False
 
-from snapcast_mvp.api.client import SnapcastClient
+from snapctrl.api.client import SnapcastClient
 
 
 @pytest.fixture

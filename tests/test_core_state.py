@@ -3,12 +3,12 @@
 import pytest
 from pytestqt.qtbot import QtBot
 
-from snapcast_mvp.core.state import StateStore
-from snapcast_mvp.models.client import Client
-from snapcast_mvp.models.group import Group
-from snapcast_mvp.models.server import Server
-from snapcast_mvp.models.server_state import ServerState
-from snapcast_mvp.models.source import Source
+from snapctrl.core.state import StateStore
+from snapctrl.models.client import Client
+from snapctrl.models.group import Group
+from snapctrl.models.server import Server
+from snapctrl.models.server_state import ServerState
+from snapctrl.models.source import Source
 
 
 @pytest.fixture

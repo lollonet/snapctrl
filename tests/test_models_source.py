@@ -2,7 +2,7 @@
 
 import pytest
 
-from snapcast_mvp.models.source import Source
+from snapctrl.models.source import Source
 
 
 class TestSource:

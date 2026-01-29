@@ -2,8 +2,8 @@
 
 import pytest
 
-from snapcast_mvp.core.config import ConfigManager
-from snapcast_mvp.models.profile import ServerProfile, create_profile
+from snapctrl.core.config import ConfigManager
+from snapctrl.models.profile import ServerProfile, create_profile
 
 
 @pytest.fixture

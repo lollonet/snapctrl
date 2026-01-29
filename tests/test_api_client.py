@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from snapcast_mvp.api.client import (
+from snapctrl.api.client import (
     SnapcastClient,
     _parse_server_status,
 )
@@ -47,7 +47,7 @@ class TestSnapcastClient:
         mock_reader.readline = mock_readline
 
         with patch(
-            "snapcast_mvp.api.client.asyncio.open_connection",
+            "snapctrl.api.client.asyncio.open_connection",
             return_value=(mock_reader, mock_writer),
         ):
             await client.connect()
@@ -64,7 +64,7 @@ class TestSnapcastClient:
 
         with (
             patch(
-                "snapcast_mvp.api.client.asyncio.open_connection",
+                "snapctrl.api.client.asyncio.open_connection",
                 side_effect=mock_connect_fail,
             ),
             pytest.raises(ConnectionError),
@@ -89,7 +89,7 @@ class TestSnapcastClient:
         mock_reader.readline = mock_readline
 
         with patch(
-            "snapcast_mvp.api.client.asyncio.open_connection",
+            "snapctrl.api.client.asyncio.open_connection",
             return_value=(mock_reader, mock_writer),
         ):
             await client.connect()
