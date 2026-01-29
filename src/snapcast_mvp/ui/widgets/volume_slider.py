@@ -9,6 +9,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from snapcast_mvp.ui.theme import theme_manager
+
 
 class VolumeSlider(QWidget):
     """Volume slider with integrated mute button.
@@ -49,18 +51,19 @@ class VolumeSlider(QWidget):
         layout.addWidget(self._slider)
 
         # Mute button
+        p = theme_manager.palette
         self._mute_button = QPushButton("🔊")
         self._mute_button.setFixedSize(32, 32)
         self._mute_button.setFlat(True)
-        self._mute_button.setStyleSheet("""
-            QPushButton {
+        self._mute_button.setStyleSheet(f"""
+            QPushButton {{
                 border: none;
                 font-size: 16px;
-            }
-            QPushButton:hover {
-                background-color: #404040;
+            }}
+            QPushButton:hover {{
+                background-color: {p.surface_hover};
                 border-radius: 4px;
-            }
+            }}
         """)
         self._mute_button.clicked.connect(self._toggle_mute)
         layout.addWidget(self._mute_button)

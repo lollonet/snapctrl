@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
 from snapcast_mvp.models.client import Client
 from snapcast_mvp.models.group import Group
 from snapcast_mvp.models.source import Source
+from snapcast_mvp.ui.theme import theme_manager
 from snapcast_mvp.ui.widgets.client_card import ClientCard
 from snapcast_mvp.ui.widgets.volume_slider import VolumeSlider
 
@@ -83,19 +84,20 @@ class GroupCard(QWidget):
 
     def _setup_styles(self) -> None:
         """Set up widget styles."""
-        self._base_style = """
-            GroupCard {
-                background-color: #353535;
+        p = theme_manager.palette
+        self._base_style = f"""
+            GroupCard {{
+                background-color: {p.surface_elevated};
                 border-radius: 8px;
-                border: 1px solid #404040;
-            }
+                border: 1px solid {p.border};
+            }}
         """
-        self._selected_style = """
-            GroupCard {
-                background-color: #404050;
+        self._selected_style = f"""
+            GroupCard {{
+                background-color: {p.surface_selected};
                 border-radius: 8px;
-                border: 2px solid #606080;
-            }
+                border: 2px solid {p.border_selected};
+            }}
         """
         self.setStyleSheet(self._base_style)
 
@@ -108,8 +110,11 @@ class GroupCard(QWidget):
         header = QHBoxLayout()
         header.setSpacing(8)
 
+        p = theme_manager.palette
         self._name_label = QLabel("Group Name")
-        self._name_label.setStyleSheet("font-weight: bold; font-size: 12pt; padding: 4px;")
+        self._name_label.setStyleSheet(
+            f"font-weight: bold; font-size: 12pt; padding: 4px; color: {p.text};"
+        )
         self._name_label.installEventFilter(self)
         header.addWidget(self._name_label)
 
@@ -130,20 +135,21 @@ class GroupCard(QWidget):
         Returns:
             The mute button.
         """
+        p = theme_manager.palette
         button = QPushButton("🔊 Mute")
         button.setCheckable(True)
-        button.setStyleSheet("""
-            QPushButton {
+        button.setStyleSheet(f"""
+            QPushButton {{
                 padding: 4px 12px;
                 border-radius: 4px;
-                background-color: #404040;
-            }
-            QPushButton:checked {
-                background-color: #604040;
-            }
-            QPushButton:hover {
-                background-color: #505050;
-            }
+                background-color: {p.surface_hover};
+            }}
+            QPushButton:checked {{
+                background-color: {p.surface_error};
+            }}
+            QPushButton:hover {{
+                background-color: {p.surface_hover};
+            }}
         """)
         button.clicked.connect(self._on_group_mute_toggled)
         self._mute_button = button
@@ -174,18 +180,19 @@ class GroupCard(QWidget):
         source_row = QHBoxLayout()
         source_row.setSpacing(8)
 
+        p = theme_manager.palette
         source_label = QLabel("Source:")
-        source_label.setStyleSheet("color: #808080;")
+        source_label.setStyleSheet(f"color: {p.text_disabled};")
         source_row.addWidget(source_label)
 
         self._source_combo = QComboBox()
         self._source_combo.setMinimumWidth(120)
-        self._source_combo.setStyleSheet("""
-            QComboBox {
+        self._source_combo.setStyleSheet(f"""
+            QComboBox {{
                 padding: 4px;
                 border-radius: 4px;
-                background-color: #404040;
-            }
+                background-color: {p.surface_hover};
+            }}
         """)
         self._source_combo.currentTextChanged.connect(self._on_source_changed)
         source_row.addWidget(self._source_combo)
@@ -206,7 +213,9 @@ class GroupCard(QWidget):
         client_layout.setSpacing(4)
 
         self._client_list_label = QLabel("Clients:")
-        self._client_list_label.setStyleSheet("color: #808080; font-size: 10pt;")
+        self._client_list_label.setStyleSheet(
+            f"color: {theme_manager.palette.text_disabled}; font-size: 10pt;"
+        )
         client_layout.addWidget(self._client_list_label)
 
         self._clients_container = QWidget()

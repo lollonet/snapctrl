@@ -19,6 +19,8 @@ from snapcast_mvp.core.state import StateStore
 from snapcast_mvp.core.worker import SnapcastWorker
 from snapcast_mvp.models.source import Source
 from snapcast_mvp.ui.main_window import MainWindow
+from snapcast_mvp.ui.system_tray import SystemTrayManager
+from snapcast_mvp.ui.theme import theme_manager
 
 # Enable logging
 logging.basicConfig(level=logging.DEBUG, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -89,6 +91,10 @@ def main() -> int:  # noqa: PLR0915
 
     # At this point host is guaranteed to be set (either from args or autodiscovery)
     assert host is not None
+
+    # Apply theme (auto-detects system dark/light mode)
+    theme_manager.apply_theme()
+    theme_manager.connect_system_theme_changes()
 
     # Create core components
     state_store = StateStore()
@@ -185,6 +191,12 @@ def main() -> int:  # noqa: PLR0915
 
     window.show()
 
+    # Set up system tray
+    tray = SystemTrayManager(window, state_store)
+    if tray.available:
+        tray.show()
+        window.set_hide_to_tray(True)
+
     # Wire UI signals to worker for volume/mute control
     # Track base volumes for proportional group volume control
     group_base_volumes: dict[str, dict[str, int]] = {}  # group_id -> {client_id -> base_volume}
@@ -265,6 +277,15 @@ def main() -> int:  # noqa: PLR0915
     window.groups_panel.source_changed.connect(on_source_changed)
     window.groups_panel.client_rename_requested.connect(worker.rename_client)
     window.groups_panel.group_rename_requested.connect(worker.rename_group)
+
+    # Connect tray quick volume to group volume handler
+    tray.volume_changed.connect(on_group_volume_changed)
+
+    # Sync tray's selected group when user selects in UI
+    def on_group_selected_for_tray(group_id: str) -> None:
+        tray.selected_group_id = group_id
+
+    window.groups_panel.group_selected.connect(on_group_selected_for_tray)
 
     # Set up ping monitor for network RTT measurement
     ping_monitor = PingMonitor(interval_sec=15.0)
