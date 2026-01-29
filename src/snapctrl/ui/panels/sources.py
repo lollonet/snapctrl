@@ -27,11 +27,12 @@ from snapctrl.api.album_art import (
 )
 from snapctrl.models.source import Source
 from snapctrl.ui.theme import theme_manager
+from snapctrl.ui.tokens import sizing, spacing, typography
 
 logger = logging.getLogger(__name__)
 
-# Album art display size
-ALBUM_ART_SIZE = 80
+# Album art display size — uses sizing.album_art token
+ALBUM_ART_SIZE = sizing.album_art
 
 # Maximum album art data size (10MB base64 ≈ 7.5MB decoded)
 MAX_ALBUM_ART_B64_SIZE = 10 * 1024 * 1024
@@ -92,11 +93,11 @@ class SourcesPanel(QWidget):
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(4)
+        layout.setSpacing(spacing.xs)
 
         # Header
         header = QLabel("Sources")
-        header.setStyleSheet("font-weight: bold; font-size: 12pt;")
+        header.setStyleSheet(f"font-weight: bold; font-size: {typography.title}pt;")
         layout.addWidget(header)
 
         # Source list
@@ -106,11 +107,11 @@ class SourcesPanel(QWidget):
             QListWidget {{
                 background-color: {p.surface_dim};
                 border: none;
-                padding: 4px;
+                padding: {spacing.xs}px;
             }}
             QListWidget::item {{
-                padding: 8px;
-                border-radius: 4px;
+                padding: {spacing.sm}px;
+                border-radius: {sizing.border_radius_md}px;
             }}
             QListWidget::item:selected {{
                 background-color: {p.surface_hover};
@@ -133,17 +134,17 @@ class SourcesPanel(QWidget):
         self._details_frame.setStyleSheet(f"""
             QFrame {{
                 background-color: {p.surface_dim};
-                border-radius: 4px;
-                padding: 8px;
+                border-radius: {sizing.border_radius_md}px;
+                padding: {spacing.sm}px;
             }}
             QLabel {{
                 color: {p.text_secondary};
-                font-size: 9pt;
+                font-size: {typography.small}pt;
             }}
         """)
         details_layout = QVBoxLayout(self._details_frame)
-        details_layout.setContentsMargins(8, 8, 8, 8)
-        details_layout.setSpacing(4)
+        details_layout.setContentsMargins(spacing.sm, spacing.sm, spacing.sm, spacing.sm)
+        details_layout.setSpacing(spacing.xs)
 
         self._detail_status = QLabel()
 
@@ -151,7 +152,7 @@ class SourcesPanel(QWidget):
         self._now_playing_frame = QWidget()
         now_playing_layout = QHBoxLayout(self._now_playing_frame)
         now_playing_layout.setContentsMargins(0, 0, 0, 0)
-        now_playing_layout.setSpacing(8)
+        now_playing_layout.setSpacing(spacing.sm)
 
         # Album art
         self._album_art = QLabel()
@@ -159,7 +160,7 @@ class SourcesPanel(QWidget):
         self._album_art.setStyleSheet(f"""
             QLabel {{
                 background-color: {p.background};
-                border-radius: 4px;
+                border-radius: {sizing.border_radius_md}px;
             }}
         """)
         self._album_art.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -169,7 +170,7 @@ class SourcesPanel(QWidget):
         # Text info (title, artist, album)
         self._detail_now_playing = QLabel()
         self._detail_now_playing.setWordWrap(True)
-        self._detail_now_playing.setStyleSheet(f"color: {p.text}; font-size: 10pt;")
+        self._detail_now_playing.setStyleSheet(f"color: {p.text}; font-size: {typography.body}pt;")
         self._detail_now_playing.setAlignment(
             Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
         )
@@ -239,7 +240,7 @@ class SourcesPanel(QWidget):
         self._album_art.setStyleSheet(f"""
             QLabel {{
                 background-color: {p.background};
-                border-radius: 4px;
+                border-radius: {sizing.border_radius_md}px;
                 color: {p.text_disabled};
             }}
         """)

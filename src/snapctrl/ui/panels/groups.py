@@ -12,6 +12,7 @@ from snapctrl.models.client import Client
 from snapctrl.models.group import Group
 from snapctrl.models.source import Source
 from snapctrl.ui.theme import theme_manager
+from snapctrl.ui.tokens import spacing, typography
 from snapctrl.ui.widgets.group_card import GroupCard
 
 
@@ -48,12 +49,14 @@ class GroupsPanel(QWidget):
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(4)
+        layout.setSpacing(spacing.xs)
 
         # Header
         p = theme_manager.palette
         header = QLabel("Groups")
-        header.setStyleSheet(f"font-weight: bold; font-size: 12pt; color: {p.text};")
+        header.setStyleSheet(
+            f"font-weight: bold; font-size: {typography.title}pt; color: {p.text};"
+        )
         layout.addWidget(header)
 
         # Scroll area for group cards
@@ -71,8 +74,8 @@ class GroupsPanel(QWidget):
         self._container = QWidget()
         self._container.setStyleSheet("background-color: transparent;")
         self._container_layout = QVBoxLayout(self._container)
-        self._container_layout.setContentsMargins(4, 4, 4, 4)
-        self._container_layout.setSpacing(12)
+        self._container_layout.setContentsMargins(spacing.xs, spacing.xs, spacing.xs, spacing.xs)
+        self._container_layout.setSpacing(spacing.md)
         self._container_layout.addStretch()
 
         scroll.setWidget(self._container)

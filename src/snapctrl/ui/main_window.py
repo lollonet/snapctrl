@@ -22,6 +22,7 @@ from snapctrl.ui.panels.groups import GroupsPanel
 from snapctrl.ui.panels.properties import PropertiesPanel
 from snapctrl.ui.panels.sources import SourcesPanel
 from snapctrl.ui.theme import theme_manager
+from snapctrl.ui.tokens import sizing, spacing, typography
 
 if TYPE_CHECKING:
     from snapctrl.core.controller import Controller
@@ -76,22 +77,22 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(central_widget)
 
         main_layout = QHBoxLayout(central_widget)
-        main_layout.setContentsMargins(4, 4, 4, 4)
-        main_layout.setSpacing(4)
+        main_layout.setContentsMargins(spacing.xs, spacing.xs, spacing.xs, spacing.xs)
+        main_layout.setSpacing(spacing.xs)
 
         # Create splitter for resizable panels
         splitter = QSplitter()
 
         # Create panels with fixed widths for side panels
         self._sources_panel = SourcesPanel()
-        self._sources_panel.setMinimumWidth(150)
+        self._sources_panel.setMinimumWidth(sizing.panel_min_side)
         self._sources_panel.setMaximumWidth(250)
 
         self._groups_panel = GroupsPanel()
 
         self._properties_panel = PropertiesPanel()
         self._properties_panel.setMinimumWidth(200)
-        self._properties_panel.setMaximumWidth(300)
+        self._properties_panel.setMaximumWidth(sizing.panel_max_side)
 
         # Add panels to splitter
         splitter.addWidget(self._sources_panel)
@@ -113,8 +114,10 @@ class MainWindow(QMainWindow):
         p = theme_manager.palette
         self._status_label = QLabel("Connecting...")
         self._status_label.setStyleSheet(
-            f"background-color: {p.scrollbar}; color: {p.text}; padding: 4px 8px;"
-            " font-size: 9pt; border-radius: 2px;"
+            f"background-color: {p.scrollbar}; color: {p.text};"
+            f" padding: {spacing.xs}px {spacing.sm}px;"
+            f" font-size: {typography.small}pt;"
+            f" border-radius: {sizing.border_radius_sm}px;"
         )
         self.statusBar().addPermanentWidget(self._status_label)
         self.statusBar().setStyleSheet(f"background-color: {p.background};")
@@ -129,7 +132,7 @@ class MainWindow(QMainWindow):
             QWidget {{
                 background-color: {p.surface};
                 color: {p.text};
-                font-size: 11pt;
+                font-size: {typography.subtitle}pt;
             }}
         """)
 
@@ -330,15 +333,19 @@ class MainWindow(QMainWindow):
             text = message or "Connected"
             self._status_label.setText(text)
             self._status_label.setStyleSheet(
-                f"background-color: {p.surface_success}; color: {p.success}; padding: 4px 8px;"
-                " font-size: 9pt; border-radius: 2px;"
+                f"background-color: {p.surface_success}; color: {p.success};"
+                f" padding: {spacing.xs}px {spacing.sm}px;"
+                f" font-size: {typography.small}pt;"
+                f" border-radius: {sizing.border_radius_sm}px;"
             )
         else:
             text = message or "Disconnected"
             self._status_label.setText(text)
             self._status_label.setStyleSheet(
-                f"background-color: {p.surface_error}; color: {p.error}; padding: 4px 8px;"
-                " font-size: 9pt; border-radius: 2px;"
+                f"background-color: {p.surface_error}; color: {p.error};"
+                f" padding: {spacing.xs}px {spacing.sm}px;"
+                f" font-size: {typography.small}pt;"
+                f" border-radius: {sizing.border_radius_sm}px;"
             )
 
     def set_hide_to_tray(self, enabled: bool) -> None:

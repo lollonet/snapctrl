@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (
 
 from snapctrl.models.client import Client
 from snapctrl.ui.theme import theme_manager
+from snapctrl.ui.tokens import spacing, typography
 from snapctrl.ui.widgets.volume_slider import VolumeSlider
 
 
@@ -75,8 +76,8 @@ class ClientCard(QFrame):
         self._update_style(False)
 
         layout = QHBoxLayout(self)
-        layout.setContentsMargins(8, 6, 8, 6)
-        layout.setSpacing(12)
+        layout.setContentsMargins(spacing.sm, 6, spacing.sm, 6)
+        layout.setSpacing(spacing.md)
 
         # Connection indicator (clickable)
         # Use filled circle with different colors: green=connected, red=disconnected
@@ -94,7 +95,9 @@ class ClientCard(QFrame):
 
         # Client name (clickable)
         self._name_label = QLabel(self._name)
-        self._name_label.setStyleSheet(f"font-size: 10pt; color: {p.text}; padding: 4px;")
+        self._name_label.setStyleSheet(
+            f"font-size: {typography.body}pt; color: {p.text}; padding: {spacing.xs}px;"
+        )
         self._name_label.setCursor(self.cursor())
         self._name_label.installEventFilter(self)
         layout.addWidget(self._name_label)
