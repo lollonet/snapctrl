@@ -262,6 +262,24 @@ class TestStateStoreUpdates:
         # Should not crash
         state.update_client_volume("client1", 80, True)
 
+    def test_update_client_latency(
+        self, state: StateStore, sample_server_state: ServerState, qtbot: QtBot
+    ) -> None:
+        """Test optimistic client latency update."""
+        state.update_from_server_state(sample_server_state)
+
+        with qtbot.wait_signal(state.clients_changed, timeout=100) as blocker:
+            state.update_client_latency("client1", 50)
+
+        clients = blocker.args[0]
+        client1 = next(c for c in clients if c.id == "client1")
+        assert client1.latency == 50
+
+    def test_update_client_latency_before_state_set(self, state: StateStore) -> None:
+        """Test updating client latency before state is set (should be safe)."""
+        # Should not crash
+        state.update_client_latency("client1", 50)
+
     def test_update_group_mute(
         self, state: StateStore, sample_server_state: ServerState, qtbot: QtBot
     ) -> None:

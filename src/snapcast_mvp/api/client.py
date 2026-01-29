@@ -433,6 +433,18 @@ class SnapcastClient:
             {"id": client_id, "name": name},
         )
 
+    async def set_client_latency(self, client_id: str, latency: int) -> None:
+        """Set client latency offset (Client.SetLatency).
+
+        Args:
+            client_id: ID of the client.
+            latency: Latency offset in milliseconds (-1000 to 1000).
+        """
+        await self.call(
+            "Client.SetLatency",
+            {"id": client_id, "latency": latency},
+        )
+
     async def set_group_name(self, group_id: str, name: str) -> None:
         """Set group name (Group.SetName).
 
