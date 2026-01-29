@@ -128,6 +128,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Documentation
 
+- **Comprehensive Docs Audit** ([#15](https://github.com/lollonet/snapctrl/pull/15)) - Jan 29
+  - Audited 28 docs against 40 source files, fixed 39 discrepancies
+  - Added REQ-011 (Now Playing/MPD), REQ-012 (Advanced Client Controls), REQ-013 (Build & Release)
+  - Fixed requirement statuses: REQ-009 Done, REQ-010 Partial, REQ-008 criteria rewritten
+  - Rewrote architecture doc: module tree, StateStore signals, Worker pattern, threading model
+  - Updated data models: Client fields, Group type fix, SourceStatus enum, MPD models
+  - Added "Current Implementation" section to UI/UX doc
+  - Fixed infrastructure: briefcase → PyInstaller, added zeroconf dependency
+  - Updated README: features (5→15), test count (300+→400+), install command, roadmap
+  - CI: added `.md` files to Claude review workflow filter
+
 - **Project Rename** - Jan 28
   - All docs updated from "Snapcast MVP" to "SnapCTRL"
   - Fixed critical error: "WebSocket port 1704" → "TCP port 1705"
