@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (
 from snapcast_mvp.models.client import Client
 from snapcast_mvp.models.group import Group
 from snapcast_mvp.models.source import Source
+from snapcast_mvp.ui.theme import theme_manager
 from snapcast_mvp.ui.widgets.group_card import GroupCard
 
 
@@ -50,8 +51,9 @@ class GroupsPanel(QWidget):
         layout.setSpacing(4)
 
         # Header
+        p = theme_manager.palette
         header = QLabel("Groups")
-        header.setStyleSheet("font-weight: bold; font-size: 12pt;")
+        header.setStyleSheet(f"font-weight: bold; font-size: 12pt; color: {p.text};")
         layout.addWidget(header)
 
         # Scroll area for group cards

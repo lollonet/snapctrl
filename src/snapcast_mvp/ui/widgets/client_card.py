@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (
 )
 
 from snapcast_mvp.models.client import Client
+from snapcast_mvp.ui.theme import theme_manager
 from snapcast_mvp.ui.widgets.volume_slider import VolumeSlider
 
 
@@ -79,12 +80,13 @@ class ClientCard(QFrame):
 
         # Connection indicator (clickable)
         # Use filled circle with different colors: green=connected, red=disconnected
+        p = theme_manager.palette
         self._status_indicator = QLabel("●")
         if self._connected:
-            self._status_indicator.setStyleSheet("color: #4CAF50; font-size: 14px;")
+            self._status_indicator.setStyleSheet(f"color: {p.success}; font-size: 14px;")
             self._status_indicator.setToolTip("Connected")
         else:
-            self._status_indicator.setStyleSheet("color: #F44336; font-size: 14px;")
+            self._status_indicator.setStyleSheet(f"color: {p.error}; font-size: 14px;")
             self._status_indicator.setToolTip("Disconnected")
         self._status_indicator.setCursor(self.cursor())
         self._status_indicator.installEventFilter(self)
@@ -92,7 +94,7 @@ class ClientCard(QFrame):
 
         # Client name (clickable)
         self._name_label = QLabel(self._name)
-        self._name_label.setStyleSheet("font-size: 10pt; color: #e0e0e0; padding: 4px;")
+        self._name_label.setStyleSheet(f"font-size: 10pt; color: {p.text}; padding: 4px;")
         self._name_label.setCursor(self.cursor())
         self._name_label.installEventFilter(self)
         layout.addWidget(self._name_label)
@@ -157,11 +159,12 @@ class ClientCard(QFrame):
         """
         self._connected = connected
         # Always use filled circle, change color: green=connected, red=disconnected
+        p = theme_manager.palette
         if connected:
-            self._status_indicator.setStyleSheet("color: #4CAF50; font-size: 14px;")
+            self._status_indicator.setStyleSheet(f"color: {p.success}; font-size: 14px;")
             self._status_indicator.setToolTip("Connected")
         else:
-            self._status_indicator.setStyleSheet("color: #F44336; font-size: 14px;")
+            self._status_indicator.setStyleSheet(f"color: {p.error}; font-size: 14px;")
             self._status_indicator.setToolTip("Disconnected")
 
     def set_selected(self, selected: bool) -> None:
@@ -179,21 +182,22 @@ class ClientCard(QFrame):
         Args:
             selected: Whether this card is selected.
         """
+        p = theme_manager.palette
         if selected:
-            self.setStyleSheet("""
-                ClientCard {
-                    background-color: #3a3a5a;
+            self.setStyleSheet(f"""
+                ClientCard {{
+                    background-color: {p.surface_selected};
                     border-radius: 6px;
-                    border: 2px solid #6a6a9a;
-                }
+                    border: 2px solid {p.border_selected};
+                }}
             """)
         else:
-            self.setStyleSheet("""
-                ClientCard {
-                    background-color: #2a2a2a;
+            self.setStyleSheet(f"""
+                ClientCard {{
+                    background-color: {p.surface_dim};
                     border-radius: 6px;
-                    border: 1px solid #333333;
-                }
+                    border: 1px solid {p.border};
+                }}
             """)
 
     def update_from_client(self, client: Client) -> None:

@@ -11,6 +11,7 @@ from snapcast_mvp.core.ping import format_rtt, get_rtt_color
 from snapcast_mvp.models.client import Client
 from snapcast_mvp.models.group import Group
 from snapcast_mvp.models.source import Source
+from snapcast_mvp.ui.theme import theme_manager
 
 
 class PropertiesPanel(QWidget):
@@ -39,10 +40,11 @@ class PropertiesPanel(QWidget):
         layout.addWidget(header)
 
         # Content area (placeholder for now)
+        p = theme_manager.palette
         self._content = QLabel("Select an item to see details")
         self._content.setTextFormat(Qt.TextFormat.RichText)  # Enable HTML rendering
         self._content.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self._content.setStyleSheet("color: #606060; font-style: italic;")
+        self._content.setStyleSheet(f"color: {p.text_disabled}; font-style: italic;")
         self._content.setWordWrap(True)
         layout.addWidget(self._content)
 
@@ -50,8 +52,9 @@ class PropertiesPanel(QWidget):
 
     def clear(self) -> None:
         """Clear the properties panel."""
+        p = theme_manager.palette
         self._content.setText("Select an item to see details")
-        self._content.setStyleSheet("color: #606060; font-style: italic;")
+        self._content.setStyleSheet(f"color: {p.text_disabled}; font-style: italic;")
 
     def set_group(self, group: Group) -> None:
         """Display group properties.
@@ -70,7 +73,7 @@ class PropertiesPanel(QWidget):
             </table>
         """
         self._content.setText(html)
-        self._content.setStyleSheet("color: #e0e0e0;")  # Ensure text is visible
+        self._content.setStyleSheet(f"color: {theme_manager.palette.text};")
         self._content.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
 
     def set_client(self, client: Client, network_rtt: float | None = None) -> None:
@@ -80,8 +83,9 @@ class PropertiesPanel(QWidget):
             client: Client to display.
             network_rtt: Optional network RTT in milliseconds from ping.
         """
+        p = theme_manager.palette
         status = "Connected" if client.connected else "Disconnected"
-        status_color = "#80ff80" if client.connected else "#ff8080"
+        status_color = p.success if client.connected else p.error
 
         # Build optional rows
         rows: list[str] = []
@@ -104,8 +108,8 @@ class PropertiesPanel(QWidget):
         elif client.connected:
             # RTT measurement pending or failed (ICMP may be blocked)
             rows.append(
-                "<tr><td><i>Network RTT:</i></td>"
-                "<td style='color: #808080;'>N/A (ping blocked?)</td></tr>"
+                f"<tr><td><i>Network RTT:</i></td>"
+                f"<td style='color: {p.text_disabled};'>N/A (ping blocked?)</td></tr>"
             )
 
         # Latency offset (configured compensation)
@@ -139,7 +143,7 @@ class PropertiesPanel(QWidget):
             </table>
         """
         self._content.setText(html)
-        self._content.setStyleSheet("color: #e0e0e0;")  # Ensure text is visible
+        self._content.setStyleSheet(f"color: {p.text};")
         self._content.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
 
     def set_source(self, source: Source) -> None:
@@ -148,8 +152,9 @@ class PropertiesPanel(QWidget):
         Args:
             source: Source to display.
         """
+        p = theme_manager.palette
         status = "Playing" if source.is_playing else "Idle"
-        status_color = "#80ff80" if source.is_playing else "#808080"
+        status_color = p.success if source.is_playing else p.text_disabled
 
         rows: list[str] = []
         rows.append(
@@ -180,5 +185,5 @@ class PropertiesPanel(QWidget):
             </table>
         """
         self._content.setText(html)
-        self._content.setStyleSheet("color: #e0e0e0;")  # Ensure text is visible
+        self._content.setStyleSheet(f"color: {p.text};")
         self._content.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)

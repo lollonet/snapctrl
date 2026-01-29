@@ -26,6 +26,7 @@ from snapcast_mvp.api.album_art import (
     MusicBrainzAlbumArtProvider,
 )
 from snapcast_mvp.models.source import Source
+from snapcast_mvp.ui.theme import theme_manager
 
 logger = logging.getLogger(__name__)
 
@@ -99,23 +100,24 @@ class SourcesPanel(QWidget):
         layout.addWidget(header)
 
         # Source list
+        p = theme_manager.palette
         self._list = QListWidget()
-        self._list.setStyleSheet("""
-            QListWidget {
-                background-color: #252525;
+        self._list.setStyleSheet(f"""
+            QListWidget {{
+                background-color: {p.surface_dim};
                 border: none;
                 padding: 4px;
-            }
-            QListWidget::item {
+            }}
+            QListWidget::item {{
                 padding: 8px;
                 border-radius: 4px;
-            }
-            QListWidget::item:selected {
-                background-color: #404040;
-            }
-            QListWidget::item:hover {
-                background-color: #353535;
-            }
+            }}
+            QListWidget::item:selected {{
+                background-color: {p.surface_hover};
+            }}
+            QListWidget::item:hover {{
+                background-color: {p.surface_elevated};
+            }}
         """)
         self._list.itemDoubleClicked.connect(self._on_item_double_clicked)
         self._list.currentItemChanged.connect(self._on_selection_changed)
@@ -126,17 +128,18 @@ class SourcesPanel(QWidget):
 
     def _setup_details_section(self, parent_layout: QVBoxLayout) -> None:
         """Set up the details section with album art and metadata labels."""
+        p = theme_manager.palette
         self._details_frame = QFrame()
-        self._details_frame.setStyleSheet("""
-            QFrame {
-                background-color: #252525;
+        self._details_frame.setStyleSheet(f"""
+            QFrame {{
+                background-color: {p.surface_dim};
                 border-radius: 4px;
                 padding: 8px;
-            }
-            QLabel {
-                color: #b0b0b0;
+            }}
+            QLabel {{
+                color: {p.text_secondary};
                 font-size: 9pt;
-            }
+            }}
         """)
         details_layout = QVBoxLayout(self._details_frame)
         details_layout.setContentsMargins(8, 8, 8, 8)
@@ -153,11 +156,11 @@ class SourcesPanel(QWidget):
         # Album art
         self._album_art = QLabel()
         self._album_art.setFixedSize(ALBUM_ART_SIZE, ALBUM_ART_SIZE)
-        self._album_art.setStyleSheet("""
-            QLabel {
-                background-color: #1a1a1a;
+        self._album_art.setStyleSheet(f"""
+            QLabel {{
+                background-color: {p.background};
                 border-radius: 4px;
-            }
+            }}
         """)
         self._album_art.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._album_art.setScaledContents(True)
@@ -166,7 +169,7 @@ class SourcesPanel(QWidget):
         # Text info (title, artist, album)
         self._detail_now_playing = QLabel()
         self._detail_now_playing.setWordWrap(True)
-        self._detail_now_playing.setStyleSheet("color: #ffffff; font-size: 10pt;")
+        self._detail_now_playing.setStyleSheet(f"color: {p.text}; font-size: 10pt;")
         self._detail_now_playing.setAlignment(
             Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
         )
@@ -231,13 +234,14 @@ class SourcesPanel(QWidget):
 
     def _show_album_art_placeholder(self) -> None:
         """Show the 'No Art' placeholder for album art."""
+        p = theme_manager.palette
         self._album_art.clear()
-        self._album_art.setStyleSheet("""
-            QLabel {
-                background-color: #1a1a1a;
+        self._album_art.setStyleSheet(f"""
+            QLabel {{
+                background-color: {p.background};
                 border-radius: 4px;
-                color: #404040;
-            }
+                color: {p.text_disabled};
+            }}
         """)
         self._album_art.setText("No\nArt")
         self._album_art.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -487,9 +491,12 @@ class SourcesPanel(QWidget):
     def _update_details(self, source: Source) -> None:
         """Update the details panel with source info."""
         # Status with color
+        p = theme_manager.palette
         status = source.status.capitalize()
         if source.is_playing:
-            self._detail_status.setText(f"Status: <span style='color: #80ff80;'>{status}</span>")
+            self._detail_status.setText(
+                f"Status: <span style='color: {p.success};'>{status}</span>"
+            )
         else:
             self._detail_status.setText(f"Status: {status}")
         self._detail_status.setTextFormat(Qt.TextFormat.RichText)
@@ -505,13 +512,14 @@ class SourcesPanel(QWidget):
             if source.meta_album:
                 self._detail_now_playing.setText(
                     f"<b>{source.meta_title}</b><br/>"
-                    f"<span style='color: #b0b0b0;'>{source.meta_artist}</span><br/>"
-                    f"<span style='color: #808080; font-style: italic;'>{source.meta_album}</span>"
+                    f"<span style='color: {p.text_secondary};'>{source.meta_artist}</span><br/>"
+                    f"<span style='color: {p.text_disabled}; font-style: italic;'>"
+                    f"{source.meta_album}</span>"
                 )
             else:
                 self._detail_now_playing.setText(
                     f"<b>{source.meta_title}</b><br/>"
-                    f"<span style='color: #b0b0b0;'>{source.meta_artist}</span>"
+                    f"<span style='color: {p.text_secondary};'>{source.meta_artist}</span>"
                 )
             self._detail_now_playing.setTextFormat(Qt.TextFormat.RichText)
 

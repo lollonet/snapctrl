@@ -11,6 +11,7 @@ Layout:
 from typing import TYPE_CHECKING
 
 from PySide6.QtCore import Slot
+from PySide6.QtGui import QCloseEvent
 from PySide6.QtWidgets import QHBoxLayout, QLabel, QMainWindow, QSplitter, QWidget
 
 from snapcast_mvp.core.state import StateStore
@@ -20,6 +21,7 @@ from snapcast_mvp.models.source import Source
 from snapcast_mvp.ui.panels.groups import GroupsPanel
 from snapcast_mvp.ui.panels.properties import PropertiesPanel
 from snapcast_mvp.ui.panels.sources import SourcesPanel
+from snapcast_mvp.ui.theme import theme_manager
 
 if TYPE_CHECKING:
     from snapcast_mvp.core.controller import Controller
@@ -108,25 +110,27 @@ class MainWindow(QMainWindow):
         main_layout.addWidget(splitter)
 
         # Connection status bar
+        p = theme_manager.palette
         self._status_label = QLabel("Connecting...")
         self._status_label.setStyleSheet(
-            "background-color: #555555; color: #ffffff; padding: 4px 8px;"
+            f"background-color: {p.scrollbar}; color: {p.text}; padding: 4px 8px;"
             " font-size: 9pt; border-radius: 2px;"
         )
         self.statusBar().addPermanentWidget(self._status_label)
-        self.statusBar().setStyleSheet("background-color: #1e1e1e;")
+        self.statusBar().setStyleSheet(f"background-color: {p.background};")
 
     def _setup_style(self) -> None:
         """Set up basic styling."""
-        self.setStyleSheet("""
-            QMainWindow {
-                background-color: #1e1e1e;
-            }
-            QWidget {
-                background-color: #2d2d2d;
-                color: #e0e0e0;
+        p = theme_manager.palette
+        self.setStyleSheet(f"""
+            QMainWindow {{
+                background-color: {p.background};
+            }}
+            QWidget {{
+                background-color: {p.surface};
+                color: {p.text};
                 font-size: 11pt;
-            }
+            }}
         """)
 
     def _connect_signals(self) -> None:
@@ -321,20 +325,54 @@ class MainWindow(QMainWindow):
             connected: Whether the server is connected.
             message: Optional status message.
         """
+        p = theme_manager.palette
         if connected:
             text = message or "Connected"
             self._status_label.setText(text)
             self._status_label.setStyleSheet(
-                "background-color: #2d5a2d; color: #80ff80; padding: 4px 8px;"
+                f"background-color: {p.surface_success}; color: {p.success}; padding: 4px 8px;"
                 " font-size: 9pt; border-radius: 2px;"
             )
         else:
             text = message or "Disconnected"
             self._status_label.setText(text)
             self._status_label.setStyleSheet(
-                "background-color: #5a2d2d; color: #ff8080; padding: 4px 8px;"
+                f"background-color: {p.surface_error}; color: {p.error}; padding: 4px 8px;"
                 " font-size: 9pt; border-radius: 2px;"
             )
+
+    def set_hide_to_tray(self, enabled: bool) -> None:
+        """Enable or disable hiding to tray on close.
+
+        When enabled, closing the window hides it to tray instead of quitting.
+
+        Args:
+            enabled: Whether to hide to tray on close.
+        """
+        self._hide_to_tray = enabled
+
+    def closeEvent(self, event: QCloseEvent) -> None:  # noqa: N802
+        """Handle window close event.
+
+        If hide-to-tray is enabled, hides the window instead of closing.
+
+        Args:
+            event: The close event.
+        """
+        if getattr(self, "_hide_to_tray", False):
+            event.ignore()
+            self.hide()
+        else:
+            super().closeEvent(event)
+
+    def toggle_visibility(self) -> None:
+        """Toggle window visibility (for tray icon)."""
+        if self.isVisible():
+            self.hide()
+        else:
+            self.show()
+            self.raise_()
+            self.activateWindow()
 
     def get_ping_result(self, client_id: str) -> float | None:
         """Get ping RTT for a client.
