@@ -10,28 +10,33 @@
 | [REQ-006](REQ-006.md) | Client Details View | Display | P1 | Done |
 | [REQ-007](REQ-007.md) | Connection Profiles | Connection | P1 | Draft |
 | [REQ-008](REQ-008.md) | Auto-Reconnection | Connection | P1 | Done |
-| [REQ-009](REQ-009.md) | System Theme Support | UI/UX | P1 | Draft |
-| [REQ-010](REQ-010.md) | System Tray Integration | UI/UX | P1 | Draft |
+| [REQ-009](REQ-009.md) | System Theme Support | UI/UX | P1 | Done |
+| [REQ-010](REQ-010.md) | System Tray Integration | UI/UX | P1 | Partial |
+| [REQ-011](REQ-011.md) | Now Playing & MPD Integration | Display | P1 | Done |
+| [REQ-012](REQ-012.md) | Advanced Client Controls | Control | P1 | Done |
+| [REQ-013](REQ-013.md) | Build & Release Pipeline | Infrastructure | P1 | Done |
 
 ## Summary by Domain
 
 | Domain | Count |
 |--------|-------|
 | Connection | 3 |
-| Control | 3 |
-| Display | 2 |
+| Control | 4 |
+| Display | 3 |
 | UI/UX | 2 |
+| Infrastructure | 1 |
 
 ## Summary by Priority
 
 | Priority | Count |
 |----------|-------|
 | P0 (MVP) | 4 |
-| P1 (Important) | 6 |
+| P1 (Important) | 9 |
 
 ## Summary by Status
 
 | Status | Count |
 |--------|-------|
-| Done | 7 |
-| Draft | 3 |
+| Done | 11 |
+| Partial | 1 |
+| Draft | 1 |

@@ -1,5 +1,31 @@
 # SnapCTRL - UI/UX Design
 
+## Current Implementation
+
+The application uses a tri-pane layout with a toolbar (no menu bar). Key differences from the original mockup below:
+
+- **No menu bar** — toolbar with connection status indicator (green/red dot + text)
+- **Sources panel** — read-only list from server (no "+ Add Source" button)
+- **Groups panel** — scrollable group cards with source dropdown, context menus for rename
+- **Properties panel** — interactive latency spinbox for connected clients, context menu rename
+- **System tray** — minimize-to-tray, quick volume sliders, now playing metadata
+- **Theme** — auto dark/light mode detection, runtime switching (macOS)
+- **No responsive breakpoints** — fixed tri-pane layout
+
+### Panel Specifications (Actual)
+
+| Panel | Width | Content | Interactions |
+|-------|-------|---------|--------------|
+| **Sources** (left) | 150-250px | List of audio sources with playing indicator, now playing metadata | Click to view details |
+| **Groups** (center) | flexible | Group cards with volume slider, mute, source dropdown | Drag slider, click mute, select source, right-click context menu |
+| **Properties** (right) | 200-300px | Details of selected item, interactive latency control | Latency spinbox (connected clients), read-only info |
+
+---
+
+## Original Design Mockup
+
+> **Note:** This wireframe was the initial design. See "Current Implementation" above for what was actually built. Elements marked (Planned) are not yet implemented.
+
 ## Layout: Tri-Pane Dashboard
 
 ```
@@ -53,7 +79,9 @@
 | Playing | Green (#4CAF50) | ▶ |
 | Idle | Gray (#999) | ○ |
 
-## Responsive Behavior
+## Responsive Behavior (Planned/Future)
+
+> **Note:** Not yet implemented. The current layout is a fixed tri-pane.
 
 | Window Width | Behavior |
 |--------------|----------|

@@ -89,7 +89,7 @@ The app MUST display detailed information for each client.
 - [ ] MAC address
 - [ ] Connection status (online/offline)
 - [ ] Current volume and mute state
-- [ ] Latency value (read-only for MVP)
+- [x] Latency value (interactive for connected clients, read-only for disconnected)
 - [ ] Snapclient version
 
 **Priority:** P1 (Important)
@@ -117,11 +117,11 @@ The app MUST support multiple server connection profiles.
 The app MUST automatically attempt to reconnect when connection is lost.
 
 **Acceptance Criteria:**
-- [ ] Detect connection loss via heartbeat
-- [ ] Attempt reconnection every 5 seconds
-- [ ] Show "Reconnecting..." status
-- [ ] Stop reconnecting after 10 failed attempts
-- [ ] Manual reconnect button
+- [x] Detect connection loss via TCP read failure
+- [x] Attempt reconnection with exponential backoff (2s initial, 30s max)
+- [x] Show connection status in toolbar indicator (green/red dot + text)
+- [x] Retry indefinitely until connection restored
+- [x] Resume full state refresh on reconnection
 
 **Priority:** P1 (Important)
 **Domain:** Connection
@@ -133,10 +133,10 @@ The app MUST automatically attempt to reconnect when connection is lost.
 The app MUST follow the system theme (light/dark mode).
 
 **Acceptance Criteria:**
-- [ ] Detect system theme at startup
-- [ ] Switch theme when system theme changes
-- [ ] Light theme with good contrast
-- [ ] Dark theme with good contrast
+- [x] Detect system theme at startup
+- [x] Switch theme when system theme changes (runtime, macOS dark mode toggle)
+- [x] Light theme with good contrast (22-color ThemePalette)
+- [x] Dark theme with good contrast (22-color ThemePalette)
 
 **Priority:** P1 (Important)
 **Domain:** UI/UX
@@ -148,10 +148,10 @@ The app MUST follow the system theme (light/dark mode).
 The app MUST provide a system tray icon.
 
 **Acceptance Criteria:**
-- [ ] Minimize to tray instead of closing
-- [ ] Tray icon shows connection status
-- [ ] Right-click menu: Show/Hide, Quit
-- [ ] Quick volume controls for each group
+- [x] Minimize to tray instead of closing (close-to-tray behavior)
+- [ ] Tray icon shows connection status (currently static icon)
+- [x] Right-click menu: Show/Hide, Quit
+- [x] Quick volume controls for each group (embedded QWidgetAction slider)
 - [ ] Mute All / Unmute All
 
 **Priority:** P1 (Important)
@@ -200,8 +200,11 @@ The app MUST provide a system tray icon.
 | REQ-006 | Client Details View | P1 | Display | Done |
 | REQ-007 | Connection Profiles | P1 | Connection | Draft |
 | REQ-008 | Auto-Reconnection | P1 | Connection | Done |
-| REQ-009 | System Theme Support | P1 | UI/UX | Draft |
-| REQ-010 | System Tray Integration | P1 | UI/UX | Draft |
+| REQ-009 | System Theme Support | P1 | UI/UX | Done |
+| REQ-010 | System Tray Integration | P1 | UI/UX | Partial |
+| REQ-011 | Now Playing & MPD Integration | P1 | Display | Done |
+| REQ-012 | Advanced Client Controls | P1 | Control | Done |
+| REQ-013 | Build & Release Pipeline | P1 | Infrastructure | Done |
 
 ---
 

@@ -121,15 +121,16 @@
 
 ---
 
-## Month 2: Advanced UI (Weeks 10-12)
+## Month 2 (cont.): Advanced UI (Weeks 10-12)
 
-### Week 10: Drag & Drop / Context Menus
+### Week 10: Context Menus & Client Controls
 | Task | Estimate | Status |
 |------|----------|--------|
-| Drag clients between groups | 1d | 🔧 |
 | Context menu for groups | 0.5d | ✅ |
 | Context menu for clients | 0.5d | ✅ |
-| Client rename functionality | 1d | ✅ |
+| Client/group rename functionality | 1d | ✅ |
+| Per-client latency adjustment (PR #14) | 1d | ✅ |
+| Drag clients between groups | 1d | 🔧 |
 | Tests | 1d | ✅ |
 
 ---
@@ -157,6 +158,8 @@
 ---
 
 ## Month 3: Polish & Launch (Weeks 13-16)
+
+> **Note:** All items below are future work (🔧). See the roadmap for priorities.
 
 ### Week 13: Polish & Bug Fixes
 | Task | Estimate | Status |
@@ -191,7 +194,8 @@
 ### Week 16: Release
 | Task | Estimate | Status |
 |------|----------|--------|
-| Packaging (Windows, macOS, Linux) | 2d | ✅ |
+| Packaging — PyInstaller (Windows, macOS, Linux) | 2d | ✅ |
+| GitHub Actions release workflow (PR #9) | 0.5d | ✅ |
 | Beta testing | 1d | 🔧 |
 | Release v0.1.0 | 1d | ✅ |
 | GitHub release announcement | 0.5d | 🔧 |
@@ -209,14 +213,15 @@
 | 2 | Advanced UI | DnD, menus, connection | 📦 In Progress |
 | 3 | Polish | Production-ready app | 🔧 Future |
 
-**Current Progress:** ~75% complete (system tray, theme system, context menus, rename, release pipeline done)
+**Current Progress:** ~75% complete (system tray, theme system, context menus, rename, latency control, release pipeline done)
 
-**Test Coverage:** 393 tests passing
+**Test Coverage:** 401 tests passing
 - Models, protocol, API: 150+ tests
 - Integration tests: 30+ tests
-- UI tests: 95+ tests (incl. tray + theme)
+- UI tests: 100+ tests (incl. tray, theme, latency)
 - Live server tests: 20+ tests
 - MPD/album art tests: 17+ tests
+- Core (ping, discovery, config): 80+ tests
 
 ---
 

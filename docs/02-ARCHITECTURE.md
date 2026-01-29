@@ -33,7 +33,8 @@
 | **Config** | QSettings | Native to Qt, cross-platform storage |
 | **Testing** | pytest + pytest-qt | Industry standard, Qt widget support |
 | **CI/CD** | GitHub Actions | Git integration, free for public |
-| **Packaging** | PyInstaller (Win), briefcase (macOS/AppImage) | Cross-platform binaries |
+| **Discovery** | zeroconf | mDNS autodiscovery on LAN |
+| **Packaging** | PyInstaller | Cross-platform binaries (all platforms) |
 
 **Note:** Snapcast uses raw TCP sockets (not WebSocket) for JSON-RPC on port 1705.
 
@@ -44,50 +45,57 @@
 ```
 src/snapcast_mvp/
 ├── __init__.py
-├── __main__.py              # Entry point
+├── __main__.py              # Entry point, signal wiring, mDNS bootstrap
 │
 ├── models/                  # Data models (frozen dataclasses)
 │   ├── __init__.py
-│   ├── server.py            # Server, ServerProfile
-│   ├── client.py            # Client
+│   ├── server.py            # Server
+│   ├── client.py            # Client (19 fields)
 │   ├── group.py             # Group
-│   ├── source.py            # Source
-│   ├── profile.py           # ServerProfile
+│   ├── source.py            # Source, SourceStatus enum
+│   ├── profile.py           # ServerProfile (with ID generation)
 │   └── server_state.py      # ServerState aggregate
 │
 ├── api/                     # API layer
 │   ├── __init__.py
-│   ├── client.py            # SnapcastClient (asyncio TCP)
-│   ├── protocol.py          # JSON-RPC types
-│   └── mpd/                  # MPD client module
+│   ├── client.py            # SnapcastClient (asyncio TCP, JSON-RPC)
+│   ├── protocol.py          # JSON-RPC request/response/notification types
+│   ├── mpd/                 # MPD client module
+│   │   ├── __init__.py
+│   │   ├── client.py        # MpdClient (asyncio TCP)
+│   │   ├── protocol.py      # MPD protocol parsing
+│   │   └── types.py         # MpdTrack, MpdStatus, MpdAlbumArt
+│   └── album_art/           # Album art provider chain
 │       ├── __init__.py
-│       ├── client.py        # MpdClient (asyncio TCP)
-│       ├── protocol.py      # MPD protocol parsing
-│       └── types.py         # MpdTrack, MpdStatus dataclasses
+│       ├── provider.py      # AlbumArtProvider base, FallbackAlbumArtProvider
+│       ├── itunes.py        # ITunesAlbumArtProvider
+│       └── musicbrainz.py   # MusicBrainzAlbumArtProvider
 │
 ├── core/                    # Business logic
 │   ├── __init__.py
-│   ├── state.py             # StateStore (Qt signals)
-│   ├── worker.py            # SnapcastWorker (QThread)
+│   ├── state.py             # StateStore (Qt signals, optimistic updates)
+│   ├── worker.py            # SnapcastWorker (QThread, 14 public methods)
 │   ├── config.py            # ConfigManager (QSettings wrapper)
 │   ├── controller.py        # Controller (UI → API bridge)
-│   ├── discovery.py         # mDNS autodiscovery
-│   ├── ping_monitor.py      # Network RTT monitoring
-│   └── mpd_monitor.py       # MPD metadata polling
+│   ├── discovery.py         # mDNS autodiscovery (zeroconf)
+│   ├── ping.py              # Network RTT ping (cross-platform)
+│   └── mpd_monitor.py       # MPD metadata polling + art cache
 │
 └── ui/                      # Qt UI layer
     ├── __init__.py
-    ├── main_window.py       # MainWindow
+    ├── main_window.py       # MainWindow (tri-pane + toolbar)
+    ├── theme.py             # ThemeManager, ThemePalette (dark/light)
+    ├── system_tray.py       # SystemTrayManager (tray icon + menu)
     ├── panels/              # UI panels
     │   ├── __init__.py
     │   ├── sources.py       # SourcesPanel (left)
     │   ├── groups.py        # GroupsPanel (center)
-    │   └── properties.py    # PropertiesPanel (right)
+    │   └── properties.py    # PropertiesPanel (right, latency spinbox)
     └── widgets/             # Reusable widgets
         ├── __init__.py
         ├── volume_slider.py # VolumeSlider with mute
-        ├── group_card.py    # GroupCard widget
-        └── client_card.py   # ClientCard widget
+        ├── group_card.py    # GroupCard (context menus, source dropdown)
+        └── client_card.py   # ClientCard (context menus, rename)
 ```
 
 ---
@@ -101,18 +109,23 @@ class StateStore(QObject):
     """Central state store emitting Qt signals on changes."""
 
     # Signals
-    server_connected = Signal()
-    server_disconnected = Signal()
-    state_changed = Signal(ServerState)
+    connection_changed = Signal(bool)     # True=connected, False=disconnected
+    groups_changed = Signal(list)         # list[Group]
+    clients_changed = Signal(list)        # list[Client]
+    sources_changed = Signal(list)        # list[Source]
+    state_changed = Signal(object)        # ServerState
 
     def __init__(self):
         super().__init__()
         self._state: ServerState | None = None
 
     def update_from_server_state(self, state: ServerState) -> None:
-        """Update state from server, emit signal."""
+        """Update state from server, emit granular signals."""
         self._state = state
         self.state_changed.emit(state)
+        self.groups_changed.emit(list(state.groups))
+        self.clients_changed.emit(list(state.clients))
+        self.sources_changed.emit(list(state.sources))
 ```
 
 **UI widgets connect to signals:**
@@ -126,27 +139,25 @@ self._state.state_changed.connect(self._on_state_updated)
 class SnapcastWorker(QThread):
     """Background thread running asyncio TCP client."""
 
-    state_received = Signal(ServerState)
+    connected = Signal()
+    disconnected = Signal()
     connection_lost = Signal()
-
-    def __init__(self, host: str, port: int):
-        super().__init__()
-        self._host = host
-        self._port = port
-        self._loop: asyncio.AbstractEventLoop | None = None
-        self._client: SnapcastClient | None = None
+    state_received = Signal(object)      # ServerState
+    error_occurred = Signal(object)      # Exception
 
     def run(self) -> None:
         """Run asyncio event loop in this thread."""
         self._loop = asyncio.new_event_loop()
         asyncio.set_event_loop(self._loop)
-        self._loop.run_until_complete(self._connect())
+        self._loop.run_until_complete(self._run_loop())
 
-    async def _connect(self) -> None:
-        """Connect to Snapcast server and listen for updates."""
-        self._client = SnapcastClient(self._host, self._port)
-        async for state in self._client.stream():
-            self.state_received.emit(state)
+    # Thread-safe public API (called from Main thread):
+    def set_client_volume(self, client_id: str, volume: int) -> None:
+        """Schedule volume change on the worker's event loop."""
+        if self._loop and self._client:
+            asyncio.run_coroutine_threadsafe(
+                self._safe_set_client_volume(client_id, volume), self._loop
+            )
 ```
 
 ### 3. Configuration Persistence (QSettings)
@@ -156,7 +167,7 @@ class ConfigManager:
     """Wrapper around QSettings for type-safe config access."""
 
     def __init__(self):
-        self._settings = QSettings("SnapcastMVP", "Snapcast Controller")
+        self._settings = QSettings("SnapCTRL", "SnapCTRL")
 
     def get_server_profiles(self) -> list[ServerProfile]:
         """Load saved server profiles."""
@@ -177,28 +188,32 @@ class ConfigManager:
 
 ```
 main()
-  ├─> Load config (QSettings)
+  ├─> Apply ThemeManager (dark/light auto-detection)
+  ├─> Discover server via mDNS (or use CLI args)
   ├─> Create StateStore
-  ├─> Create SnapcastWorker (QThread)
+  ├─> Create SnapcastWorker (QThread) → connect + fetch status
   ├─> Create MainWindow
   │    ├─> SourcesPanel (subscribes to state)
   │    ├─> GroupsPanel (subscribes to state)
   │    └─> PropertiesPanel (subscribes to selection)
-  ├─> Connect to last server (if auto-connect enabled)
+  ├─> Create SystemTrayManager (tray icon + menu)
+  ├─> Start MpdMonitor (track metadata + album art polling)
+  ├─> Start PingMonitor (network RTT, 15s interval)
+  ├─> Wire all signals (state → UI, worker → state)
   └─> app.exec()
 ```
 
 ### 2. Server Connection
 
 ```
-User: Click "Connect"
-  └─> MainWindow._on_connect()
-       └─> SnapcastWorker.start()
+Startup: mDNS autodiscovery OR CLI host:port
+  └─> SnapcastWorker.start()
+       └─> asyncio event loop in QThread
             ├─> Connect to tcp://host:1705
             ├─> Send: {"id": 1, "method": "Server.GetStatus"}
-            └─> Receive status
+            └─> Receive status → parse → emit state_received
                  └─> StateStore.update_from_server_state()
-                      └─> Emit state_changed signal
+                      └─> Emit granular signals (groups, clients, sources)
                            └─> UI widgets update
 ```
 
@@ -207,13 +222,12 @@ User: Click "Connect"
 ```
 User: Drag volume slider
   └─> VolumeSlider.valueChanged
-       └─> GroupsPanel._on_volume_changed(group_id, value)
-            └─> Controller.set_client_volume()
+       └─> Worker.set_client_volume(client_id, volume)
+            └─> asyncio.run_coroutine_threadsafe(...)
                  └─> SnapcastClient.set_client_volume()
                       └─> Send RPC: {"method": "Client.SetVolume", ...}
-                           └─> Server confirms
-                                └─> StateStore updates
-                                     └─> UI slider updates (optimistic)
+                           └─> _fetch_status() → StateStore updates
+                                └─> UI slider updates
 ```
 
 ---
@@ -224,6 +238,8 @@ User: Drag volume slider
 |--------|----------------|---------------|
 | **Main (Qt)** | UI rendering, event handling | Signals → Worker |
 | **Worker (QThread)** | TCP I/O, asyncio loop | Signals → Main |
+| **PingMonitor** | Background RTT measurement (15s) | Callback → Main |
+| **MpdMonitor** | MPD polling, album art fetch | Signals → Main |
 
 **Rule:** No Qt widgets in Worker thread. No blocking I/O in Main thread.
 
@@ -233,8 +249,8 @@ User: Drag volume slider
 
 | Error Type | Handling | User Feedback |
 |------------|----------|---------------|
-| Connection refused | Retry 5x with exponential backoff | "Could not connect. Retrying..." |
-| TCP connection dropped | Auto-reconnect | Status indicator: yellow |
+| Connection refused | Exponential backoff (2s→30s), infinite retry | Toolbar indicator: red dot |
+| TCP connection dropped | Auto-reconnect with backoff | Toolbar indicator: red dot |
 | Invalid RPC response | Log, show error in status bar | "Server returned invalid data" |
 | Config corrupted | Reset to defaults | "Settings reset to defaults" |
 
@@ -248,7 +264,7 @@ uv run ruff check --fix      # linting
 uv run ruff format           # formatting
 
 # Manual (before major commits)
-uv run basedpyright src/     # type checking
+uv run basedpyright src/ bin/ tests/  # type checking
 QT_QPA_PLATFORM=offscreen uv run pytest  # tests
 ```
 
@@ -269,4 +285,4 @@ QT_QPA_PLATFORM=offscreen uv run pytest  # tests
 
 *Next: [Data Models](03-DATA-MODELS.md) →*
 
-*Last updated: 2026-01-28*
+*Last updated: 2026-01-29*

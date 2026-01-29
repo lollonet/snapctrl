@@ -19,12 +19,15 @@ snapctrl/
 ├── .github/
 │   └── workflows/
 │       ├── ci.yml                 # Lint, format, test (unit only)
+│       ├── release.yml            # Build & publish on tag push
 │       └── claude-review.yml      # Claude Code Review on PRs
 ├── src/snapcast_mvp/
 │   ├── api/                       # TCP API client
 │   ├── core/                      # Business logic
 │   ├── models/                    # Frozen dataclasses
 │   └── ui/                        # PySide6 UI
+├── scripts/
+│   └── build.py                   # Cross-platform PyInstaller build script
 ├── tests/
 │   ├── test_*.py                  # Unit tests
 │   └── conftest.py                # Test fixtures
@@ -102,7 +105,7 @@ QT_QPA_PLATFORM=offscreen uv run pytest tests/ -v
 uv run pytest tests/ --ignore=tests/test_ui*.py --ignore=tests/test_integration*.py
 
 # Type check (manual)
-uv run basedpyright src/
+uv run basedpyright src/ bin/ tests/
 ```
 
 ## Packaging
@@ -110,8 +113,8 @@ uv run basedpyright src/
 | Platform | Tool | Output |
 |----------|------|--------|
 | Windows | PyInstaller | SnapCTRL.exe |
-| macOS | briefcase | SnapCTRL.app |
-| Linux | PyInstaller | SnapCTRL (AppImage) |
+| macOS | PyInstaller | SnapCTRL.app (DMG) |
+| Linux | PyInstaller | SnapCTRL (tarball) |
 
 ---
 
@@ -123,6 +126,7 @@ uv run basedpyright src/
 [project]
 dependencies = [
     "PySide6>=6.8.0",
+    "zeroconf>=0.136.2",
 ]
 ```
 
@@ -157,4 +161,4 @@ uv run ruff format src tests
 
 *Next: [Testing Strategy](07-TESTING.md) →*
 
-*Last updated: 2025-01-26*
+*Last updated: 2026-01-29*
