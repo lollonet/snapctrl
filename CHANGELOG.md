@@ -28,6 +28,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `Client.SetLatency` API integration for audio sync fine-tuning
   - Shown only for connected clients; read-only display for disconnected
 
+### Changed
+
+- **Package Rename** ([#16](https://github.com/lollonet/snapctrl/pull/16)) - Jan 29
+  - Renamed source package `src/snapcast_mvp/` → `src/snapctrl/`
+  - Updated ~250 references across imports, tests, configs, specs, and docs
+
 ## [0.1.0] - 2026-01-29
 
 ### Added
