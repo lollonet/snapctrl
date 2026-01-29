@@ -23,7 +23,7 @@ jobs:
         id: diff
         run: |
           git fetch origin ${{ github.base_ref }}
-          FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -E "\.(py|yaml|yml|toml)$" || echo "")
+          FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -E "\.(py|yaml|yml|toml|md)$" || echo "")
           echo "files=$FILES" >> $GITHUB_OUTPUT
           echo "Changed files: $FILES"
 
