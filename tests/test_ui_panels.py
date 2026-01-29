@@ -172,3 +172,64 @@ class TestPropertiesPanel:
 
         panel.clear()
         assert "Select an item" in panel._content.text()
+
+
+class TestGroupsPanelRenameSignals:
+    """Test rename signal forwarding in GroupsPanel."""
+
+    def test_group_rename_signal_exists(self, qtbot: QtBot) -> None:
+        """Test that group_rename_requested signal exists."""
+        panel = GroupsPanel()
+        qtbot.addWidget(panel)
+        assert hasattr(panel, "group_rename_requested")
+
+    def test_client_rename_signal_exists(self, qtbot: QtBot) -> None:
+        """Test that client_rename_requested signal exists."""
+        panel = GroupsPanel()
+        qtbot.addWidget(panel)
+        assert hasattr(panel, "client_rename_requested")
+
+    def test_group_rename_signal_forwarded(self, qtbot: QtBot) -> None:
+        """Test that group card rename signal is forwarded through the panel."""
+        panel = GroupsPanel()
+        qtbot.addWidget(panel)
+
+        groups = [
+            Group(id="g1", name="Living Room", stream_id="mpd", muted=False, client_ids=[]),
+        ]
+        panel.set_groups(groups)
+
+        # The group card's rename_requested should be connected to panel's signal
+        card = panel._group_cards["g1"]
+        received: list[tuple[str, str]] = []
+        panel.group_rename_requested.connect(lambda gid, name: received.append((gid, name)))
+
+        # Emit directly from the card to test the wiring
+        card.rename_requested.emit("g1", "New Name")
+
+        assert received == [("g1", "New Name")]
+
+    def test_client_rename_signal_forwarded(self, qtbot: QtBot) -> None:
+        """Test that client card rename signal is forwarded through group card and panel."""
+        panel = GroupsPanel()
+        qtbot.addWidget(panel)
+
+        clients_data = [
+            Client(
+                id="c1", host="10.0.0.1", name="Speaker",
+                volume=50, muted=False, connected=True,
+            ),
+        ]
+        groups = [
+            Group(id="g1", name="Living Room", stream_id="mpd", muted=False, client_ids=["c1"]),
+        ]
+        panel.set_groups(groups, clients={"g1": clients_data})
+
+        received: list[tuple[str, str]] = []
+        panel.client_rename_requested.connect(lambda cid, name: received.append((cid, name)))
+
+        # Emit from the group card's client_rename_requested (which comes from client cards)
+        card = panel._group_cards["g1"]
+        card.client_rename_requested.emit("c1", "New Speaker")
+
+        assert received == [("c1", "New Speaker")]

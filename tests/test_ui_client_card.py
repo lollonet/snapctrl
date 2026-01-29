@@ -130,3 +130,16 @@ class TestClientCard:
         # Check signals exist
         assert hasattr(card, "volume_changed")
         assert hasattr(card, "mute_toggled")
+        assert hasattr(card, "rename_requested")
+
+    def test_rename_signal_emits(self, qtbot: QtBot) -> None:
+        """Test that rename_requested signal can be emitted."""
+        card = ClientCard(client_id="c1", name="Old Name")
+        qtbot.addWidget(card)
+
+        received: list[tuple[str, str]] = []
+        card.rename_requested.connect(lambda cid, name: received.append((cid, name)))
+
+        card.rename_requested.emit("c1", "New Name")
+
+        assert received == [("c1", "New Name")]
