@@ -17,6 +17,7 @@ from snapctrl.models.client import Client
 from snapctrl.models.group import Group
 from snapctrl.models.source import Source
 from snapctrl.ui.theme import theme_manager
+from snapctrl.ui.tokens import sizing, spacing, typography
 from snapctrl.ui.widgets.client_card import ClientCard
 from snapctrl.ui.widgets.volume_slider import VolumeSlider
 
@@ -73,8 +74,8 @@ class GroupCard(QWidget):
         """Set up the user interface."""
         self._setup_styles()
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(12, 8, 12, 8)
-        layout.setSpacing(8)
+        layout.setContentsMargins(spacing.md, spacing.sm, spacing.md, spacing.sm)
+        layout.setSpacing(spacing.sm)
 
         layout.addLayout(self._create_header())
         layout.addWidget(self._create_mute_button())
@@ -88,14 +89,14 @@ class GroupCard(QWidget):
         self._base_style = f"""
             GroupCard {{
                 background-color: {p.surface_elevated};
-                border-radius: 8px;
+                border-radius: {sizing.border_radius_lg}px;
                 border: 1px solid {p.border};
             }}
         """
         self._selected_style = f"""
             GroupCard {{
                 background-color: {p.surface_selected};
-                border-radius: 8px;
+                border-radius: {sizing.border_radius_lg}px;
                 border: 2px solid {p.border_selected};
             }}
         """
@@ -108,12 +109,13 @@ class GroupCard(QWidget):
             The header layout.
         """
         header = QHBoxLayout()
-        header.setSpacing(8)
+        header.setSpacing(spacing.sm)
 
         p = theme_manager.palette
         self._name_label = QLabel("Group Name")
         self._name_label.setStyleSheet(
-            f"font-weight: bold; font-size: 12pt; padding: 4px; color: {p.text};"
+            f"font-weight: bold; font-size: {typography.title}pt;"
+            f" padding: {spacing.xs}px; color: {p.text};"
         )
         self._name_label.installEventFilter(self)
         header.addWidget(self._name_label)
@@ -121,7 +123,7 @@ class GroupCard(QWidget):
         header.addStretch()
 
         self._expand_button = QPushButton("▼")
-        self._expand_button.setFixedSize(24, 24)
+        self._expand_button.setFixedSize(sizing.icon_md, sizing.icon_md)
         self._expand_button.setFlat(True)
         self._expand_button.setStyleSheet("QPushButton { border: none; }")
         self._expand_button.clicked.connect(self._toggle_expand)
@@ -140,8 +142,8 @@ class GroupCard(QWidget):
         button.setCheckable(True)
         button.setStyleSheet(f"""
             QPushButton {{
-                padding: 4px 12px;
-                border-radius: 4px;
+                padding: {spacing.xs}px {spacing.md}px;
+                border-radius: {sizing.border_radius_md}px;
                 background-color: {p.surface_hover};
             }}
             QPushButton:checked {{
@@ -178,7 +180,7 @@ class GroupCard(QWidget):
             The source row layout.
         """
         source_row = QHBoxLayout()
-        source_row.setSpacing(8)
+        source_row.setSpacing(spacing.sm)
 
         p = theme_manager.palette
         source_label = QLabel("Source:")
@@ -189,8 +191,8 @@ class GroupCard(QWidget):
         self._source_combo.setMinimumWidth(120)
         self._source_combo.setStyleSheet(f"""
             QComboBox {{
-                padding: 4px;
-                border-radius: 4px;
+                padding: {spacing.xs}px;
+                border-radius: {sizing.border_radius_md}px;
                 background-color: {p.surface_hover};
             }}
         """)
@@ -209,19 +211,19 @@ class GroupCard(QWidget):
         client_list = QWidget()
         client_list.setVisible(False)
         client_layout = QVBoxLayout(client_list)
-        client_layout.setContentsMargins(8, 4, 8, 4)
-        client_layout.setSpacing(4)
+        client_layout.setContentsMargins(spacing.sm, spacing.xs, spacing.sm, spacing.xs)
+        client_layout.setSpacing(spacing.xs)
 
         self._client_list_label = QLabel("Clients:")
         self._client_list_label.setStyleSheet(
-            f"color: {theme_manager.palette.text_disabled}; font-size: 10pt;"
+            f"color: {theme_manager.palette.text_disabled}; font-size: {typography.body}pt;"
         )
         client_layout.addWidget(self._client_list_label)
 
         self._clients_container = QWidget()
         self._clients_layout = QVBoxLayout(self._clients_container)
         self._clients_layout.setContentsMargins(0, 0, 0, 0)
-        self._clients_layout.setSpacing(4)
+        self._clients_layout.setSpacing(spacing.xs)
         client_layout.addWidget(self._clients_container)
 
         self._client_list = client_list

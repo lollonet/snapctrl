@@ -20,6 +20,8 @@ from PySide6.QtCore import QObject, Signal
 from PySide6.QtGui import QGuiApplication
 from PySide6.QtWidgets import QApplication
 
+from snapctrl.ui.tokens import sizing, spacing
+
 logger = logging.getLogger(__name__)
 
 
@@ -227,16 +229,16 @@ class ThemeManager(QObject):
                 background-color: {p.surface};
                 color: {p.text};
                 border: 1px solid {p.border};
-                padding: 4px;
+                padding: {spacing.xs}px;
             }}
             QScrollBar:vertical {{
                 background: {p.background};
-                width: 8px;
+                width: {sizing.scrollbar_width}px;
             }}
             QScrollBar::handle:vertical {{
                 background: {p.scrollbar};
-                min-height: 20px;
-                border-radius: 4px;
+                min-height: {sizing.scrollbar_min_handle}px;
+                border-radius: {sizing.border_radius_md}px;
             }}
             QScrollBar::handle:vertical:hover {{
                 background: {p.scrollbar_hover};
@@ -246,12 +248,12 @@ class ThemeManager(QObject):
             }}
             QScrollBar:horizontal {{
                 background: {p.background};
-                height: 8px;
+                height: {sizing.scrollbar_width}px;
             }}
             QScrollBar::handle:horizontal {{
                 background: {p.scrollbar};
-                min-width: 20px;
-                border-radius: 4px;
+                min-width: {sizing.scrollbar_min_handle}px;
+                border-radius: {sizing.border_radius_md}px;
             }}
             QScrollBar::handle:horizontal:hover {{
                 background: {p.scrollbar_hover};

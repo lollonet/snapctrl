@@ -14,7 +14,7 @@ from snapctrl.api.mpd import MpdTrack
 from snapctrl.api.protocol import JsonRpcNotification
 from snapctrl.core.discovery import ServerDiscovery
 from snapctrl.core.mpd_monitor import MpdMonitor
-from snapctrl.core.ping import PingMonitor
+from snapctrl.core.ping import PingMonitor, format_rtt
 from snapctrl.core.state import StateStore
 from snapctrl.core.worker import SnapcastWorker
 from snapctrl.models.source import Source
@@ -121,6 +121,8 @@ def main() -> int:  # noqa: PLR0915
     def on_connected() -> None:
         logger.info("Connected to server")
         window.set_connection_status(True, "Connected")
+        # Seed the ping monitor with the server host immediately
+        update_ping_hosts()
 
     def on_disconnected() -> None:
         logger.warning("Disconnected from server")
@@ -293,15 +295,25 @@ def main() -> int:  # noqa: PLR0915
     # Set up ping monitor for network RTT measurement
     ping_monitor = PingMonitor(interval_sec=15.0)
 
+    # Special key for server host in ping results
+    server_ping_key = "__server__"
+
     def update_ping_hosts() -> None:
-        """Update ping monitor with current client IPs."""
+        """Update ping monitor with current client IPs and server host."""
         hosts = {c.id: c.host for c in state_store.clients if c.host}
+        # Always include the server itself
+        hosts[server_ping_key] = host
         ping_monitor.set_hosts(hosts)
 
     def on_ping_results(results: dict[str, float | None]) -> None:
         """Handle ping results update."""
         logger.debug(f"Ping results: {results}")
-        # Store results in window for PropertiesPanel access
+
+        # Update status bar with server RTT
+        server_rtt = results.pop(server_ping_key, None)
+        if server_rtt is not None:
+            window.set_connection_status(True, f"Connected — {format_rtt(server_rtt)}")
+        # Store client results in window for PropertiesPanel access
         window.set_ping_results(results)
 
     ping_monitor.results_updated.connect(on_ping_results)

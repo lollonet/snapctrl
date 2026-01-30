@@ -14,6 +14,7 @@ from snapctrl.models.client import Client
 from snapctrl.models.group import Group
 from snapctrl.models.source import Source
 from snapctrl.ui.theme import theme_manager
+from snapctrl.ui.tokens import spacing, typography
 
 
 class PropertiesPanel(QWidget):
@@ -36,11 +37,11 @@ class PropertiesPanel(QWidget):
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(4)
+        layout.setSpacing(spacing.xs)
 
         # Header
         header = QLabel("Properties")
-        header.setStyleSheet("font-weight: bold; font-size: 12pt;")
+        header.setStyleSheet(f"font-weight: bold; font-size: {typography.title}pt;")
         layout.addWidget(header)
 
         # Content area (placeholder for now)
@@ -76,7 +77,7 @@ class PropertiesPanel(QWidget):
         mute_status = "Muted" if group.muted else "Active"
         html = f"""
             <h3>{group.name}</h3>
-            <table cellpadding="4">
+            <table cellpadding="{spacing.xs}">
             <tr><td><i>ID:</i></td><td>{group.id}</td></tr>
             <tr><td><i>Status:</i></td><td>{mute_status}</td></tr>
             <tr><td><i>Stream:</i></td><td>{group.stream_id}</td></tr>
@@ -148,12 +149,13 @@ class PropertiesPanel(QWidget):
 
         # Client ID (less prominent at bottom)
         rows.append(
-            f"<tr><td><i>ID:</i></td><td style='font-size: 8pt;'>{client.id[:16]}...</td></tr>"
+            f"<tr><td><i>ID:</i></td><td style='font-size: {typography.caption}pt;'>"
+            f"{client.id[:16]}...</td></tr>"
         )
 
         html = f"""
             <h3>{client.name or client.host}</h3>
-            <table cellpadding="4">
+            <table cellpadding="{spacing.xs}">
             {"".join(rows)}
             </table>
         """
@@ -202,7 +204,7 @@ class PropertiesPanel(QWidget):
 
         html = f"""
             <h3>{source.name}</h3>
-            <table cellpadding="4">
+            <table cellpadding="{spacing.xs}">
             {"".join(rows)}
             </table>
         """
@@ -219,7 +221,7 @@ class PropertiesPanel(QWidget):
         p = theme_manager.palette
         self._latency_widget = QWidget()
         row = QHBoxLayout(self._latency_widget)
-        row.setContentsMargins(4, 0, 4, 0)
+        row.setContentsMargins(spacing.xs, 0, spacing.xs, 0)
 
         label = QLabel("Latency offset:")
         label.setStyleSheet(f"color: {p.text}; font-style: italic;")

@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (
 
 from snapctrl.models.client import Client
 from snapctrl.ui.theme import theme_manager
+from snapctrl.ui.tokens import sizing, spacing, typography
 from snapctrl.ui.widgets.volume_slider import VolumeSlider
 
 
@@ -75,18 +76,23 @@ class ClientCard(QFrame):
         self._update_style(False)
 
         layout = QHBoxLayout(self)
-        layout.setContentsMargins(8, 6, 8, 6)
-        layout.setSpacing(12)
+        layout.setContentsMargins(spacing.sm, spacing.sm, spacing.sm, spacing.sm)
+        layout.setSpacing(spacing.md)
 
         # Connection indicator (clickable)
         # Use filled circle with different colors: green=connected, red=disconnected
         p = theme_manager.palette
         self._status_indicator = QLabel("●")
+        indicator_size = sizing.emoji_indicator
         if self._connected:
-            self._status_indicator.setStyleSheet(f"color: {p.success}; font-size: 14px;")
+            self._status_indicator.setStyleSheet(
+                f"color: {p.success}; font-size: {indicator_size}px;"
+            )
             self._status_indicator.setToolTip("Connected")
         else:
-            self._status_indicator.setStyleSheet(f"color: {p.error}; font-size: 14px;")
+            self._status_indicator.setStyleSheet(
+                f"color: {p.error}; font-size: {indicator_size}px;"
+            )
             self._status_indicator.setToolTip("Disconnected")
         self._status_indicator.setCursor(self.cursor())
         self._status_indicator.installEventFilter(self)
@@ -94,7 +100,9 @@ class ClientCard(QFrame):
 
         # Client name (clickable)
         self._name_label = QLabel(self._name)
-        self._name_label.setStyleSheet(f"font-size: 10pt; color: {p.text}; padding: 4px;")
+        self._name_label.setStyleSheet(
+            f"font-size: {typography.body}pt; color: {p.text}; padding: {spacing.xs}px;"
+        )
         self._name_label.setCursor(self.cursor())
         self._name_label.installEventFilter(self)
         layout.addWidget(self._name_label)
@@ -160,11 +168,16 @@ class ClientCard(QFrame):
         self._connected = connected
         # Always use filled circle, change color: green=connected, red=disconnected
         p = theme_manager.palette
+        indicator_size = sizing.emoji_indicator
         if connected:
-            self._status_indicator.setStyleSheet(f"color: {p.success}; font-size: 14px;")
+            self._status_indicator.setStyleSheet(
+                f"color: {p.success}; font-size: {indicator_size}px;"
+            )
             self._status_indicator.setToolTip("Connected")
         else:
-            self._status_indicator.setStyleSheet(f"color: {p.error}; font-size: 14px;")
+            self._status_indicator.setStyleSheet(
+                f"color: {p.error}; font-size: {indicator_size}px;"
+            )
             self._status_indicator.setToolTip("Disconnected")
 
     def set_selected(self, selected: bool) -> None:
@@ -187,7 +200,7 @@ class ClientCard(QFrame):
             self.setStyleSheet(f"""
                 ClientCard {{
                     background-color: {p.surface_selected};
-                    border-radius: 6px;
+                    border-radius: {sizing.border_radius_lg}px;
                     border: 2px solid {p.border_selected};
                 }}
             """)
@@ -195,7 +208,7 @@ class ClientCard(QFrame):
             self.setStyleSheet(f"""
                 ClientCard {{
                     background-color: {p.surface_dim};
-                    border-radius: 6px;
+                    border-radius: {sizing.border_radius_lg}px;
                     border: 1px solid {p.border};
                 }}
             """)

@@ -10,6 +10,7 @@ from PySide6.QtWidgets import (
 )
 
 from snapctrl.ui.theme import theme_manager
+from snapctrl.ui.tokens import sizing, spacing
 
 
 class VolumeSlider(QWidget):
@@ -34,7 +35,7 @@ class VolumeSlider(QWidget):
 
         layout = QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(8)
+        layout.setSpacing(spacing.sm)
 
         # Volume percentage label
         self._volume_label = QLabel("50%")
@@ -53,16 +54,16 @@ class VolumeSlider(QWidget):
         # Mute button
         p = theme_manager.palette
         self._mute_button = QPushButton("🔊")
-        self._mute_button.setFixedSize(32, 32)
+        self._mute_button.setFixedSize(sizing.control_button, sizing.control_button)
         self._mute_button.setFlat(True)
         self._mute_button.setStyleSheet(f"""
             QPushButton {{
                 border: none;
-                font-size: 16px;
+                font-size: {sizing.emoji_button}px;
             }}
             QPushButton:hover {{
                 background-color: {p.surface_hover};
-                border-radius: 4px;
+                border-radius: {sizing.border_radius_md}px;
             }}
         """)
         self._mute_button.clicked.connect(self._toggle_mute)
