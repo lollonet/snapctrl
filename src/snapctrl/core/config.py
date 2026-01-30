@@ -14,6 +14,13 @@ _KEY_SERVERS = "servers"
 _KEY_LAST_SERVER = "last_server"
 _KEY_AUTO_CONNECT = "auto_connect_enabled"
 
+# Snapclient settings keys
+_KEY_SNAPCLIENT_ENABLED = "snapclient/enabled"
+_KEY_SNAPCLIENT_BINARY_PATH = "snapclient/binary_path"
+_KEY_SNAPCLIENT_AUTO_START = "snapclient/auto_start"
+_KEY_SNAPCLIENT_SERVER_HOST = "snapclient/server_host"
+_KEY_SNAPCLIENT_EXTRA_ARGS = "snapclient/extra_args"
+
 
 class ConfigManager:
     """Wrapper around QSettings for type-safe config access.
@@ -175,6 +182,93 @@ class ConfigManager:
             if profile.auto_connect:
                 return profile
         return None
+
+    # -- Snapclient settings --------------------------------------------------
+
+    def get_snapclient_enabled(self) -> bool:
+        """Return whether the local snapclient is enabled.
+
+        Returns:
+            True if local snapclient management is enabled.
+        """
+        return bool(self._settings.value(_KEY_SNAPCLIENT_ENABLED, False, bool))
+
+    def set_snapclient_enabled(self, enabled: bool) -> None:
+        """Enable or disable local snapclient management.
+
+        Args:
+            enabled: Whether to enable local snapclient.
+        """
+        self._settings.setValue(_KEY_SNAPCLIENT_ENABLED, enabled)
+
+    def get_snapclient_binary_path(self) -> str:
+        """Return the user-configured snapclient binary path.
+
+        Returns:
+            Path string, or empty string for auto-detection.
+        """
+        value = self._settings.value(_KEY_SNAPCLIENT_BINARY_PATH, "", str)
+        return str(value) if value else ""
+
+    def set_snapclient_binary_path(self, path: str) -> None:
+        """Set a custom snapclient binary path.
+
+        Args:
+            path: Path to binary, or empty string for auto-detection.
+        """
+        self._settings.setValue(_KEY_SNAPCLIENT_BINARY_PATH, path)
+
+    def get_snapclient_auto_start(self) -> bool:
+        """Return whether snapclient should auto-start with the app.
+
+        Returns:
+            True if auto-start is enabled (default True).
+        """
+        return bool(self._settings.value(_KEY_SNAPCLIENT_AUTO_START, True, bool))
+
+    def set_snapclient_auto_start(self, enabled: bool) -> None:
+        """Enable or disable snapclient auto-start.
+
+        Args:
+            enabled: Whether to auto-start on app launch.
+        """
+        self._settings.setValue(_KEY_SNAPCLIENT_AUTO_START, enabled)
+
+    def get_snapclient_server_host(self) -> str:
+        """Return the server host for snapclient to connect to.
+
+        Returns:
+            Host string, or empty string to use the main connection host.
+        """
+        value = self._settings.value(_KEY_SNAPCLIENT_SERVER_HOST, "", str)
+        return str(value) if value else ""
+
+    def set_snapclient_server_host(self, host: str) -> None:
+        """Set the server host for snapclient.
+
+        Args:
+            host: Hostname or IP, or empty string for main connection host.
+        """
+        self._settings.setValue(_KEY_SNAPCLIENT_SERVER_HOST, host)
+
+    def get_snapclient_extra_args(self) -> str:
+        """Return additional CLI arguments for snapclient.
+
+        Returns:
+            Extra arguments string, or empty string.
+        """
+        value = self._settings.value(_KEY_SNAPCLIENT_EXTRA_ARGS, "", str)
+        return str(value) if value else ""
+
+    def set_snapclient_extra_args(self, args: str) -> None:
+        """Set additional CLI arguments for snapclient.
+
+        Args:
+            args: Extra CLI arguments string.
+        """
+        self._settings.setValue(_KEY_SNAPCLIENT_EXTRA_ARGS, args)
+
+    # -- General settings ------------------------------------------------------
 
     def clear(self) -> None:
         """Clear all settings (useful for testing or reset)."""

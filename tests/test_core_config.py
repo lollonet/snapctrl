@@ -169,6 +169,63 @@ class TestConfigManagerClear:
         assert config.get_last_server_id() is None
 
 
+class TestConfigManagerSnapclient:
+    """Test snapclient configuration settings."""
+
+    def test_snapclient_enabled_default_false(self, config: ConfigManager) -> None:
+        """Snapclient is disabled by default."""
+        assert config.get_snapclient_enabled() is False
+
+    def test_set_snapclient_enabled(self, config: ConfigManager) -> None:
+        """Can enable/disable snapclient."""
+        config.set_snapclient_enabled(True)
+        assert config.get_snapclient_enabled() is True
+        config.set_snapclient_enabled(False)
+        assert config.get_snapclient_enabled() is False
+
+    def test_snapclient_binary_path_default_empty(self, config: ConfigManager) -> None:
+        """Binary path defaults to empty (auto-detect)."""
+        assert config.get_snapclient_binary_path() == ""
+
+    def test_set_snapclient_binary_path(self, config: ConfigManager) -> None:
+        """Can set a custom binary path."""
+        config.set_snapclient_binary_path("/opt/snapclient")
+        assert config.get_snapclient_binary_path() == "/opt/snapclient"
+
+    def test_clear_snapclient_binary_path(self, config: ConfigManager) -> None:
+        """Can clear binary path back to auto-detect."""
+        config.set_snapclient_binary_path("/opt/snapclient")
+        config.set_snapclient_binary_path("")
+        assert config.get_snapclient_binary_path() == ""
+
+    def test_snapclient_auto_start_default_true(self, config: ConfigManager) -> None:
+        """Auto-start defaults to True."""
+        assert config.get_snapclient_auto_start() is True
+
+    def test_set_snapclient_auto_start(self, config: ConfigManager) -> None:
+        """Can toggle auto-start."""
+        config.set_snapclient_auto_start(False)
+        assert config.get_snapclient_auto_start() is False
+
+    def test_snapclient_server_host_default_empty(self, config: ConfigManager) -> None:
+        """Server host defaults to empty (use main connection)."""
+        assert config.get_snapclient_server_host() == ""
+
+    def test_set_snapclient_server_host(self, config: ConfigManager) -> None:
+        """Can set a custom server host."""
+        config.set_snapclient_server_host("192.168.1.50")
+        assert config.get_snapclient_server_host() == "192.168.1.50"
+
+    def test_snapclient_extra_args_default_empty(self, config: ConfigManager) -> None:
+        """Extra args default to empty."""
+        assert config.get_snapclient_extra_args() == ""
+
+    def test_set_snapclient_extra_args(self, config: ConfigManager) -> None:
+        """Can set extra CLI arguments."""
+        config.set_snapclient_extra_args("--latency 100 --mixer pulse")
+        assert config.get_snapclient_extra_args() == "--latency 100 --mixer pulse"
+
+
 class TestConfigManagerInvalidData:
     """Test handling of invalid data in settings."""
 
