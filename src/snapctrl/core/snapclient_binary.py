@@ -28,7 +28,8 @@ def bundled_snapclient_path() -> Path:
     """
     if getattr(sys, "frozen", False):
         # PyInstaller bundle: sys._MEIPASS is the temp extraction dir
-        base = Path(sys._MEIPASS).resolve()  # type: ignore[attr-defined]  # noqa: SLF001
+        meipass: str = getattr(sys, "_MEIPASS", "")
+        base = Path(meipass).resolve() if meipass else Path(__file__).resolve().parents[3]
     else:
         # Running from source — use project root as a fallback
         base = Path(__file__).resolve().parents[3]

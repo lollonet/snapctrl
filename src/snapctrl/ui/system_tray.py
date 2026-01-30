@@ -306,7 +306,10 @@ class SystemTrayManager(QObject):
     def _on_start_snapclient(self) -> None:
         """Start the local snapclient with configured host/port."""
         if self._snapclient_mgr and self._snapclient_host:
-            self._snapclient_mgr.start(self._snapclient_host, self._snapclient_port)
+            try:
+                self._snapclient_mgr.start(self._snapclient_host, self._snapclient_port)
+            except ValueError as e:
+                logger.error("Failed to start snapclient: %s", e)
 
     def _get_target_group(self) -> Group | None:
         """Get the group to control with the quick volume slider.

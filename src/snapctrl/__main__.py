@@ -2,6 +2,7 @@
 
 import base64
 import logging
+import shlex
 import sys
 import time
 from pathlib import Path
@@ -205,7 +206,7 @@ def main() -> int:  # noqa: PLR0912, PLR0915
         snapclient_mgr.set_configured_binary_path(sc_binary)
     sc_extra = config.get_snapclient_extra_args()
     if sc_extra:
-        snapclient_mgr.set_extra_args(sc_extra.split())
+        snapclient_mgr.set_extra_args(shlex.split(sc_extra))
 
     # Connect snapclient signals to UI
     snapclient_mgr.status_changed.connect(window.set_snapclient_status)
@@ -217,7 +218,9 @@ def main() -> int:  # noqa: PLR0912, PLR0915
 
     # Set up system tray
     tray = SystemTrayManager(window, state_store, snapclient_mgr=snapclient_mgr)
-    tray.set_snapclient_connection(host, 1704)
+    # Snapclient port (1704) is distinct from the control port (1705)
+    snapclient_port = 1704
+    tray.set_snapclient_connection(host, snapclient_port)
     if tray.available:
         tray.show()
         window.set_hide_to_tray(True)
@@ -431,7 +434,7 @@ def main() -> int:  # noqa: PLR0912, PLR0915
     # Auto-start local snapclient if configured
     if config.get_snapclient_enabled() and config.get_snapclient_auto_start():
         sc_host = config.get_snapclient_server_host() or host
-        snapclient_mgr.start(sc_host, 1704)
+        snapclient_mgr.start(sc_host, snapclient_port)
 
     # Run the application
     exit_code = app.exec()

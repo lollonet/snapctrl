@@ -8,6 +8,7 @@ Layout:
 +----------------------------------+
 """
 
+import logging
 from typing import TYPE_CHECKING
 
 from PySide6.QtCore import Slot
@@ -23,6 +24,8 @@ from snapctrl.ui.panels.properties import PropertiesPanel
 from snapctrl.ui.panels.sources import SourcesPanel
 from snapctrl.ui.theme import theme_manager
 from snapctrl.ui.tokens import sizing, spacing, typography
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from snapctrl.core.controller import Controller
@@ -385,6 +388,8 @@ class MainWindow(QMainWindow):
             "stopped": ("Local: Stopped", p.scrollbar, p.text_disabled),
             "error": ("Local: Error", p.surface_error, p.error),
         }
+        if status not in status_config:
+            logger.warning("Unknown snapclient status: %r", status)
         text, bg, fg = status_config.get(status, ("Local: Unknown", p.scrollbar, p.text_disabled))
         self._snapclient_label.setText(text)
         self._snapclient_label.setStyleSheet(f"background-color: {bg}; color: {fg};{base_style}")

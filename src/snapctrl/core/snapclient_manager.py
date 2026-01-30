@@ -107,7 +107,7 @@ class SnapclientManager(QObject):
         Raises:
             ValueError: If args contain blocked flags managed internally.
         """
-        blocked = [a for a in args if a in _BLOCKED_ARGS]
+        blocked = [a for a in args if a in _BLOCKED_ARGS or a.split("=", 1)[0] in _BLOCKED_ARGS]
         if blocked:
             msg = f"Blocked arguments (managed internally): {blocked}"
             raise ValueError(msg)
@@ -187,11 +187,13 @@ class SnapclientManager(QObject):
             msg = "Cannot restart: no host configured (call start() first)"
             raise RuntimeError(msg)
 
-        self._auto_restart = True
+        # Capture connection info before stop() clears _auto_restart
+        restart_host = self._host
+        restart_port = self._port
         if self.is_running:
             self.stop()
-            self._auto_restart = True  # stop() sets this to False
-        self.start(self._host, self._port)
+        self._auto_restart = True
+        self.start(restart_host, restart_port)
 
     def enable_auto_restart(self, enabled: bool = True) -> None:
         """Enable or disable auto-restart on crash.
@@ -241,7 +243,10 @@ class SnapclientManager(QObject):
             return
 
         data = self._process.readAllStandardOutput()
-        text = bytes(data.data()).decode("utf-8", errors="replace")
+        raw = bytes(data.data())
+        text = raw.decode("utf-8", errors="replace")
+        if "\ufffd" in text:
+            logger.debug("snapclient output contained invalid UTF-8 bytes")
 
         for raw_line in text.splitlines():
             line = raw_line.strip()
@@ -249,7 +254,7 @@ class SnapclientManager(QObject):
                 continue
             logger.debug("snapclient: %s", line)
 
-            # Detect successful connection
+            # Detect successful connection (snapclient v0.28–v0.31 output format)
             if "Connected to" in line:
                 self._set_status("running")
                 self._backoff_ms = INITIAL_BACKOFF_MS
@@ -259,10 +264,12 @@ class SnapclientManager(QObject):
                 parts = line.split("hostID:", 1)
                 if len(parts) > 1:
                     client_id = parts[1].strip()
-                    # Validate client ID: safe chars + length limit
+                    # Validate client ID: safe chars, length limit, no leading/trailing separators
                     if (
                         client_id
                         and len(client_id) <= MAX_CLIENT_ID_LEN
+                        and client_id[0].isalnum()
+                        and client_id[-1].isalnum()
                         and all(c.isalnum() or c in ":-" for c in client_id)
                     ):
                         logger.info("Detected client ID: %s", client_id)
@@ -336,6 +343,6 @@ class SnapclientManager(QObject):
                 self._process.finished.disconnect(self._on_finished)
                 self._process.errorOccurred.disconnect(self._on_error)
             except (RuntimeError, TypeError):
-                pass  # Signals may already be disconnected
+                logger.debug("Signal disconnect during cleanup (already disconnected)")
             self._process.deleteLater()
             self._process = None
