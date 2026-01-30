@@ -17,6 +17,7 @@ Usage:
 from __future__ import annotations
 
 import logging
+import re
 
 from PySide6.QtCore import QObject, QProcess, QTimer, Signal
 
@@ -36,6 +37,8 @@ MAX_PORT = 65535
 
 # Client ID max length and validation
 MAX_CLIENT_ID_LEN = 64
+_MAC_RE = re.compile(r"^([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2}$")
+_HOST_RE = re.compile(r"^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?$")
 
 # Dangerous snapclient flags that must not be set via extra_args
 _BLOCKED_ARGS = frozenset({"--host", "--port", "--hostID", "--logsink", "--logfilter"})
@@ -142,8 +145,11 @@ class SnapclientManager(QObject):
 
         if self.is_running:
             logger.info("Stopping existing snapclient before restart")
+            self._auto_restart = False  # Prevent auto-restart during teardown
+            self._restart_timer.stop()
             self.stop()
 
+        self._auto_restart = True
         self._host = host
         self._port = port
         self._backoff_ms = INITIAL_BACKOFF_MS
@@ -251,9 +257,11 @@ class SnapclientManager(QObject):
 
         data = self._process.readAllStandardOutput()
         raw = bytes(data.data())
-        text = raw.decode("utf-8", errors="replace")
-        if "\ufffd" in text:
-            logger.debug("snapclient output contained invalid UTF-8 bytes")
+        try:
+            text = raw.decode("utf-8")
+        except UnicodeDecodeError:
+            logger.warning("snapclient output contained invalid UTF-8, using replacement")
+            text = raw.decode("utf-8", errors="replace")
 
         for raw_line in text.splitlines():
             line = raw_line.strip()
@@ -271,16 +279,11 @@ class SnapclientManager(QObject):
                 parts = line.split("hostID:", 1)
                 if len(parts) > 1:
                     client_id = parts[1].strip()
-                    # Validate client ID: safe chars, length limit,
-                    # no leading/trailing/consecutive separators
+                    # Validate client ID: MAC address or hostname format
                     if (
                         client_id
                         and len(client_id) <= MAX_CLIENT_ID_LEN
-                        and client_id[0].isalnum()
-                        and client_id[-1].isalnum()
-                        and all(c.isalnum() or c in ":-" for c in client_id)
-                        and "::" not in client_id
-                        and "--" not in client_id
+                        and (_MAC_RE.match(client_id) or _HOST_RE.match(client_id))
                     ):
                         logger.info("Detected client ID: %s", client_id)
                         self.client_id_detected.emit(client_id)
