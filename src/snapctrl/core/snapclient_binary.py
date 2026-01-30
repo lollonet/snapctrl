@@ -74,7 +74,7 @@ def find_snapclient(configured_path: str | None = None) -> Path | None:
     return None
 
 
-def validate_snapclient(path: Path) -> tuple[bool, str]:  # noqa: PLR0911
+def validate_snapclient(path: Path) -> tuple[bool, str]:
     """Validate a snapclient binary by running ``--version``.
 
     Args:
@@ -106,9 +106,7 @@ def validate_snapclient(path: Path) -> tuple[bool, str]:  # noqa: PLR0911
             logger.info("Validated snapclient %s at %s", version, path)
             return True, version
         return False, f"Unexpected output: {first_line}"
-    except FileNotFoundError:
-        return False, f"Binary not executable: {path}"
     except subprocess.TimeoutExpired:
         return False, "Timed out running --version"
     except OSError as e:
-        return False, f"OS error: {e}"
+        return False, f"Cannot execute binary: {e}"

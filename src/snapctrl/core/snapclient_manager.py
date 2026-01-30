@@ -133,8 +133,8 @@ class SnapclientManager(QObject):
         Raises:
             ValueError: If host is empty or port is out of range.
         """
-        if not host or not host.strip():
-            msg = "Host must not be empty"
+        if not host.strip():
+            msg = "Host must not be empty or whitespace-only"
             raise ValueError(msg)
         if not (1 <= port <= MAX_PORT):
             msg = f"Port must be 1–{MAX_PORT}, got {port}"
@@ -172,7 +172,10 @@ class SnapclientManager(QObject):
                 # teardown before the app exits or before a restart, and the
                 # timeouts (3 s + 1 s) keep the blocking bounded.
                 self._process.terminate()
-                if not self._process.waitForFinished(TERMINATE_TIMEOUT_MS):
+                if (
+                    self._process.state() != QProcess.ProcessState.NotRunning
+                    and not self._process.waitForFinished(TERMINATE_TIMEOUT_MS)
+                ):
                     logger.warning("snapclient did not stop, killing")
                     self._process.kill()
                     if not self._process.waitForFinished(KILL_TIMEOUT_MS):
