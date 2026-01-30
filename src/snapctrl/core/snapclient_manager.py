@@ -167,6 +167,10 @@ class SnapclientManager(QObject):
         if self._process is not None:
             if self._process.state() != QProcess.ProcessState.NotRunning:
                 logger.info("Stopping snapclient (SIGTERM)")
+                # Note: waitForFinished() blocks the Qt event loop during
+                # shutdown.  This is intentional — we need a clean process
+                # teardown before the app exits or before a restart, and the
+                # timeouts (3 s + 1 s) keep the blocking bounded.
                 self._process.terminate()
                 if not self._process.waitForFinished(TERMINATE_TIMEOUT_MS):
                     logger.warning("snapclient did not stop, killing")
@@ -264,13 +268,16 @@ class SnapclientManager(QObject):
                 parts = line.split("hostID:", 1)
                 if len(parts) > 1:
                     client_id = parts[1].strip()
-                    # Validate client ID: safe chars, length limit, no leading/trailing separators
+                    # Validate client ID: safe chars, length limit,
+                    # no leading/trailing/consecutive separators
                     if (
                         client_id
                         and len(client_id) <= MAX_CLIENT_ID_LEN
                         and client_id[0].isalnum()
                         and client_id[-1].isalnum()
                         and all(c.isalnum() or c in ":-" for c in client_id)
+                        and "::" not in client_id
+                        and "--" not in client_id
                     ):
                         logger.info("Detected client ID: %s", client_id)
                         self.client_id_detected.emit(client_id)

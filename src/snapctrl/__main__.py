@@ -206,6 +206,8 @@ def main() -> int:  # noqa: PLR0912, PLR0915
         snapclient_mgr.set_configured_binary_path(sc_binary)
     sc_extra = config.get_snapclient_extra_args()
     if sc_extra:
+        # Defense-in-depth: shlex.split handles quoted args safely,
+        # and set_extra_args() rejects blocked flags (--host, --port, etc.)
         snapclient_mgr.set_extra_args(shlex.split(sc_extra))
 
     # Connect snapclient signals to UI
