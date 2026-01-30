@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-01-30
+
 ### Added
 
 - **System Tray Icon** ([#13](https://github.com/lollonet/snapctrl/pull/13)) - Jan 29
@@ -28,11 +30,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `Client.SetLatency` API integration for audio sync fine-tuning
   - Shown only for connected clients; read-only display for disconnected
 
+- **Design Tokens** ([#17](https://github.com/lollonet/snapctrl/pull/17)) - Jan 30
+  - Frozen dataclass singletons for spacing (4px base unit), typography (pt scale), and sizing (border radii, icons, panel widths)
+  - Replaced ~50 hardcoded magic numbers across 7 UI files with token references
+  - Design system documentation (`docs/09-DESIGN-SYSTEM.md`)
+
+- **Local Snapclient Manager** ([#19](https://github.com/lollonet/snapctrl/pull/19)) - Jan 30
+  - QProcess-based subprocess lifecycle: start, stop, auto-restart on crash
+  - Priority-ordered binary discovery (bundled → PATH → user-configured) with version validation
+  - Exponential backoff restart (1s → 30s, max 5 attempts) with consecutive failure tracking
+  - Stdout parsing for connection status and client ID detection (MAC/hostname regex)
+  - Status bar indicator (running/starting/stopped/error with color coding)
+  - System tray integration with start/stop toggle
+  - Properties panel local client display
+  - QSettings-based configuration (binary path, auto-start, extra args, server host)
+
 ### Changed
 
 - **Package Rename** ([#16](https://github.com/lollonet/snapctrl/pull/16)) - Jan 29
   - Renamed source package `src/snapcast_mvp/` → `src/snapctrl/`
   - Updated ~250 references across imports, tests, configs, specs, and docs
+
+### Maintenance
+
+- **Claude Code GitHub Workflow** ([#18](https://github.com/lollonet/snapctrl/pull/18)) - Jan 30
+  - GitHub Actions workflow for @claude mentions in PRs and issues
 
 ## [0.1.0] - 2026-01-29
 
