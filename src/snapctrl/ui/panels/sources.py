@@ -325,10 +325,10 @@ class SourcesPanel(QWidget):
                 Qt.TransformationMode.SmoothTransformation,
             )
             self._album_art.setPixmap(scaled)
-            self._album_art.setStyleSheet("""
-                QLabel {
-                    border-radius: 4px;
-                }
+            self._album_art.setStyleSheet(f"""
+                QLabel {{
+                    border-radius: {sizing.border_radius_md}px;
+                }}
             """)
             logger.info(
                 "Album art from %s for %s - %s",
@@ -417,10 +417,10 @@ class SourcesPanel(QWidget):
                     Qt.TransformationMode.SmoothTransformation,
                 )
                 self._album_art.setPixmap(scaled)
-                self._album_art.setStyleSheet("""
-                    QLabel {
-                        border-radius: 4px;
-                    }
+                self._album_art.setStyleSheet(f"""
+                    QLabel {{
+                        border-radius: {sizing.border_radius_md}px;
+                    }}
                 """)
                 self._pending_art_url = ""
                 # Mark art as loaded to prevent fallback overwriting
@@ -468,10 +468,10 @@ class SourcesPanel(QWidget):
                 Qt.TransformationMode.SmoothTransformation,
             )
             self._album_art.setPixmap(scaled)
-            self._album_art.setStyleSheet("""
-                QLabel {
-                    border-radius: 4px;
-                }
+            self._album_art.setStyleSheet(f"""
+                QLabel {{
+                    border-radius: {sizing.border_radius_md}px;
+                }}
             """)
             # Mark art as loaded to prevent fallback overwriting
             self._art_loaded = True

@@ -90,6 +90,16 @@ class TestSizingTokens:
         assert sizing.icon_md == 24
         assert sizing.icon_lg == 32
 
+    def test_emoji_sizes(self) -> None:
+        """Test emoji/icon font sizing tokens."""
+        assert sizing.emoji_indicator == 14
+        assert sizing.emoji_button == 16
+
+    def test_scrollbar_sizes(self) -> None:
+        """Test scrollbar sizing tokens."""
+        assert sizing.scrollbar_width == 8
+        assert sizing.scrollbar_min_handle == 20
+
     def test_component_sizes(self) -> None:
         """Test component-specific sizing tokens."""
         assert sizing.album_art == 80

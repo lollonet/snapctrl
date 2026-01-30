@@ -47,8 +47,12 @@ All UI files import from these two modules. No magic numbers in widget code.
 | `sizing.icon_sm` | 16px | Inline icons |
 | `sizing.icon_md` | 24px | Toolbar icons |
 | `sizing.icon_lg` | 32px | Panel header icons |
+| `sizing.emoji_indicator` | 14px | Status indicator emoji |
+| `sizing.emoji_button` | 16px | Button emoji / icon font |
 | `sizing.album_art` | 80px | Album art thumbnail |
 | `sizing.control_button` | 32px | Transport control buttons |
+| `sizing.scrollbar_width` | 8px | Scrollbar track width/height |
+| `sizing.scrollbar_min_handle` | 20px | Min scrollbar handle dimension |
 | `sizing.panel_min_side` | 150px | Min side panel width |
 | `sizing.panel_max_side` | 300px | Max side panel width |
 

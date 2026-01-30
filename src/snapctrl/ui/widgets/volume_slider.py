@@ -59,7 +59,7 @@ class VolumeSlider(QWidget):
         self._mute_button.setStyleSheet(f"""
             QPushButton {{
                 border: none;
-                font-size: 16px;
+                font-size: {sizing.emoji_button}px;
             }}
             QPushButton:hover {{
                 background-color: {p.surface_hover};

@@ -50,8 +50,12 @@ class SizingTokens:
     icon_sm: int = 16  # Inline icons
     icon_md: int = 24  # Toolbar icons
     icon_lg: int = 32  # Panel header icons
+    emoji_indicator: int = 14  # Status indicator emoji (px)
+    emoji_button: int = 16  # Button emoji / icon font (px)
     album_art: int = 80  # Album art thumbnail
     control_button: int = 32  # Transport control buttons
+    scrollbar_width: int = 8  # Scrollbar track width/height
+    scrollbar_min_handle: int = 20  # Min scrollbar handle dimension
     panel_min_side: int = 150  # Min side panel width
     panel_max_side: int = 300  # Max side panel width
 
