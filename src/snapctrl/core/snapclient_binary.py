@@ -74,7 +74,7 @@ def find_snapclient(configured_path: str | None = None) -> Path | None:
     return None
 
 
-def validate_snapclient(path: Path) -> tuple[bool, str]:
+def validate_snapclient(path: Path) -> tuple[bool, str]:  # noqa: PLR0911
     """Validate a snapclient binary by running ``--version``.
 
     Args:
@@ -89,6 +89,8 @@ def validate_snapclient(path: Path) -> tuple[bool, str]:
 
     try:
         resolved = path.resolve(strict=True)
+        if not resolved.is_file():
+            return False, f"Binary path invalid after resolution: {resolved}"
         if not os.access(resolved, os.X_OK):
             return False, f"Binary not executable: {resolved}"
         result = subprocess.run(

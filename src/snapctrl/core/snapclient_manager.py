@@ -29,6 +29,7 @@ logger = logging.getLogger(__name__)
 INITIAL_BACKOFF_MS = 1000
 MAX_BACKOFF_MS = 30_000
 BACKOFF_MULTIPLIER = 2
+MAX_RESTART_ATTEMPTS = 5
 
 # Graceful termination timeouts
 TERMINATE_TIMEOUT_MS = 3000
@@ -78,6 +79,7 @@ class SnapclientManager(QObject):
         self._configured_binary_path: str | None = None
         self._auto_restart = True
         self._backoff_ms = INITIAL_BACKOFF_MS
+        self._consecutive_failures = 0
         self._restart_timer = QTimer(self)
         self._restart_timer.setSingleShot(True)
         self._restart_timer.timeout.connect(self._do_restart)
@@ -148,7 +150,12 @@ class SnapclientManager(QObject):
             logger.info("Stopping existing snapclient before restart")
             self._auto_restart = False  # Prevent auto-restart during teardown
             self._restart_timer.stop()
-            self.stop()
+            try:
+                self.stop()
+            except Exception:
+                logger.exception("Failed to stop existing process cleanly")
+                self._cleanup_process()
+                self._set_status("stopped")
 
         self._auto_restart = True
         self._host = host
@@ -210,12 +217,13 @@ class SnapclientManager(QObject):
             msg = "Cannot restart: no host configured (call start() first)"
             raise RuntimeError(msg)
 
-        # Capture connection info before stop() clears _auto_restart
+        # Capture state before stop() modifies it
         restart_host = self._host
         restart_port = self._port
+        was_auto_restart = self._auto_restart
         if self.is_running:
             self.stop()
-        self._auto_restart = True
+        self._auto_restart = was_auto_restart
         self.start(restart_host, restart_port)
 
     def enable_auto_restart(self, enabled: bool = True) -> None:
@@ -283,6 +291,7 @@ class SnapclientManager(QObject):
             if "Connected to" in line:
                 self._set_status("running")
                 self._backoff_ms = INITIAL_BACKOFF_MS
+                self._consecutive_failures = 0
 
             # Detect client ID from output (e.g. "hostID: aa:bb:cc:dd:ee:ff")
             id_match = re.search(r"\bhostID:\s*([a-zA-Z0-9:._-]+)", line)
@@ -341,9 +350,26 @@ class SnapclientManager(QObject):
 
     def _do_restart(self) -> None:
         """Execute auto-restart."""
-        if self._binary_path and self._auto_restart:
-            logger.info("Auto-restarting snapclient")
-            self._launch()
+        if not self._binary_path or not self._auto_restart:
+            return
+
+        if self._consecutive_failures >= MAX_RESTART_ATTEMPTS:
+            logger.error(
+                "Auto-restart disabled after %d consecutive failures",
+                self._consecutive_failures,
+            )
+            self._auto_restart = False
+            self._set_status("error")
+            self.error_occurred.emit("Auto-restart disabled due to repeated failures")
+            return
+
+        self._consecutive_failures += 1
+        logger.info(
+            "Auto-restarting snapclient (attempt %d/%d)",
+            self._consecutive_failures,
+            MAX_RESTART_ATTEMPTS,
+        )
+        self._launch()
 
     def _set_status(self, status: str) -> None:
         """Update status and emit signal if changed.
