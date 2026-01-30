@@ -21,7 +21,7 @@ import re
 
 from PySide6.QtCore import QObject, QProcess, QTimer, Signal
 
-from snapctrl.core.snapclient_binary import find_snapclient
+from snapctrl.core.snapclient_binary import find_snapclient, validate_snapclient
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +38,8 @@ MAX_PORT = 65535
 # Client ID max length and validation
 MAX_CLIENT_ID_LEN = 64
 _MAC_RE = re.compile(r"^([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2}$")
-_HOST_RE = re.compile(r"^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?$")
+_HOSTNAME_LABEL = r"[a-zA-Z0-9](?:[a-zA-Z0-9_-]{0,61}[a-zA-Z0-9])?"
+_HOST_RE = re.compile(rf"^{_HOSTNAME_LABEL}(?:\.{_HOSTNAME_LABEL})*$")
 
 # Dangerous snapclient flags that must not be set via extra_args
 _BLOCKED_ARGS = frozenset({"--host", "--port", "--hostID", "--logsink", "--logfilter"})
@@ -162,6 +163,15 @@ class SnapclientManager(QObject):
             self.error_occurred.emit(msg)
             return
 
+        is_valid, version_or_error = validate_snapclient(binary)
+        if not is_valid:
+            msg = f"Invalid snapclient binary: {version_or_error}"
+            logger.error(msg)
+            self._set_status("error")
+            self.error_occurred.emit(msg)
+            return
+
+        logger.info("Using snapclient %s at %s", version_or_error, binary)
         self._binary_path = str(binary)
         self._launch()
 
@@ -275,20 +285,17 @@ class SnapclientManager(QObject):
                 self._backoff_ms = INITIAL_BACKOFF_MS
 
             # Detect client ID from output (e.g. "hostID: aa:bb:cc:dd:ee:ff")
-            if "hostID:" in line:
-                parts = line.split("hostID:", 1)
-                if len(parts) > 1:
-                    client_id = parts[1].strip()
-                    # Validate client ID: MAC address or hostname format
-                    if (
-                        client_id
-                        and len(client_id) <= MAX_CLIENT_ID_LEN
-                        and (_MAC_RE.match(client_id) or _HOST_RE.match(client_id))
-                    ):
-                        logger.info("Detected client ID: %s", client_id)
-                        self.client_id_detected.emit(client_id)
-                    else:
-                        logger.warning("Invalid client ID format: %r", client_id)
+            id_match = re.search(r"\bhostID:\s*([a-zA-Z0-9:._-]+)", line)
+            if id_match:
+                client_id = id_match.group(1)
+                # Validate client ID: MAC address or hostname format
+                if len(client_id) <= MAX_CLIENT_ID_LEN and (
+                    _MAC_RE.match(client_id) or _HOST_RE.match(client_id)
+                ):
+                    logger.info("Detected client ID: %s", client_id)
+                    self.client_id_detected.emit(client_id)
+                else:
+                    logger.warning("Invalid client ID format: %r", client_id)
 
     def _on_finished(self, exit_code: int, exit_status: QProcess.ExitStatus) -> None:
         """Handle process exit.
@@ -355,7 +362,7 @@ class SnapclientManager(QObject):
                 self._process.readyReadStandardOutput.disconnect(self._on_stdout)
                 self._process.finished.disconnect(self._on_finished)
                 self._process.errorOccurred.disconnect(self._on_error)
-            except (RuntimeError, TypeError):
-                logger.debug("Signal disconnect during cleanup (already disconnected)")
+            except RuntimeError:
+                logger.debug("Signals already disconnected during cleanup")
             self._process.deleteLater()
             self._process = None

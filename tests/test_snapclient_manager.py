@@ -144,6 +144,10 @@ class TestSnapclientManagerStart:
 
         with (
             patch("snapctrl.core.snapclient_manager.find_snapclient", return_value=fake_binary),
+            patch(
+                "snapctrl.core.snapclient_manager.validate_snapclient",
+                return_value=(True, "0.31.0"),
+            ),
             patch.object(QProcess, "start") as mock_start,
             patch.object(QProcess, "state", return_value=QProcess.ProcessState.NotRunning),
         ):

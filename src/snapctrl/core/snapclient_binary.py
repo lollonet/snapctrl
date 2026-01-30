@@ -97,6 +97,7 @@ def validate_snapclient(path: Path) -> tuple[bool, str]:
             text=True,
             timeout=5,
             check=False,
+            shell=False,  # Explicit: never use shell with user paths
         )
         output = ((result.stdout or "") + (result.stderr or "")).strip()
         # First line should be "snapclient v0.34.0"
