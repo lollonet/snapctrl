@@ -12,9 +12,11 @@ from PySide6.QtWidgets import QApplication, QMessageBox
 
 from snapctrl.api.mpd import MpdTrack
 from snapctrl.api.protocol import JsonRpcNotification
+from snapctrl.core.config import ConfigManager
 from snapctrl.core.discovery import ServerDiscovery
 from snapctrl.core.mpd_monitor import MpdMonitor
 from snapctrl.core.ping import PingMonitor, format_rtt
+from snapctrl.core.snapclient_manager import SnapclientManager
 from snapctrl.core.state import StateStore
 from snapctrl.core.worker import SnapcastWorker
 from snapctrl.models.source import Source
@@ -49,7 +51,7 @@ def discover_server() -> tuple[str, int, str] | None:
     return None
 
 
-def main() -> int:  # noqa: PLR0915
+def main() -> int:  # noqa: PLR0912, PLR0915
     """Run the SnapCTRL application.
 
     Returns:
@@ -193,8 +195,29 @@ def main() -> int:  # noqa: PLR0915
 
     window.show()
 
+    # Set up local snapclient manager
+    config = ConfigManager()
+    snapclient_mgr = SnapclientManager()
+
+    # Apply config to manager
+    sc_binary = config.get_snapclient_binary_path()
+    if sc_binary:
+        snapclient_mgr.set_configured_binary_path(sc_binary)
+    sc_extra = config.get_snapclient_extra_args()
+    if sc_extra:
+        snapclient_mgr.set_extra_args(sc_extra.split())
+
+    # Connect snapclient signals to UI
+    snapclient_mgr.status_changed.connect(window.set_snapclient_status)
+    snapclient_mgr.error_occurred.connect(lambda e: logger.error("Snapclient: %s", e))  # pyright: ignore[reportUnknownArgumentType,reportUnknownLambdaType]
+
+    # Show initial status if enabled
+    if config.get_snapclient_enabled():
+        window.set_snapclient_status("stopped")
+
     # Set up system tray
-    tray = SystemTrayManager(window, state_store)
+    tray = SystemTrayManager(window, state_store, snapclient_mgr=snapclient_mgr)
+    tray.set_snapclient_connection(host, 1704)
     if tray.available:
         tray.show()
         window.set_hide_to_tray(True)
@@ -405,10 +428,16 @@ def main() -> int:  # noqa: PLR0915
     # Start worker thread
     worker.start()
 
+    # Auto-start local snapclient if configured
+    if config.get_snapclient_enabled() and config.get_snapclient_auto_start():
+        sc_host = config.get_snapclient_server_host() or host
+        snapclient_mgr.start(sc_host, 1704)
+
     # Run the application
     exit_code = app.exec()
 
     # Cleanup
+    snapclient_mgr.stop()
     mpd_monitor.stop()
     ping_monitor.stop()
     worker.stop()

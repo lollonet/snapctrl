@@ -58,6 +58,63 @@ class TestMainWindowBasics:
         window._groups_panel.mute_toggled.disconnect(mock_slot)
 
 
+class TestMainWindowSnapclientStatus:
+    """Test snapclient status bar indicator."""
+
+    def test_snapclient_label_hidden_initially(self, qtbot: QtBot) -> None:
+        """Snapclient label is hidden by default."""
+        window = MainWindow()
+        qtbot.addWidget(window)
+        window.show()
+        assert not window._snapclient_label.isVisible()  # pyright: ignore[reportPrivateUsage]
+
+    def test_set_snapclient_status_running(self, qtbot: QtBot) -> None:
+        """Running status shows green label."""
+        window = MainWindow()
+        qtbot.addWidget(window)
+        window.show()
+        window.set_snapclient_status("running")
+        assert window._snapclient_label.isVisible()  # pyright: ignore[reportPrivateUsage]
+        assert "Running" in window._snapclient_label.text()  # pyright: ignore[reportPrivateUsage]
+
+    def test_set_snapclient_status_stopped(self, qtbot: QtBot) -> None:
+        """Stopped status shows grey label."""
+        window = MainWindow()
+        qtbot.addWidget(window)
+        window.show()
+        window.set_snapclient_status("stopped")
+        assert window._snapclient_label.isVisible()  # pyright: ignore[reportPrivateUsage]
+        assert "Stopped" in window._snapclient_label.text()  # pyright: ignore[reportPrivateUsage]
+
+    def test_set_snapclient_status_error(self, qtbot: QtBot) -> None:
+        """Error status shows red label."""
+        window = MainWindow()
+        qtbot.addWidget(window)
+        window.show()
+        window.set_snapclient_status("error")
+        assert window._snapclient_label.isVisible()  # pyright: ignore[reportPrivateUsage]
+        assert "Error" in window._snapclient_label.text()  # pyright: ignore[reportPrivateUsage]
+
+    def test_set_snapclient_status_disabled_hides(self, qtbot: QtBot) -> None:
+        """Disabled status hides the label."""
+        window = MainWindow()
+        qtbot.addWidget(window)
+        window.show()
+        window.set_snapclient_status("running")  # first show it
+        assert window._snapclient_label.isVisible()  # pyright: ignore[reportPrivateUsage]
+        window.set_snapclient_status("disabled")
+        assert not window._snapclient_label.isVisible()  # pyright: ignore[reportPrivateUsage]
+
+    def test_set_snapclient_status_starting(self, qtbot: QtBot) -> None:
+        """Starting status shows label."""
+        window = MainWindow()
+        qtbot.addWidget(window)
+        window.show()
+        window.set_snapclient_status("starting")
+        assert window._snapclient_label.isVisible()  # pyright: ignore[reportPrivateUsage]
+        assert "Starting" in window._snapclient_label.text()  # pyright: ignore[reportPrivateUsage]
+
+
 class TestMainWindowStyling:
     """Test MainWindow styling."""
 
