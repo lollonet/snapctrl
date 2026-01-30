@@ -212,6 +212,57 @@ class PropertiesPanel(QWidget):
         self._content.setStyleSheet(f"color: {p.text};")
         self._content.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
 
+    def set_local_snapclient(
+        self,
+        status: str,
+        binary_path: str = "",
+        version: str = "",
+        server_host: str = "",
+        server_port: int = 1704,
+    ) -> None:
+        """Display local snapclient properties.
+
+        Args:
+            status: Current status ("running", "stopped", "starting", "error").
+            binary_path: Path to snapclient binary.
+            version: Snapclient version string.
+            server_host: Connected server host.
+            server_port: Connected server port.
+        """
+        self._remove_latency_widget()
+        p = theme_manager.palette
+
+        status_colors: dict[str, str] = {
+            "running": p.success,
+            "starting": p.warning,
+            "stopped": p.text_disabled,
+            "error": p.error,
+        }
+        status_color = status_colors.get(status, p.text_disabled)
+        status_label = status.capitalize()
+
+        rows: list[str] = []
+        rows.append(
+            f"<tr><td><i>Status:</i></td>"
+            f"<td style='color: {status_color};'>{status_label}</td></tr>"
+        )
+        if binary_path:
+            rows.append(f"<tr><td><i>Binary:</i></td><td>{binary_path}</td></tr>")
+        if version:
+            rows.append(f"<tr><td><i>Version:</i></td><td>{version}</td></tr>")
+        if server_host:
+            rows.append(f"<tr><td><i>Server:</i></td><td>{server_host}:{server_port}</td></tr>")
+
+        html = f"""
+            <h3>Local Snapclient</h3>
+            <table cellpadding="{spacing.xs}">
+            {"".join(rows)}
+            </table>
+        """
+        self._content.setText(html)
+        self._content.setStyleSheet(f"color: {p.text};")
+        self._content.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
+
     def _add_latency_widget(self, current_latency: int) -> None:
         """Add an interactive latency spinbox below the content.
 

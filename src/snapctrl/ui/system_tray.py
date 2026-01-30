@@ -25,6 +25,7 @@ from PySide6.QtWidgets import (
     QWidgetAction,
 )
 
+from snapctrl.core.snapclient_manager import SnapclientManager
 from snapctrl.core.state import StateStore
 from snapctrl.ui.widgets.volume_slider import VolumeSlider
 
@@ -62,6 +63,7 @@ class SystemTrayManager(QObject):
         window: QMainWindow,
         state_store: StateStore,
         icon: QIcon | None = None,
+        snapclient_mgr: SnapclientManager | None = None,
     ) -> None:
         """Initialize the system tray manager.
 
@@ -69,11 +71,15 @@ class SystemTrayManager(QObject):
             window: The main application window.
             state_store: The state store for group/source data.
             icon: Optional icon for the tray. Falls back to app icon.
+            snapclient_mgr: Optional local snapclient manager.
         """
         super().__init__()
         self._window = window
         self._state = state_store
         self._selected_group_id: str | None = None
+        self._snapclient_mgr = snapclient_mgr
+        self._snapclient_host = ""
+        self._snapclient_port = 1704
 
         # Quick volume slider (embedded in menu)
         self._volume_slider: VolumeSlider | None = None
@@ -104,6 +110,10 @@ class SystemTrayManager(QObject):
         self._state.sources_changed.connect(self._schedule_rebuild)
         self._state.clients_changed.connect(self._schedule_rebuild)
 
+        # Connect snapclient status to rebuild
+        if self._snapclient_mgr:
+            self._snapclient_mgr.status_changed.connect(self._schedule_rebuild)
+
     @property
     def available(self) -> bool:
         """Return True if system tray is available on this platform."""
@@ -118,6 +128,16 @@ class SystemTrayManager(QObject):
     def selected_group_id(self, group_id: str | None) -> None:
         """Set which group the quick volume controls."""
         self._selected_group_id = group_id
+
+    def set_snapclient_connection(self, host: str, port: int = 1704) -> None:
+        """Set the host/port for snapclient start action.
+
+        Args:
+            host: Server hostname or IP.
+            port: Server port.
+        """
+        self._snapclient_host = host
+        self._snapclient_port = port
 
     def show(self) -> None:
         """Show the tray icon."""
@@ -157,6 +177,11 @@ class SystemTrayManager(QObject):
             for group in groups:
                 group_clients = [c for c in clients if c.id in group.client_ids]
                 self._add_group_entry(group, group_clients)
+            self._menu.addSeparator()
+
+        # Local Client
+        if self._snapclient_mgr:
+            self._add_local_client_section()
             self._menu.addSeparator()
 
         # Now Playing
@@ -250,6 +275,42 @@ class SystemTrayManager(QObject):
         self._menu.addAction(widget_action)
 
         self._volume_slider = slider
+
+    def _add_local_client_section(self) -> None:
+        """Add local snapclient status and start/stop action to the menu."""
+        if not self._snapclient_mgr:
+            return
+
+        status = self._snapclient_mgr.status
+        status_labels = {
+            "running": "Local Client: Running",
+            "starting": "Local Client: Starting...",
+            "stopped": "Local Client: Stopped",
+            "error": "Local Client: Error",
+        }
+        label = status_labels.get(status, f"Local Client: {status}")
+
+        status_action = QAction(label, self._menu)
+        status_action.setEnabled(False)
+        self._menu.addAction(status_action)
+
+        # Toggle action
+        if self._snapclient_mgr.is_running:
+            toggle = QAction("Stop Local Client", self._menu)
+            toggle.triggered.connect(self._snapclient_mgr.stop)
+        else:
+            toggle = QAction("Start Local Client", self._menu)
+            toggle.triggered.connect(self._on_start_snapclient)
+        self._menu.addAction(toggle)
+
+    def _on_start_snapclient(self) -> None:
+        """Start the local snapclient with configured host/port."""
+        if self._snapclient_mgr and self._snapclient_host:
+            try:
+                self._snapclient_mgr.start(self._snapclient_host, self._snapclient_port)
+            except ValueError as e:
+                logger.error("Failed to start snapclient: %s", e)
+                self._snapclient_mgr.error_occurred.emit(str(e))
 
     def _get_target_group(self) -> Group | None:
         """Get the group to control with the quick volume slider.

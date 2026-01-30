@@ -4,6 +4,7 @@ from unittest.mock import patch
 
 from pytestqt.qtbot import QtBot
 
+from snapctrl.core.snapclient_manager import SnapclientManager
 from snapctrl.core.state import StateStore
 from snapctrl.models.client import Client
 from snapctrl.models.group import Group
@@ -156,6 +157,63 @@ class TestSystemTrayManager:
             mock_app_cls.instance.return_value = mock_app_cls
             tray._on_quit()  # pyright: ignore[reportPrivateUsage]
             mock_app_cls.quit.assert_called_once()
+
+
+class TestSystemTrayLocalClient:
+    """Test local snapclient tray menu integration."""
+
+    def test_menu_has_local_client_section(self, qtbot: QtBot) -> None:
+        """Menu shows local client when manager provided."""
+        state = StateStore()
+        window = MainWindow(state_store=state)
+        qtbot.addWidget(window)
+
+        mgr = SnapclientManager()
+        tray = SystemTrayManager(window, state, snapclient_mgr=mgr)
+        tray._rebuild_menu()  # pyright: ignore[reportPrivateUsage]
+
+        menu = tray._menu  # pyright: ignore[reportPrivateUsage]
+        menu_text = " ".join(a.text() for a in menu.actions() if not a.isSeparator())
+        assert "Local Client" in menu_text
+
+    def test_menu_shows_start_when_stopped(self, qtbot: QtBot) -> None:
+        """Menu shows 'Start Local Client' when not running."""
+        state = StateStore()
+        window = MainWindow(state_store=state)
+        qtbot.addWidget(window)
+
+        mgr = SnapclientManager()
+        tray = SystemTrayManager(window, state, snapclient_mgr=mgr)
+        tray._rebuild_menu()  # pyright: ignore[reportPrivateUsage]
+
+        menu = tray._menu  # pyright: ignore[reportPrivateUsage]
+        menu_text = " ".join(a.text() for a in menu.actions() if not a.isSeparator())
+        assert "Start Local Client" in menu_text
+
+    def test_no_local_client_without_manager(self, qtbot: QtBot) -> None:
+        """Menu has no local client section without manager."""
+        state = StateStore()
+        window = MainWindow(state_store=state)
+        qtbot.addWidget(window)
+
+        tray = SystemTrayManager(window, state)
+        tray._rebuild_menu()  # pyright: ignore[reportPrivateUsage]
+
+        menu = tray._menu  # pyright: ignore[reportPrivateUsage]
+        menu_text = " ".join(a.text() for a in menu.actions() if not a.isSeparator())
+        assert "Local Client" not in menu_text
+
+    def test_set_snapclient_connection(self, qtbot: QtBot) -> None:
+        """Can set snapclient host/port for start action."""
+        state = StateStore()
+        window = MainWindow(state_store=state)
+        qtbot.addWidget(window)
+
+        mgr = SnapclientManager()
+        tray = SystemTrayManager(window, state, snapclient_mgr=mgr)
+        tray.set_snapclient_connection("192.168.1.100", 1704)
+        assert tray._snapclient_host == "192.168.1.100"  # pyright: ignore[reportPrivateUsage]
+        assert tray._snapclient_port == 1704  # pyright: ignore[reportPrivateUsage]
 
 
 class TestMainWindowHideToTray:

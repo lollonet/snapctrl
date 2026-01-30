@@ -8,6 +8,7 @@ Layout:
 +----------------------------------+
 """
 
+import logging
 from typing import TYPE_CHECKING
 
 from PySide6.QtCore import Slot
@@ -23,6 +24,8 @@ from snapctrl.ui.panels.properties import PropertiesPanel
 from snapctrl.ui.panels.sources import SourcesPanel
 from snapctrl.ui.theme import theme_manager
 from snapctrl.ui.tokens import sizing, spacing, typography
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from snapctrl.core.controller import Controller
@@ -120,6 +123,18 @@ class MainWindow(QMainWindow):
             f" border-radius: {sizing.border_radius_sm}px;"
         )
         self.statusBar().addPermanentWidget(self._status_label)
+
+        # Snapclient status label (hidden until enabled)
+        self._snapclient_label = QLabel()
+        self._snapclient_label.setStyleSheet(
+            f"background-color: {p.scrollbar}; color: {p.text_disabled};"
+            f" padding: {spacing.xs}px {spacing.sm}px;"
+            f" font-size: {typography.small}pt;"
+            f" border-radius: {sizing.border_radius_sm}px;"
+        )
+        self._snapclient_label.setVisible(False)
+        self.statusBar().addPermanentWidget(self._snapclient_label)
+
         self.statusBar().setStyleSheet(f"background-color: {p.background};")
 
     def _setup_style(self) -> None:
@@ -347,6 +362,37 @@ class MainWindow(QMainWindow):
                 f" font-size: {typography.small}pt;"
                 f" border-radius: {sizing.border_radius_sm}px;"
             )
+
+    def set_snapclient_status(self, status: str) -> None:
+        """Update the local snapclient status indicator.
+
+        Args:
+            status: One of "running", "starting", "stopped", "error", "disabled".
+        """
+        p = theme_manager.palette
+        base_style = (
+            f" padding: {spacing.xs}px {spacing.sm}px;"
+            f" font-size: {typography.small}pt;"
+            f" border-radius: {sizing.border_radius_sm}px;"
+        )
+
+        if status == "disabled":
+            self._snapclient_label.setVisible(False)
+            return
+
+        self._snapclient_label.setVisible(True)
+
+        status_config: dict[str, tuple[str, str, str]] = {
+            "running": ("Local: Running", p.surface_success, p.success),
+            "starting": ("Local: Starting...", p.scrollbar, p.warning),
+            "stopped": ("Local: Stopped", p.scrollbar, p.text_disabled),
+            "error": ("Local: Error", p.surface_error, p.error),
+        }
+        if status not in status_config:
+            logger.warning("Unknown snapclient status: %r", status)
+        text, bg, fg = status_config.get(status, ("Local: Unknown", p.scrollbar, p.text_disabled))
+        self._snapclient_label.setText(text)
+        self._snapclient_label.setStyleSheet(f"background-color: {bg}; color: {fg};{base_style}")
 
     def set_hide_to_tray(self, enabled: bool) -> None:
         """Enable or disable hiding to tray on close.
