@@ -5,12 +5,15 @@ from __future__ import annotations
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
 from PySide6.QtCore import QProcess
 
 from snapctrl.core.snapclient_manager import (
     BACKOFF_MULTIPLIER,
     INITIAL_BACKOFF_MS,
+    KILL_TIMEOUT_MS,
     MAX_BACKOFF_MS,
+    TERMINATE_TIMEOUT_MS,
     SnapclientManager,
 )
 
@@ -199,6 +202,29 @@ class TestSnapclientManagerStop:
         assert mgr._auto_restart is False  # pyright: ignore[reportPrivateUsage]
 
 
+class TestSnapclientManagerRestart:
+    """Test restart behavior."""
+
+    def test_restart_raises_when_no_host(self) -> None:
+        """Restart raises RuntimeError if start() was never called."""
+        mgr = SnapclientManager()
+        with pytest.raises(RuntimeError, match="no host configured"):
+            mgr.restart()
+
+    def test_restart_works_after_start(self) -> None:
+        """Restart works when host was previously configured."""
+        mgr = SnapclientManager()
+        fake_binary = Path("/usr/bin/snapclient")
+
+        with (
+            patch("snapctrl.core.snapclient_manager.find_snapclient", return_value=fake_binary),
+            patch.object(QProcess, "start"),
+            patch.object(QProcess, "state", return_value=QProcess.ProcessState.NotRunning),
+        ):
+            mgr.start("192.168.1.100")
+            mgr.restart()  # Should not raise
+
+
 class TestSnapclientManagerConstants:
     """Test module-level constants."""
 
@@ -213,6 +239,14 @@ class TestSnapclientManagerConstants:
     def test_backoff_multiplier(self) -> None:
         """Backoff doubles each time."""
         assert BACKOFF_MULTIPLIER == 2
+
+    def test_terminate_timeout(self) -> None:
+        """Terminate timeout is 3 seconds."""
+        assert TERMINATE_TIMEOUT_MS == 3000
+
+    def test_kill_timeout(self) -> None:
+        """Kill timeout is 1 second."""
+        assert KILL_TIMEOUT_MS == 1000
 
     def test_backoff_sequence(self) -> None:
         """Verify backoff sequence: 1s, 2s, 4s, 8s, 16s, 30s, 30s..."""

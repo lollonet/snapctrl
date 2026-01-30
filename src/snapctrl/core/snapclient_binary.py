@@ -27,7 +27,7 @@ def bundled_snapclient_path() -> Path:
     """
     if getattr(sys, "frozen", False):
         # PyInstaller bundle: sys._MEIPASS is the temp extraction dir
-        base = Path(sys._MEIPASS)  # type: ignore[attr-defined]  # noqa: SLF001
+        base = Path(sys._MEIPASS).resolve()  # type: ignore[attr-defined]  # noqa: SLF001
     else:
         # Running from source — use project root as a fallback
         base = Path(__file__).resolve().parents[3]
@@ -82,18 +82,20 @@ def validate_snapclient(path: Path) -> tuple[bool, str]:
         Tuple of (is_valid, version_string).
         On failure, version_string contains the error message.
     """
-    if not path.is_file():
-        return False, f"File not found: {path}"
+    if not path.is_file() or path.is_symlink():
+        reason = "symlink" if path.is_symlink() else "not found"
+        return False, f"Invalid binary path ({reason}): {path}"
 
     try:
+        resolved = path.resolve(strict=True)
         result = subprocess.run(
-            [str(path), "--version"],
+            [str(resolved), "--version"],
             capture_output=True,
             text=True,
             timeout=5,
             check=False,
         )
-        output = (result.stdout or result.stderr).strip()
+        output = ((result.stdout or "") + (result.stderr or "")).strip()
         # First line should be "snapclient v0.34.0"
         first_line = output.split("\n")[0] if output else ""
         if first_line.startswith(VERSION_PREFIX):

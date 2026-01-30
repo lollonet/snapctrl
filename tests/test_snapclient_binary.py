@@ -31,11 +31,12 @@ class TestBundledSnapclientPath:
 
     @patch("snapctrl.core.snapclient_binary.sys")
     def test_frozen_uses_meipass(self, mock_sys: object) -> None:
-        """When frozen (PyInstaller), uses sys._MEIPASS."""
+        """When frozen (PyInstaller), uses resolved sys._MEIPASS."""
         mock_sys.frozen = True  # type: ignore[union-attr]
         mock_sys._MEIPASS = "/tmp/pyinstaller_extract"  # type: ignore[union-attr]  # noqa: SLF001
         result = snapclient_binary_mod.bundled_snapclient_path()
-        assert result == Path("/tmp/pyinstaller_extract/bin/snapclient")
+        expected = Path("/tmp/pyinstaller_extract").resolve() / "bin" / "snapclient"
+        assert result == expected
 
 
 class TestFindSnapclient:
@@ -107,6 +108,17 @@ class TestValidateSnapclient:
         valid, msg = validate_snapclient(tmp_path / "nope")
         assert valid is False
         assert "not found" in msg.lower()
+
+    def test_symlink_rejected(self, tmp_path: Path) -> None:
+        """Returns (False, error) for symlink."""
+        real_bin = tmp_path / "real_snapclient"
+        real_bin.touch()
+        symlink = tmp_path / "snapclient_link"
+        symlink.symlink_to(real_bin)
+
+        valid, msg = validate_snapclient(symlink)
+        assert valid is False
+        assert "symlink" in msg
 
     def test_valid_binary(self, tmp_path: Path) -> None:
         """Returns (True, version) for valid binary."""

@@ -29,6 +29,10 @@ INITIAL_BACKOFF_MS = 1000
 MAX_BACKOFF_MS = 30_000
 BACKOFF_MULTIPLIER = 2
 
+# Graceful termination timeouts
+TERMINATE_TIMEOUT_MS = 3000
+KILL_TIMEOUT_MS = 1000
+
 
 class SnapclientManager(QObject):
     """Manages a local snapclient subprocess.
@@ -140,16 +144,25 @@ class SnapclientManager(QObject):
             if self._process.state() != QProcess.ProcessState.NotRunning:
                 logger.info("Stopping snapclient (SIGTERM)")
                 self._process.terminate()
-                if not self._process.waitForFinished(3000):
+                if not self._process.waitForFinished(TERMINATE_TIMEOUT_MS):
                     logger.warning("snapclient did not stop, killing")
                     self._process.kill()
-                    self._process.waitForFinished(1000)
+                    if not self._process.waitForFinished(KILL_TIMEOUT_MS):
+                        logger.error("snapclient could not be killed")
             self._cleanup_process()
 
         self._set_status("stopped")
 
     def restart(self) -> None:
-        """Restart the snapclient subprocess."""
+        """Restart the snapclient subprocess.
+
+        Raises:
+            RuntimeError: If no host has been configured (start() never called).
+        """
+        if not self._host:
+            msg = "Cannot restart: no host configured (call start() first)"
+            raise RuntimeError(msg)
+
         self._auto_restart = True
         if self.is_running:
             self.stop()
@@ -204,7 +217,7 @@ class SnapclientManager(QObject):
             return
 
         data = self._process.readAllStandardOutput()
-        text = bytes(data).decode("utf-8", errors="replace")  # type: ignore[arg-type]
+        text = bytes(data.data()).decode("utf-8", errors="replace")
 
         for raw_line in text.splitlines():
             line = raw_line.strip()
@@ -219,11 +232,15 @@ class SnapclientManager(QObject):
 
             # Detect client ID from output (e.g. "hostID: aa:bb:cc:dd:ee:ff")
             if "hostID:" in line:
-                parts = line.split("hostID:")
+                parts = line.split("hostID:", 1)
                 if len(parts) > 1:
                     client_id = parts[1].strip()
-                    logger.info("Detected client ID: %s", client_id)
-                    self.client_id_detected.emit(client_id)
+                    # Validate client ID contains only safe characters
+                    if client_id and all(c.isalnum() or c in ":-" for c in client_id):
+                        logger.info("Detected client ID: %s", client_id)
+                        self.client_id_detected.emit(client_id)
+                    else:
+                        logger.warning("Invalid client ID format: %r", client_id)
 
     def _on_finished(self, exit_code: int, exit_status: QProcess.ExitStatus) -> None:
         """Handle process exit.
@@ -241,12 +258,11 @@ class SnapclientManager(QObject):
 
         self._cleanup_process()
 
-        if self._auto_restart and exit_code != 0:
+        if self._auto_restart and exit_status == QProcess.ExitStatus.CrashExit:
             logger.info("Auto-restarting in %d ms", self._backoff_ms)
             self._restart_timer.start(self._backoff_ms)
             self._backoff_ms = min(self._backoff_ms * BACKOFF_MULTIPLIER, MAX_BACKOFF_MS)
-
-        if not self._auto_restart:
+        else:
             self._set_status("stopped")
 
     def _on_error(self, error: QProcess.ProcessError) -> None:
@@ -287,8 +303,11 @@ class SnapclientManager(QObject):
     def _cleanup_process(self) -> None:
         """Clean up the QProcess instance."""
         if self._process is not None:
-            self._process.readyReadStandardOutput.disconnect(self._on_stdout)
-            self._process.finished.disconnect(self._on_finished)
-            self._process.errorOccurred.disconnect(self._on_error)
+            try:
+                self._process.readyReadStandardOutput.disconnect(self._on_stdout)
+                self._process.finished.disconnect(self._on_finished)
+                self._process.errorOccurred.disconnect(self._on_error)
+            except (RuntimeError, TypeError):
+                pass  # Signals may already be disconnected
             self._process.deleteLater()
             self._process = None
