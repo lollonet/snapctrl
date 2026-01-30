@@ -63,6 +63,18 @@ class TestSnapclientManagerConfig:
         args.append("--mixer")
         assert len(mgr._extra_args) == 2  # pyright: ignore[reportPrivateUsage]
 
+    def test_set_extra_args_rejects_blocked_flags(self) -> None:
+        """Blocked flags like --host are rejected."""
+        mgr = SnapclientManager()
+        with pytest.raises(ValueError, match="Blocked arguments"):
+            mgr.set_extra_args(["--host", "evil"])
+
+    def test_set_extra_args_rejects_logsink(self) -> None:
+        """--logsink is a blocked flag."""
+        mgr = SnapclientManager()
+        with pytest.raises(ValueError, match="Blocked arguments"):
+            mgr.set_extra_args(["--logsink", "/tmp/exfil"])
+
     def test_set_host_id(self) -> None:
         """Can set custom host ID."""
         mgr = SnapclientManager()
@@ -76,6 +88,34 @@ class TestSnapclientManagerConfig:
         assert mgr._auto_restart is False  # pyright: ignore[reportPrivateUsage]
         mgr.enable_auto_restart(True)
         assert mgr._auto_restart is True  # pyright: ignore[reportPrivateUsage]
+
+
+class TestSnapclientManagerStartValidation:
+    """Test start() input validation."""
+
+    def test_start_rejects_empty_host(self) -> None:
+        """Start raises ValueError for empty host."""
+        mgr = SnapclientManager()
+        with pytest.raises(ValueError, match="Host must not be empty"):
+            mgr.start("")
+
+    def test_start_rejects_whitespace_host(self) -> None:
+        """Start raises ValueError for whitespace-only host."""
+        mgr = SnapclientManager()
+        with pytest.raises(ValueError, match="Host must not be empty"):
+            mgr.start("   ")
+
+    def test_start_rejects_invalid_port(self) -> None:
+        """Start raises ValueError for out-of-range port."""
+        mgr = SnapclientManager()
+        with pytest.raises(ValueError, match="Port must be"):
+            mgr.start("192.168.1.1", port=0)
+
+    def test_start_rejects_port_too_high(self) -> None:
+        """Start raises ValueError for port > 65535."""
+        mgr = SnapclientManager()
+        with pytest.raises(ValueError, match="Port must be"):
+            mgr.start("192.168.1.1", port=70000)
 
 
 class TestSnapclientManagerStart:

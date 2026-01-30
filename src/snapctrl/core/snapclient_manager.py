@@ -32,6 +32,13 @@ BACKOFF_MULTIPLIER = 2
 # Graceful termination timeouts
 TERMINATE_TIMEOUT_MS = 3000
 KILL_TIMEOUT_MS = 1000
+MAX_PORT = 65535
+
+# Client ID max length and validation
+MAX_CLIENT_ID_LEN = 64
+
+# Dangerous snapclient flags that must not be set via extra_args
+_BLOCKED_ARGS = frozenset({"--host", "--port", "--hostID", "--logsink", "--logfilter"})
 
 
 class SnapclientManager(QObject):
@@ -96,8 +103,15 @@ class SnapclientManager(QObject):
 
         Args:
             args: List of extra arguments.
+
+        Raises:
+            ValueError: If args contain blocked flags managed internally.
         """
-        self._extra_args = list(args)
+        blocked = [a for a in args if a in _BLOCKED_ARGS]
+        if blocked:
+            msg = f"Blocked arguments (managed internally): {blocked}"
+            raise ValueError(msg)
+        self._extra_args = args.copy()
 
     def set_host_id(self, host_id: str) -> None:
         """Set custom host ID (default uses MAC address).
@@ -115,7 +129,17 @@ class SnapclientManager(QObject):
         Args:
             host: Snapserver hostname or IP.
             port: Snapserver port (default 1704).
+
+        Raises:
+            ValueError: If host is empty or port is out of range.
         """
+        if not host or not host.strip():
+            msg = "Host must not be empty"
+            raise ValueError(msg)
+        if not (1 <= port <= MAX_PORT):
+            msg = f"Port must be 1–{MAX_PORT}, got {port}"
+            raise ValueError(msg)
+
         if self.is_running:
             logger.info("Stopping existing snapclient before restart")
             self.stop()
@@ -189,7 +213,7 @@ class SnapclientManager(QObject):
         self._process.errorOccurred.connect(self._on_error)
 
         args = self._build_args()
-        logger.info("Starting snapclient: %s %s", self._binary_path, " ".join(args))
+        logger.info("Starting snapclient: %r %r", self._binary_path, args)
 
         self._set_status("starting")
         self._process.start(self._binary_path, args)
@@ -235,8 +259,12 @@ class SnapclientManager(QObject):
                 parts = line.split("hostID:", 1)
                 if len(parts) > 1:
                     client_id = parts[1].strip()
-                    # Validate client ID contains only safe characters
-                    if client_id and all(c.isalnum() or c in ":-" for c in client_id):
+                    # Validate client ID: safe chars + length limit
+                    if (
+                        client_id
+                        and len(client_id) <= MAX_CLIENT_ID_LEN
+                        and all(c.isalnum() or c in ":-" for c in client_id)
+                    ):
                         logger.info("Detected client ID: %s", client_id)
                         self.client_id_detected.emit(client_id)
                     else:

@@ -109,16 +109,30 @@ class TestValidateSnapclient:
         assert valid is False
         assert "not found" in msg.lower()
 
-    def test_symlink_rejected(self, tmp_path: Path) -> None:
-        """Returns (False, error) for symlink."""
+    def test_symlink_accepted(self, tmp_path: Path) -> None:
+        """Symlinks are resolved and accepted (package managers use them)."""
         real_bin = tmp_path / "real_snapclient"
-        real_bin.touch()
+        real_bin.write_text("#!/bin/sh\necho 'snapclient v0.34.0'\n")
+        real_bin.chmod(0o755)
         symlink = tmp_path / "snapclient_link"
         symlink.symlink_to(real_bin)
 
-        valid, msg = validate_snapclient(symlink)
+        with patch("snapctrl.core.snapclient_binary.subprocess.run") as mock_run:
+            mock_run.return_value.stdout = "snapclient v0.34.0\n"
+            mock_run.return_value.stderr = ""
+            valid, version = validate_snapclient(symlink)
+            assert valid is True
+            assert version == "0.34.0"
+
+    def test_not_executable_rejected(self, tmp_path: Path) -> None:
+        """Returns (False, error) for non-executable file."""
+        fake_bin = tmp_path / "snapclient"
+        fake_bin.write_text("not executable")
+        fake_bin.chmod(0o644)
+
+        valid, msg = validate_snapclient(fake_bin)
         assert valid is False
-        assert "symlink" in msg
+        assert "not executable" in msg.lower()
 
     def test_valid_binary(self, tmp_path: Path) -> None:
         """Returns (True, version) for valid binary."""
@@ -150,6 +164,7 @@ class TestValidateSnapclient:
         """Returns (False, error) on timeout."""
         fake_bin = tmp_path / "snapclient"
         fake_bin.touch()
+        fake_bin.chmod(0o755)
 
         with patch("snapctrl.core.snapclient_binary.subprocess.run") as mock_run:
             mock_run.side_effect = subprocess.TimeoutExpired(cmd="snapclient", timeout=5)

@@ -7,6 +7,7 @@ bundled path → system PATH → user-configured path.
 from __future__ import annotations
 
 import logging
+import os
 import shutil
 import subprocess
 import sys
@@ -72,7 +73,7 @@ def find_snapclient(configured_path: str | None = None) -> Path | None:
     return None
 
 
-def validate_snapclient(path: Path) -> tuple[bool, str]:
+def validate_snapclient(path: Path) -> tuple[bool, str]:  # noqa: PLR0911
     """Validate a snapclient binary by running ``--version``.
 
     Args:
@@ -82,14 +83,15 @@ def validate_snapclient(path: Path) -> tuple[bool, str]:
         Tuple of (is_valid, version_string).
         On failure, version_string contains the error message.
     """
-    if not path.is_file() or path.is_symlink():
-        reason = "symlink" if path.is_symlink() else "not found"
-        return False, f"Invalid binary path ({reason}): {path}"
+    if not path.is_file():
+        return False, f"Invalid binary path (not found): {path}"
 
     try:
         resolved = path.resolve(strict=True)
+        if not os.access(resolved, os.X_OK):
+            return False, f"Binary not executable: {resolved}"
         result = subprocess.run(
-            [str(resolved), "--version"],
+            [resolved, "--version"],
             capture_output=True,
             text=True,
             timeout=5,
