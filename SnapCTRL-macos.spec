@@ -72,12 +72,15 @@ app = BUNDLE(
     info_plist={
         "CFBundleName": "SnapCTRL",
         "CFBundleDisplayName": "SnapCTRL",
-        "CFBundleVersion": "0.1.0",
-        "CFBundleShortVersionString": "0.1.0",
+        "CFBundleVersion": "0.2.1",
+        "CFBundleShortVersionString": "0.2.1",
         "NSHighResolutionCapable": True,
         "NSRequiresAquaSystemAppearance": False,  # Support dark mode
         "LSMinimumSystemVersion": "10.15",
         "NSPrincipalClass": "NSApplication",
         "NSAppleScriptEnabled": False,
+        # mDNS/Bonjour: required since macOS 11 for local network discovery
+        "NSLocalNetworkUsageDescription": "SnapCTRL needs local network access to discover and control Snapcast servers.",
+        "NSBonjourServices": ["_snapcast._tcp"],
     },
 )
