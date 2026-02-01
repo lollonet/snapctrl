@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-02-01
+
+### Fixed
+
+- **Group Mute Toggle** ([#20](https://github.com/lollonet/snapctrl/pull/20)) - Feb 1
+  - The VolumeSlider's speaker icon (🔊/🔇) was not connected to the API — clicking it toggled mute visually but never sent `Group.SetMute` to the server
+  - Removed the redundant dedicated "Mute" button; the slider's built-in speaker icon is now the single mute control per group
+
 ## [0.2.0] - 2026-01-30
 
 ### Added
