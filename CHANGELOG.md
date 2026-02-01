@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-02-01
+
+### Fixed
+
+- **CLI Argument Parsing** ([#21](https://github.com/lollonet/snapctrl/pull/21)) - Feb 1
+  - Replaced manual `sys.argv` parsing with `argparse` — the old parser crashed with `ValueError` when using `--host`/`--port` flags (e.g., `open SnapCTRL.app --args --host raspy`)
+  - Now supports both positional (`snapctrl raspy 1705`) and flag (`snapctrl --host raspy --port 1705`) syntax
+
+- **macOS mDNS Server Discovery** ([#22](https://github.com/lollonet/snapctrl/pull/22)) - Feb 1
+  - Added `NSLocalNetworkUsageDescription` and `NSBonjourServices` to macOS `Info.plist` — required since macOS 11 for mDNS/Bonjour access
+  - Without these keys, the compiled `.app` bundle silently failed to discover Snapcast servers on the local network
+
 ## [0.2.1] - 2026-02-01
 
 ### Fixed
