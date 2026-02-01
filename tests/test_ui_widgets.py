@@ -88,7 +88,7 @@ class TestGroupCard:
         qtbot.addWidget(card)
 
         assert card._name_label.text() == "Living Room"
-        assert not card._mute_button.isChecked()
+        assert not card._volume_slider.is_muted  # pyright: ignore[reportPrivateUsage]
 
     def test_with_muted_group(self, qtbot: QtBot) -> None:
         """Test card with muted group."""
@@ -102,8 +102,7 @@ class TestGroupCard:
         card = GroupCard(group)
         qtbot.addWidget(card)
 
-        assert card._mute_button.isChecked()
-        assert "Unmute" in card._mute_button.text()
+        assert card._volume_slider.is_muted  # pyright: ignore[reportPrivateUsage]
 
     def test_set_sources(self, qtbot: QtBot) -> None:
         """Test setting sources."""

@@ -78,7 +78,6 @@ class GroupCard(QWidget):
         layout.setSpacing(spacing.sm)
 
         layout.addLayout(self._create_header())
-        layout.addWidget(self._create_mute_button())
         layout.addWidget(self._create_volume_slider())
         layout.addLayout(self._create_source_row())
         layout.addWidget(self._create_client_list())
@@ -131,32 +130,6 @@ class GroupCard(QWidget):
 
         return header
 
-    def _create_mute_button(self) -> QPushButton:
-        """Create the mute toggle button.
-
-        Returns:
-            The mute button.
-        """
-        p = theme_manager.palette
-        button = QPushButton("🔊 Mute")
-        button.setCheckable(True)
-        button.setStyleSheet(f"""
-            QPushButton {{
-                padding: {spacing.xs}px {spacing.md}px;
-                border-radius: {sizing.border_radius_md}px;
-                background-color: {p.surface_hover};
-            }}
-            QPushButton:checked {{
-                background-color: {p.surface_error};
-            }}
-            QPushButton:hover {{
-                background-color: {p.surface_hover};
-            }}
-        """)
-        button.clicked.connect(self._on_group_mute_toggled)
-        self._mute_button = button
-        return button
-
     def _create_volume_slider(self) -> VolumeSlider:
         """Create the volume slider.
 
@@ -165,8 +138,13 @@ class GroupCard(QWidget):
         """
         slider = VolumeSlider()
         slider.volume_changed.connect(self._on_volume_slider_changed)
+        slider.mute_toggled.connect(self._on_slider_mute_toggled)
         self._volume_slider = slider
         return slider
+
+    def _on_slider_mute_toggled(self, muted: bool) -> None:
+        """Handle mute toggle from the volume slider's speaker icon."""
+        self.mute_toggled.emit(self._group.id if self._group else "", muted)
 
     def _on_volume_slider_changed(self, vol: int) -> None:
         """Handle volume slider value changes."""
@@ -311,17 +289,7 @@ class GroupCard(QWidget):
 
         self._name_label.setText(self._group.name)
 
-        # Update mute button
-        self._mute_button.blockSignals(True)
-        if self._group.muted:
-            self._mute_button.setChecked(True)
-            self._mute_button.setText("🔇 Unmute")
-        else:
-            self._mute_button.setChecked(False)
-            self._mute_button.setText("🔊 Mute")
-        self._mute_button.blockSignals(False)
-
-        # Update volume slider
+        # Update volume slider mute state
         self._volume_slider.set_muted(self._group.muted)
 
     def set_sources(self, sources: list[Source]) -> None:
@@ -344,21 +312,6 @@ class GroupCard(QWidget):
             if index >= 0:
                 self._source_combo.setCurrentIndex(index)
         self._source_combo.blockSignals(False)
-
-    def _on_group_mute_toggled(self, checked: bool) -> None:
-        """Handle group mute toggle.
-
-        Args:
-            checked: Whether mute button is checked.
-        """
-        if checked:
-            self._mute_button.setText("🔇 Unmute")
-            self._volume_slider.set_muted(True)
-        else:
-            self._mute_button.setText("🔊 Mute")
-            self._volume_slider.set_muted(False)
-
-        self.mute_toggled.emit(self._group.id if self._group else "", checked)
 
     def _on_source_changed(self, _text: str) -> None:
         """Handle source dropdown change."""
@@ -534,14 +487,6 @@ class GroupCard(QWidget):
         Args:
             muted: Whether the group is muted.
         """
-        self._mute_button.blockSignals(True)
-        self._mute_button.setChecked(muted)
-        if muted:
-            self._mute_button.setText("🔇 Unmute")
-        else:
-            self._mute_button.setText("🔊 Mute")
-        self._mute_button.blockSignals(False)
-
         self._volume_slider.set_muted(muted)
 
     def add_client(
