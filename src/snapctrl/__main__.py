@@ -1,5 +1,6 @@
 """Main entry point for the SnapCTRL application."""
 
+import argparse
 import base64
 import logging
 import sys
@@ -66,16 +67,29 @@ def main() -> int:  # noqa: PLR0912, PLR0915
     app = QApplication(sys.argv)
 
     # Parse command line arguments
-    host: str | None = None
-    port = 1705
+    parser = argparse.ArgumentParser(
+        prog="snapctrl",
+        description="SnapCTRL — Snapcast controller",
+    )
+    parser.add_argument(
+        "host", nargs="?", default=None, help="server hostname or IP",
+    )
+    parser.add_argument(
+        "port", nargs="?", type=int, default=1705, help="TCP port (default: 1705)",
+    )
+    parser.add_argument(
+        "--host", dest="host_flag", default=None, help="server hostname or IP",
+    )
+    parser.add_argument(
+        "--port", dest="port_flag", type=int, default=None, help="TCP port",
+    )
+    parsed = parser.parse_args(app.arguments()[1:])
+
+    host: str | None = parsed.host_flag or parsed.host
+    port: int = parsed.port_flag if parsed.port_flag is not None else parsed.port
     hostname: str = ""  # FQDN from mDNS discovery
 
-    args = sys.argv[1:]
-    if args:
-        host = args[0]
-        if len(args) > 1:
-            port = int(args[1])
-    else:
+    if not host:
         # No arguments - try autodiscovery
         result = discover_server()
         if result:
