@@ -35,6 +35,7 @@ ALBUM_ART_SIZE = sizing.album_art
 
 # Maximum album art data size (10MB base64 ≈ 7.5MB decoded)
 MAX_ALBUM_ART_B64_SIZE = 10 * 1024 * 1024
+_ART_HEIGHT_MAX_RETRIES = 3
 
 
 class SourcesPanel(QWidget):
@@ -272,7 +273,7 @@ class SourcesPanel(QWidget):
         # Defer height update so layout has assigned the label's width
         QTimer.singleShot(10, self._update_art_height)
 
-    def _update_art_height(self) -> None:
+    def _update_art_height(self, *, _retries: int = 0) -> None:
         """Set label height to match aspect ratio of the original pixmap."""
         if self._original_pixmap is None or self._original_pixmap.isNull():
             return
@@ -282,6 +283,8 @@ class SourcesPanel(QWidget):
             return
         w = self._album_art.width()
         if w == 0:
+            if _retries < _ART_HEIGHT_MAX_RETRIES:
+                QTimer.singleShot(10, lambda: self._update_art_height(_retries=_retries + 1))
             return
         h = max(int(w * ph / pw), ALBUM_ART_SIZE)
         h = min(h, 4 * ALBUM_ART_SIZE)  # Cap to prevent excessive heights
