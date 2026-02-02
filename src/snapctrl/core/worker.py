@@ -6,11 +6,14 @@ events to the main thread via Qt signals.
 """
 
 import asyncio
+import logging
 
 from PySide6.QtCore import QThread, Signal
 
 from snapctrl.api.client import SnapcastClient
 from snapctrl.api.protocol import JsonRpcNotification
+
+logger = logging.getLogger(__name__)
 
 
 class SnapcastWorker(QThread):
@@ -117,6 +120,7 @@ class SnapcastWorker(QThread):
                 if stats:
                     results[client_id] = stats
             except Exception:  # noqa: BLE001
+                logger.debug("Failed to fetch time stats for %s", client_id, exc_info=True)
                 continue
         if results:
             self.time_stats_updated.emit(results)

@@ -476,7 +476,8 @@ class SnapcastClient:
                 return {}
             return typed
         except RuntimeError as e:
-            if "method not found" in str(e).lower():
+            # JSON-RPC -32601 = Method not found (server doesn't support endpoint)
+            if "[-32601]" in str(e):
                 logger.debug("Server does not support Client.GetTimeStats")
             else:
                 logger.warning("GetTimeStats failed for %s: %s", client_id, e)

@@ -381,18 +381,10 @@ def main() -> int:  # noqa: PLR0912, PLR0915
     worker.time_stats_updated.connect(on_time_stats)
 
     # Poll immediately on first state received, then periodically
-    _time_stats_started = False
-
-    def start_time_stats_polling() -> None:
-        nonlocal _time_stats_started
-        if _time_stats_started:
-            return
-        _time_stats_started = True
+    def _on_first_state_for_time_stats(_state: object) -> None:
+        worker.state_received.disconnect(_on_first_state_for_time_stats)
         poll_time_stats()
         time_stats_timer.start()
-
-    def _on_first_state_for_time_stats(_state: object) -> None:
-        start_time_stats_polling()
 
     worker.state_received.connect(_on_first_state_for_time_stats)
 
