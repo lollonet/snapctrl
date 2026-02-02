@@ -78,6 +78,12 @@ class SourcesPanel(QWidget):
         # Flag to cancel fallback when valid art arrives
         self._art_loaded: bool = False
 
+        # Debounce timer for resize-driven album art height updates
+        self._resize_timer = QTimer(self)
+        self._resize_timer.setSingleShot(True)
+        self._resize_timer.setInterval(10)
+        self._resize_timer.timeout.connect(self._update_art_height)
+
         # Generation counter to cancel stale fallback requests
         self._fallback_generation: int = 0
         self._pending_fallback_generation: int = 0
@@ -275,17 +281,14 @@ class SourcesPanel(QWidget):
         if pw == 0 or ph == 0:
             return
         w = self._album_art.width()
+        if w == 0:
+            return
         h = max(int(w * ph / pw), ALBUM_ART_SIZE)
         self._album_art.setFixedHeight(h)
 
     def event(self, ev: QEvent) -> bool:
         """Update album art height on resize (debounced so layout is complete)."""
         if ev.type() == QEvent.Type.Resize:
-            if not hasattr(self, "_resize_timer"):
-                self._resize_timer = QTimer(self)
-                self._resize_timer.setSingleShot(True)
-                self._resize_timer.setInterval(10)
-                self._resize_timer.timeout.connect(self._update_art_height)
             self._resize_timer.start()
         return super().event(ev)
 

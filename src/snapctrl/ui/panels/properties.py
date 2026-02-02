@@ -28,10 +28,7 @@ def _format_jitter(ms: float) -> str:
     if ms < _JITTER_US_THRESHOLD:
         return "0\u00b5s"
     if ms < 1:
-        us = int(ms * _MS_TO_US)
-        if us >= _MS_TO_US:
-            return "1.0ms"
-        return f"{us}\u00b5s"
+        return f"{int(ms * _MS_TO_US)}\u00b5s"
     if ms < _JITTER_PRECISION_THRESHOLD:
         return f"{ms:.1f}ms"
     return f"{int(ms)}ms"
