@@ -6,11 +6,11 @@
 The app MUST connect to a Snapcast server via TCP on port 1705 (default control port).
 
 **Acceptance Criteria:**
-- [ ] Connect using IP address or hostname
-- [ ] Discover servers on local network via mDNS
+- [x] Connect using IP address or hostname
+- [x] Discover servers on local network via mDNS
 - [ ] Save multiple connection profiles
-- [ ] Auto-connect to last used server on startup
-- [ ] Show connection status (connected/disconnected/connecting)
+- [x] Auto-connect to last used server on startup
+- [x] Show connection status (connected/disconnected/connecting)
 
 **Priority:** P0 (MVP)
 **Domain:** Connection
@@ -22,11 +22,11 @@ The app MUST connect to a Snapcast server via TCP on port 1705 (default control 
 The app MUST display the current state of the Snapcast server.
 
 **Acceptance Criteria:**
-- [ ] List all audio groups with member clients
-- [ ] Show each client's name, host, and online status
-- [ ] Display available audio sources
-- [ ] Show which source each group is playing
-- [ ] Update in real-time via TCP notifications
+- [x] List all audio groups with member clients
+- [x] Show each client's name, host, and online status
+- [x] Display available audio sources
+- [x] Show which source each group is playing
+- [x] Update in real-time via TCP notifications
 
 **Priority:** P0 (MVP)
 **Domain:** Display
@@ -38,11 +38,11 @@ The app MUST display the current state of the Snapcast server.
 The app MUST provide volume control for each group.
 
 **Acceptance Criteria:**
-- [ ] Volume slider (0-100%) per group
-- [ ] Mute/unmute toggle per group
-- [ ] Visual feedback when volume changes
-- [ ] Volume changes apply to all clients in group
-- [ ] Show current volume percentage
+- [x] Volume slider (0-100%) per group
+- [x] Mute/unmute toggle per group
+- [x] Visual feedback when volume changes
+- [x] Volume changes apply to all clients in group
+- [x] Show current volume percentage
 
 **Priority:** P0 (MVP)
 **Domain:** Control
@@ -54,10 +54,10 @@ The app MUST provide volume control for each group.
 The app MUST provide individual volume control for each client.
 
 **Acceptance Criteria:**
-- [ ] Volume slider (0-100%) per client
-- [ ] Mute/unmute toggle per client
-- [ ] Client volume independent of group volume
-- [ ] Expandable within group card to show client controls
+- [x] Volume slider (0-100%) per client
+- [x] Mute/unmute toggle per client
+- [x] Client volume independent of group volume
+- [x] Expandable within group card to show client controls
 
 **Priority:** P1 (Important)
 **Domain:** Control
@@ -69,10 +69,10 @@ The app MUST provide individual volume control for each client.
 The app MUST allow changing the audio source for any group.
 
 **Acceptance Criteria:**
-- [ ] Dropdown selector of available sources per group
-- [ ] Show current source for each group
-- [ ] Visual indicator when source is playing
-- [ ] Instant source change on selection
+- [x] Dropdown selector of available sources per group
+- [x] Show current source for each group
+- [x] Visual indicator when source is playing
+- [x] Instant source change on selection
 
 **Priority:** P0 (MVP)
 **Domain:** Control
@@ -84,13 +84,14 @@ The app MUST allow changing the audio source for any group.
 The app MUST display detailed information for each client.
 
 **Acceptance Criteria:**
-- [ ] Client name (editable)
-- [ ] Host IP/hostname
-- [ ] MAC address
-- [ ] Connection status (online/offline)
-- [ ] Current volume and mute state
+- [x] Client name (editable)
+- [x] Host IP/hostname
+- [x] MAC address
+- [x] Connection status (online/offline)
+- [x] Current volume and mute state
 - [x] Latency value (interactive for connected clients, read-only for disconnected)
-- [ ] Snapclient version
+- [x] Snapclient version
+- [x] Server-side jitter stats (median, P95, samples) with µs precision
 
 **Priority:** P1 (Important)
 **Domain:** Display
@@ -102,10 +103,10 @@ The app MUST display detailed information for each client.
 The app MUST support multiple server connection profiles.
 
 **Acceptance Criteria:**
-- [ ] Add/edit/delete server profiles
-- [ ] Store: name, host, port
+- [ ] Add/edit/delete server profiles (UI needed — stored in QSettings)
+- [x] Store: name, host, port (ConfigManager + ServerProfile model)
 - [ ] Quick switch between saved profiles
-- [ ] Profiles persist across app restarts
+- [x] Profiles persist across app restarts (QSettings)
 
 **Priority:** P1 (Important)
 **Domain:** Connection
@@ -205,6 +206,7 @@ The app MUST provide a system tray icon.
 | REQ-011 | Now Playing & MPD Integration | P1 | Display | Done |
 | REQ-012 | Advanced Client Controls | P1 | Control | Done |
 | REQ-013 | Build & Release Pipeline | P1 | Infrastructure | Done |
+| REQ-014 | App Preferences | P1 | UI/UX | Draft |
 
 ---
 

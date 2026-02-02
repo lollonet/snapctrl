@@ -7,12 +7,11 @@ import logging
 import threading
 from urllib.parse import urlparse, urlunparse
 
-from PySide6.QtCore import Qt, QTimer, QUrl, Signal
+from PySide6.QtCore import QEvent, Qt, QTimer, QUrl, Signal
 from PySide6.QtGui import QPixmap
 from PySide6.QtNetwork import QNetworkAccessManager, QNetworkReply, QNetworkRequest
 from PySide6.QtWidgets import (
     QFrame,
-    QHBoxLayout,
     QLabel,
     QListWidget,
     QListWidgetItem,
@@ -148,23 +147,23 @@ class SourcesPanel(QWidget):
 
         self._detail_status = QLabel()
 
-        # Now Playing section with album art
+        # Now Playing section with album art (vertical: art above text)
         self._now_playing_frame = QWidget()
-        now_playing_layout = QHBoxLayout(self._now_playing_frame)
+        now_playing_layout = QVBoxLayout(self._now_playing_frame)
         now_playing_layout.setContentsMargins(0, 0, 0, 0)
         now_playing_layout.setSpacing(spacing.sm)
 
-        # Album art
+        # Album art — fills panel width, height adjusts to keep aspect ratio
         self._album_art = QLabel()
-        self._album_art.setFixedSize(ALBUM_ART_SIZE, ALBUM_ART_SIZE)
+        self._album_art.setMinimumHeight(ALBUM_ART_SIZE)
+        self._album_art.setScaledContents(True)
         self._album_art.setStyleSheet(f"""
             QLabel {{
                 background-color: {p.background};
                 border-radius: {sizing.border_radius_md}px;
             }}
         """)
-        self._album_art.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self._album_art.setScaledContents(True)
+        self._original_pixmap: QPixmap | None = None
         now_playing_layout.addWidget(self._album_art)
 
         # Text info (title, artist, album)
@@ -172,9 +171,9 @@ class SourcesPanel(QWidget):
         self._detail_now_playing.setWordWrap(True)
         self._detail_now_playing.setStyleSheet(f"color: {p.text}; font-size: {typography.body}pt;")
         self._detail_now_playing.setAlignment(
-            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
+            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop
         )
-        now_playing_layout.addWidget(self._detail_now_playing, 1)
+        now_playing_layout.addWidget(self._detail_now_playing)
 
         self._detail_type = QLabel()
         self._detail_codec = QLabel()
@@ -235,8 +234,11 @@ class SourcesPanel(QWidget):
 
     def _show_album_art_placeholder(self) -> None:
         """Show the 'No Art' placeholder for album art."""
+        self._original_pixmap = None
         p = theme_manager.palette
         self._album_art.clear()
+        self._album_art.setScaledContents(False)  # Don't stretch text
+        self._album_art.setFixedHeight(ALBUM_ART_SIZE)
         self._album_art.setStyleSheet(f"""
             QLabel {{
                 background-color: {p.background};
@@ -246,6 +248,41 @@ class SourcesPanel(QWidget):
         """)
         self._album_art.setText("No\nArt")
         self._album_art.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+    def _set_pixmap(self, pixmap: QPixmap) -> None:
+        """Store original pixmap and let Qt scale via setScaledContents.
+
+        Args:
+            pixmap: Full-resolution pixmap to display.
+        """
+        self._original_pixmap = pixmap
+        self._album_art.setScaledContents(True)
+        self._album_art.setPixmap(pixmap)
+        self._album_art.setStyleSheet(f"""
+            QLabel {{
+                border-radius: {sizing.border_radius_md}px;
+            }}
+        """)
+        # Defer height update so layout has assigned the label's width
+        QTimer.singleShot(0, self._update_art_height)
+
+    def _update_art_height(self) -> None:
+        """Set label height to match aspect ratio of the original pixmap."""
+        if self._original_pixmap is None or self._original_pixmap.isNull():
+            return
+        pw = self._original_pixmap.width()
+        ph = self._original_pixmap.height()
+        if pw == 0:
+            return
+        w = self._album_art.width()
+        h = max(int(w * ph / pw), ALBUM_ART_SIZE)
+        self._album_art.setFixedHeight(h)
+
+    def event(self, ev: QEvent) -> bool:
+        """Update album art height on resize (deferred so layout is complete)."""
+        if ev.type() == QEvent.Type.Resize:
+            QTimer.singleShot(0, self._update_art_height)
+        return super().event(ev)
 
     def _try_fallback_art(self) -> None:
         """Try to fetch album art from fallback providers (iTunes, MusicBrainz).
@@ -318,18 +355,7 @@ class SourcesPanel(QWidget):
 
         pixmap = QPixmap()
         if pixmap.loadFromData(data):
-            scaled = pixmap.scaled(
-                ALBUM_ART_SIZE,
-                ALBUM_ART_SIZE,
-                Qt.AspectRatioMode.KeepAspectRatio,
-                Qt.TransformationMode.SmoothTransformation,
-            )
-            self._album_art.setPixmap(scaled)
-            self._album_art.setStyleSheet(f"""
-                QLabel {{
-                    border-radius: {sizing.border_radius_md}px;
-                }}
-            """)
+            self._set_pixmap(pixmap)
             logger.info(
                 "Album art from %s for %s - %s",
                 source,
@@ -410,18 +436,7 @@ class SourcesPanel(QWidget):
         if image_data:
             pixmap = QPixmap()
             if pixmap.loadFromData(image_data):
-                scaled = pixmap.scaled(
-                    ALBUM_ART_SIZE,
-                    ALBUM_ART_SIZE,
-                    Qt.AspectRatioMode.KeepAspectRatio,
-                    Qt.TransformationMode.SmoothTransformation,
-                )
-                self._album_art.setPixmap(scaled)
-                self._album_art.setStyleSheet(f"""
-                    QLabel {{
-                        border-radius: {sizing.border_radius_md}px;
-                    }}
-                """)
+                self._set_pixmap(pixmap)
                 self._pending_art_url = ""
                 # Mark art as loaded to prevent fallback overwriting
                 self._art_loaded = True
@@ -461,18 +476,7 @@ class SourcesPanel(QWidget):
             if pixmap.isNull():
                 return False
 
-            scaled = pixmap.scaled(
-                ALBUM_ART_SIZE,
-                ALBUM_ART_SIZE,
-                Qt.AspectRatioMode.KeepAspectRatio,
-                Qt.TransformationMode.SmoothTransformation,
-            )
-            self._album_art.setPixmap(scaled)
-            self._album_art.setStyleSheet(f"""
-                QLabel {{
-                    border-radius: {sizing.border_radius_md}px;
-                }}
-            """)
+            self._set_pixmap(pixmap)
             # Mark art as loaded to prevent fallback overwriting
             self._art_loaded = True
             return True

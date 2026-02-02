@@ -27,7 +27,9 @@ SnapCTRL is a cross-platform desktop application that provides an intuitive GUI 
 - **System Tray**: Minimize-to-tray with quick volume sliders
 - **Dark/Light Theme**: Automatic system theme detection and runtime switching
 - **Auto-Reconnection**: Exponential backoff (2s–30s), infinite retry
-- **Network RTT Ping**: Color-coded latency monitoring per client
+- **Server-Side Jitter Stats**: Median/P95 jitter via `Client.GetTimeStats` (with ping fallback)
+- **Server Version**: Snapserver version displayed in status bar alongside RTT
+- **Resizable Album Art**: Cover art fills available panel width, scales on resize
 - **Cross-Platform Builds**: PyInstaller packaging for macOS, Windows, Linux
 
 ### Current Status
@@ -43,14 +45,14 @@ SnapCTRL is a cross-platform desktop application that provides an intuitive GUI 
 | Album Art        | ✅ Complete   |
 | Integration      | ✅ Complete   |
 
-Run `pytest tests/ -v` for current test count (400+ tests).
+Run `pytest tests/ -v` for current test count (499 tests).
 
 ## Requirements
 
 - Python 3.11+
 - PySide6 6.8+
 - zeroconf (for mDNS autodiscovery)
-- A running Snapcast server (v0.27+ tested)
+- A running Snapcast server (v0.27+ tested, v0.34+ for jitter stats)
 
 ## Installation
 
@@ -99,7 +101,7 @@ QT_QPA_PLATFORM=offscreen uv run pytest tests/ -v
 uv run basedpyright src/
 ```
 
-### Test Coverage (401 tests)
+### Test Coverage (499 tests)
 
 - **Models, protocol, API**: 150+ tests
 - **Core (state, config, ping, discovery)**: 80+ tests

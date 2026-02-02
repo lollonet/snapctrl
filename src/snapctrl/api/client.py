@@ -445,7 +445,7 @@ class SnapcastClient:
             {"id": client_id, "latency": latency},
         )
 
-    _TIME_STATS_KEYS = {"rtt_median_ms", "rtt_p95_ms", "jitter_ms", "samples"}
+    _TIME_STATS_KEYS = {"jitter_median_ms", "jitter_p95_ms", "samples"}
 
     async def get_client_time_stats(
         self,
@@ -460,8 +460,8 @@ class SnapcastClient:
             client_id: ID of the client.
 
         Returns:
-            Dict with rtt_median_ms, rtt_p95_ms, jitter_ms,
-            samples, suggested_latency_ms. Empty dict on error.
+            Dict with jitter_median_ms, jitter_p95_ms,
+            samples, suggested_buffer_ms. Empty dict on error.
         """
         try:
             result = await self.call(

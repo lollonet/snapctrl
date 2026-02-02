@@ -79,7 +79,8 @@ src/snapctrl/
 │   ├── controller.py        # Controller (UI → API bridge)
 │   ├── discovery.py         # mDNS autodiscovery (zeroconf)
 │   ├── ping.py              # Network RTT ping (cross-platform)
-│   └── mpd_monitor.py       # MPD metadata polling + art cache
+│   ├── mpd_monitor.py       # MPD metadata polling + art cache
+│   └── snapclient_manager.py # Local snapclient process lifecycle
 │
 └── ui/                      # Qt UI layer
     ├── __init__.py
@@ -240,6 +241,8 @@ User: Drag volume slider
 | **Worker (QThread)** | TCP I/O, asyncio loop | Signals → Main |
 | **PingMonitor** | Background RTT measurement (15s) | Callback → Main |
 | **MpdMonitor** | MPD polling, album art fetch | Signals → Main |
+| **SnapclientManager** | Local snapclient process lifecycle | Signals → Main |
+| **AlbumArt (daemon)** | Fallback art fetch (iTunes/MusicBrainz) | QTimer.singleShot → Main |
 
 **Rule:** No Qt widgets in Worker thread. No blocking I/O in Main thread.
 
@@ -285,4 +288,4 @@ QT_QPA_PLATFORM=offscreen uv run pytest  # tests
 
 *Next: [Data Models](03-DATA-MODELS.md) →*
 
-*Last updated: 2026-01-29*
+*Last updated: 2026-02-02*

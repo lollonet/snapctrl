@@ -1,5 +1,6 @@
 """Properties panel - displays details of selected item."""
 
+import logging
 from typing import Any
 
 from PySide6.QtCore import Qt, Signal
@@ -17,6 +18,22 @@ from snapctrl.models.group import Group
 from snapctrl.models.source import Source
 from snapctrl.ui.theme import theme_manager
 from snapctrl.ui.tokens import spacing, typography
+
+logger = logging.getLogger(__name__)
+
+_JITTER_US_THRESHOLD = 0.001  # Below this, show as 0µs
+_JITTER_PRECISION_THRESHOLD = 10  # Below this, show one decimal
+
+
+def _format_jitter(ms: float) -> str:
+    """Format jitter value, showing microseconds when sub-millisecond."""
+    if ms < _JITTER_US_THRESHOLD:
+        return "0\u00b5s"
+    if ms < 1:
+        return f"{ms * 1000:.0f}\u00b5s"
+    if ms < _JITTER_PRECISION_THRESHOLD:
+        return f"{ms:.1f}ms"
+    return f"{int(ms)}ms"
 
 
 class PropertiesPanel(QWidget):
@@ -117,9 +134,12 @@ class PropertiesPanel(QWidget):
         rows.append(f"<tr><td><i>Muted:</i></td><td>{'Yes' if client.muted else 'No'}</td></tr>")
 
         # Server-side latency stats (preferred) or fallback to ping RTT
+        logger.debug("set_client time_stats=%s", time_stats)
         samples = time_stats.get("samples", 0) if time_stats else 0
         if time_stats and isinstance(samples, (int, float)) and samples > 0:
+            logger.debug("calling _add_time_stats_rows, samples=%s", samples)
             self._add_time_stats_rows(rows, time_stats)
+            logger.debug("rows after time_stats: %s", rows)
         elif network_rtt is not None:
             rtt_str = format_rtt(network_rtt).replace("<", "&lt;")
             rtt_color = get_rtt_color(network_rtt)
@@ -185,27 +205,27 @@ class PropertiesPanel(QWidget):
     ) -> None:
         """Add server-measured latency rows to the properties table."""
         try:
-            median = float(stats.get("rtt_median_ms", 0.0))
-            p95 = float(stats.get("rtt_p95_ms", 0.0))
-            jitter = float(stats.get("jitter_ms", 0.0))
+            median = float(stats.get("jitter_median_ms", 0.0))
+            p95 = float(stats.get("jitter_p95_ms", 0.0))
             samples = int(stats.get("samples", 0))
         except (TypeError, ValueError):
             return
 
         median_color = get_rtt_color(median)
         p95_color = get_rtt_color(p95)
+        median_str = _format_jitter(median)
+        p95_str = _format_jitter(p95)
 
         rows.append(
-            f"<tr><td><i>Latency (server):</i></td>"
+            f"<tr><td><i>Jitter (server):</i></td>"
             f"<td style='color: {median_color};'>"
-            f"{format_rtt(median)}</td></tr>"
+            f"{median_str}</td></tr>"
         )
         rows.append(
-            f"<tr><td><i>Latency P95:</i></td>"
+            f"<tr><td><i>Jitter P95:</i></td>"
             f"<td style='color: {p95_color};'>"
-            f"{format_rtt(p95)}</td></tr>"
+            f"{p95_str}</td></tr>"
         )
-        rows.append(f"<tr><td><i>Jitter:</i></td><td>{format_rtt(jitter)}</td></tr>")
         rows.append(f"<tr><td><i>Samples:</i></td><td>{samples}</td></tr>")
 
     def set_source(self, source: Source) -> None:

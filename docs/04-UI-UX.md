@@ -4,10 +4,11 @@
 
 The application uses a tri-pane layout with a toolbar (no menu bar). Key differences from the original mockup below:
 
-- **No menu bar** — toolbar with connection status indicator (green/red dot + text)
-- **Sources panel** — read-only list from server (no "+ Add Source" button)
+- **No menu bar** — toolbar with connection status indicator (green/red dot + text) and server version
+- **Sources panel** — read-only list from server, now playing metadata with resizable album art (fills panel width)
 - **Groups panel** — scrollable group cards with source dropdown, context menus for rename
-- **Properties panel** — interactive latency spinbox for connected clients, context menu rename
+- **Properties panel** — interactive latency spinbox for connected clients, server-side jitter stats (µs precision), context menu rename
+- **Status bar** — shows server version and network RTT (e.g., "Connected — v0.34.1 — 2.5ms")
 - **System tray** — minimize-to-tray, quick volume sliders, now playing metadata
 - **Theme** — auto dark/light mode detection, runtime switching (macOS)
 - **No responsive breakpoints** — fixed tri-pane layout
@@ -16,9 +17,9 @@ The application uses a tri-pane layout with a toolbar (no menu bar). Key differe
 
 | Panel | Width | Content | Interactions |
 |-------|-------|---------|--------------|
-| **Sources** (left) | 150-250px | List of audio sources with playing indicator, now playing metadata | Click to view details |
+| **Sources** (left) | 150-250px | Source list with playing indicator, now playing metadata, resizable album art (vertical layout, fills width) | Click to view details, splitter drag resizes art |
 | **Groups** (center) | flexible | Group cards with volume slider, mute, source dropdown | Drag slider, click mute, select source, right-click context menu |
-| **Properties** (right) | 200-300px | Details of selected item, interactive latency control | Latency spinbox (connected clients), read-only info |
+| **Properties** (right) | 200-300px | Details of selected item, server-side jitter stats (µs precision), interactive latency control | Latency spinbox (connected clients), read-only info |
 
 ---
 
