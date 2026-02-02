@@ -16,7 +16,7 @@ import logging
 from typing import TYPE_CHECKING, cast
 
 from PySide6.QtCore import QObject, QTimer, Signal
-from PySide6.QtGui import QAction, QIcon
+from PySide6.QtGui import QAction, QBrush, QColor, QIcon, QPainter, QPen
 from PySide6.QtWidgets import (
     QApplication,
     QMainWindow,
@@ -57,6 +57,7 @@ class SystemTrayManager(QObject):
 
     # Signals forwarded from the quick volume slider
     volume_changed = Signal(str, int)  # group_id, volume
+    mute_all_changed = Signal(bool)  # True=mute all, False=unmute all
 
     def __init__(
         self,
@@ -81,6 +82,9 @@ class SystemTrayManager(QObject):
         self._snapclient_host = ""
         self._snapclient_port = 1704
 
+        # Connection state for icon overlay
+        self._connected = False
+
         # Quick volume slider (embedded in menu)
         self._volume_slider: VolumeSlider | None = None
 
@@ -94,10 +98,11 @@ class SystemTrayManager(QObject):
         if icon is None:
             raw_app = QApplication.instance()
             icon = cast(QApplication, raw_app).windowIcon() if raw_app is not None else QIcon()
+        self._base_icon = icon
 
-        # Create tray icon
-        self._tray = QSystemTrayIcon(icon)
-        self._tray.setToolTip("SnapCTRL")
+        # Create tray icon with connection status overlay
+        self._tray = QSystemTrayIcon(self._build_status_icon())
+        self._tray.setToolTip("SnapCTRL — Disconnected")
         self._tray.activated.connect(self._on_activated)
 
         # Build initial menu
@@ -109,6 +114,7 @@ class SystemTrayManager(QObject):
         self._state.groups_changed.connect(self._schedule_rebuild)
         self._state.sources_changed.connect(self._schedule_rebuild)
         self._state.clients_changed.connect(self._schedule_rebuild)
+        self._state.connection_changed.connect(self._on_connection_changed)
 
         # Connect snapclient status to rebuild
         if self._snapclient_mgr:
@@ -177,6 +183,16 @@ class SystemTrayManager(QObject):
             for group in groups:
                 group_clients = [c for c in clients if c.id in group.client_ids]
                 self._add_group_entry(group, group_clients)
+
+            # Mute All / Unmute All
+            mute_all = QAction("Mute All", self._menu)
+            mute_all.triggered.connect(lambda: self.mute_all_changed.emit(True))
+            self._menu.addAction(mute_all)
+
+            unmute_all = QAction("Unmute All", self._menu)
+            unmute_all.triggered.connect(lambda: self.mute_all_changed.emit(False))
+            self._menu.addAction(unmute_all)
+
             self._menu.addSeparator()
 
         # Local Client
@@ -330,6 +346,42 @@ class SystemTrayManager(QObject):
                 return group
 
         return groups[0]
+
+    def _build_status_icon(self) -> QIcon:
+        """Build a tray icon with a connection status dot overlay.
+
+        Returns:
+            QIcon with green (connected) or red (disconnected) dot at bottom-right.
+        """
+        size = 64
+        pixmap = self._base_icon.pixmap(size, size)
+        if pixmap.isNull():
+            return self._base_icon
+
+        painter = QPainter(pixmap)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+
+        dot_radius = 8
+        dot_x = size - dot_radius * 2 - 2
+        dot_y = size - dot_radius * 2 - 2
+        color = QColor("#4CAF50") if self._connected else QColor("#F44336")
+
+        painter.setPen(QPen(QColor("#1A1A1A"), 2))
+        painter.setBrush(QBrush(color))
+        painter.drawEllipse(dot_x, dot_y, dot_radius * 2, dot_radius * 2)
+        painter.end()
+
+        return QIcon(pixmap)
+
+    def _on_connection_changed(self, connected: bool) -> None:
+        """Update tray icon when connection state changes.
+
+        Args:
+            connected: True if connected, False if disconnected.
+        """
+        self._connected = connected
+        self._tray.setIcon(self._build_status_icon())
+        self._tray.setToolTip("SnapCTRL — Connected" if connected else "SnapCTRL — Disconnected")
 
     def _toggle_window(self) -> None:
         """Toggle main window visibility."""

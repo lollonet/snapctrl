@@ -150,10 +150,10 @@ The app MUST provide a system tray icon.
 
 **Acceptance Criteria:**
 - [x] Minimize to tray instead of closing (close-to-tray behavior)
-- [ ] Tray icon shows connection status (currently static icon)
+- [x] Tray icon shows connection status (green/red dot overlay via QPainter)
 - [x] Right-click menu: Show/Hide, Quit
 - [x] Quick volume controls for each group (embedded QWidgetAction slider)
-- [ ] Mute All / Unmute All
+- [x] Mute All / Unmute All
 
 **Priority:** P1 (Important)
 **Domain:** UI/UX
@@ -299,7 +299,7 @@ The app MUST allow users to reassign clients between groups via drag-and-drop an
 | REQ-007 | Connection Profiles | P1 | Connection | Draft |
 | REQ-008 | Auto-Reconnection | P1 | Connection | Done |
 | REQ-009 | System Theme Support | P1 | UI/UX | Done |
-| REQ-010 | System Tray Integration | P1 | UI/UX | Partial |
+| REQ-010 | System Tray Integration | P1 | UI/UX | Done |
 | REQ-011 | Now Playing & MPD Integration | P1 | Display | Done |
 | REQ-012 | Advanced Client Controls | P1 | Control | Done |
 | REQ-013 | Build & Release Pipeline | P1 | Infrastructure | Done |
