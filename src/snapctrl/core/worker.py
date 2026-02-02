@@ -105,14 +105,19 @@ class SnapcastWorker(QThread):
             )
 
     async def _safe_fetch_time_stats(self, client_ids: list[str]) -> None:
-        """Fetch time stats with error handling."""
+        """Fetch time stats with per-client error handling."""
         if not self._client or not self._client.is_connected:
             return
         results: dict[str, dict[str, object]] = {}
         for client_id in client_ids:
-            stats = await self._client.get_client_time_stats(client_id)
-            if stats:
-                results[client_id] = stats
+            if not self._client.is_connected:
+                break
+            try:
+                stats = await self._client.get_client_time_stats(client_id)
+                if stats:
+                    results[client_id] = stats
+            except Exception:  # noqa: BLE001
+                continue
         if results:
             self.time_stats_updated.emit(results)
 

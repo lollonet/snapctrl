@@ -379,7 +379,22 @@ def main() -> int:  # noqa: PLR0912, PLR0915
         window.set_time_stats(results)
 
     worker.time_stats_updated.connect(on_time_stats)
-    time_stats_timer.start()
+
+    # Poll immediately on first state received, then periodically
+    _time_stats_started = False
+
+    def start_time_stats_polling() -> None:
+        nonlocal _time_stats_started
+        if _time_stats_started:
+            return
+        _time_stats_started = True
+        poll_time_stats()
+        time_stats_timer.start()
+
+    def _on_first_state_for_time_stats(_state: object) -> None:
+        start_time_stats_polling()
+
+    worker.state_received.connect(_on_first_state_for_time_stats)
 
     # Set up MPD monitor for track metadata
     # MPD typically runs on the same host as Snapcast server

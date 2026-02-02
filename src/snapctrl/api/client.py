@@ -445,6 +445,8 @@ class SnapcastClient:
             {"id": client_id, "latency": latency},
         )
 
+    _TIME_STATS_KEYS = {"latency_median_ms", "latency_p95_ms", "jitter_ms", "samples"}
+
     async def get_client_time_stats(
         self,
         client_id: str,
@@ -466,10 +468,20 @@ class SnapcastClient:
                 "Client.GetTimeStats",
                 {"id": client_id},
             )
-            if isinstance(result, dict):
-                return cast(dict[str, Any], result)
+            if not isinstance(result, dict):
+                return {}
+            typed = cast(dict[str, Any], result)
+            if not self._TIME_STATS_KEYS.issubset(typed):
+                logger.debug("GetTimeStats missing keys: %s", typed.keys())
+                return {}
+            return typed
+        except RuntimeError as e:
+            if "method not found" in str(e).lower():
+                logger.debug("Server does not support Client.GetTimeStats")
+            else:
+                logger.warning("GetTimeStats failed for %s: %s", client_id, e)
             return {}
-        except (RuntimeError, ConnectionError):
+        except ConnectionError:
             return {}
 
     async def set_group_name(self, group_id: str, name: str) -> None:

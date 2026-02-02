@@ -117,7 +117,8 @@ class PropertiesPanel(QWidget):
         rows.append(f"<tr><td><i>Muted:</i></td><td>{'Yes' if client.muted else 'No'}</td></tr>")
 
         # Server-side latency stats (preferred) or fallback to ping RTT
-        if time_stats and time_stats.get("samples", 0) > 0:
+        samples = time_stats.get("samples", 0) if time_stats else 0
+        if time_stats and isinstance(samples, (int, float)) and samples > 0:
             self._add_time_stats_rows(rows, time_stats)
         elif network_rtt is not None:
             rtt_str = format_rtt(network_rtt).replace("<", "&lt;")
@@ -183,10 +184,13 @@ class PropertiesPanel(QWidget):
         stats: dict[str, Any],
     ) -> None:
         """Add server-measured latency rows to the properties table."""
-        median = stats.get("latency_median_ms", 0.0)
-        p95 = stats.get("latency_p95_ms", 0.0)
-        jitter = stats.get("jitter_ms", 0.0)
-        samples = stats.get("samples", 0)
+        try:
+            median = float(stats.get("latency_median_ms", 0.0))
+            p95 = float(stats.get("latency_p95_ms", 0.0))
+            jitter = float(stats.get("jitter_ms", 0.0))
+            samples = int(stats.get("samples", 0))
+        except (TypeError, ValueError):
+            return
 
         median_color = get_rtt_color(median)
         p95_color = get_rtt_color(p95)

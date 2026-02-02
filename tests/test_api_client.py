@@ -141,6 +141,22 @@ class TestSnapcastClient:
         assert result == {}
 
     @pytest.mark.asyncio
+    async def test_get_client_time_stats_missing_keys(self) -> None:
+        """Test that incomplete response returns empty dict."""
+        client = SnapcastClient("localhost")
+        client.call = AsyncMock(return_value={"latency_median_ms": 3.0})  # type: ignore[method-assign]
+        result = await client.get_client_time_stats("client-1")
+        assert result == {}
+
+    @pytest.mark.asyncio
+    async def test_get_client_time_stats_non_dict(self) -> None:
+        """Test that non-dict response returns empty dict."""
+        client = SnapcastClient("localhost")
+        client.call = AsyncMock(return_value="unexpected")  # type: ignore[method-assign]
+        result = await client.get_client_time_stats("client-1")
+        assert result == {}
+
+    @pytest.mark.asyncio
     async def test_next_id_increments(self) -> None:
         """Test that request IDs increment."""
         client = SnapcastClient("localhost")
