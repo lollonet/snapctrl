@@ -15,6 +15,7 @@
 | [REQ-011](REQ-011.md) | Now Playing & MPD Integration | Display | P1 | Done |
 | [REQ-012](REQ-012.md) | Advanced Client Controls | Control | P1 | Done |
 | [REQ-013](REQ-013.md) | Build & Release Pipeline | Infrastructure | P1 | Done |
+| [REQ-014](REQ-014.md) | App Preferences | UI/UX | P1 | Draft |
 
 ## Summary by Domain
 
@@ -23,7 +24,7 @@
 | Connection | 3 |
 | Control | 4 |
 | Display | 3 |
-| UI/UX | 2 |
+| UI/UX | 3 |
 | Infrastructure | 1 |
 
 ## Summary by Priority
@@ -31,7 +32,7 @@
 | Priority | Count |
 |----------|-------|
 | P0 (MVP) | 4 |
-| P1 (Important) | 9 |
+| P1 (Important) | 10 |
 
 ## Summary by Status
 
@@ -39,4 +40,4 @@
 |--------|-------|
 | Done | 11 |
 | Partial | 1 |
-| Draft | 1 |
+| Draft | 2 |

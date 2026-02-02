@@ -7,22 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Resizable Album Art** - Feb 2
+  - Cover art fills available panel width, scales dynamically on splitter drag/window resize
+  - Changed from fixed 80×80px horizontal layout to vertical layout (art above text)
+  - Qt `setScaledContents` with aspect-ratio-correct height for pixel-perfect rendering
+
 ## [0.2.3] - 2026-02-02
 
 ### Added
 
-- **Server-Side Latency Stats** ([#24](https://github.com/lollonet/snapctrl/pull/24)) - Feb 2
-  - Replaced ICMP ping to clients with server-measured latency via `Client.GetTimeStats` JSON-RPC endpoint
-  - Properties panel shows median RTT, p95 RTT, and jitter per client (requires snapserver fork with latency sampling)
+- **Server-Side Jitter Stats** ([#24](https://github.com/lollonet/snapctrl/pull/24)) - Feb 2
+  - Replaced ICMP ping to clients with server-measured jitter via `Client.GetTimeStats` JSON-RPC endpoint
+  - Properties panel shows median jitter, P95 jitter, and sample count per client (requires snapserver fork with latency sampling)
+  - Microsecond display for sub-millisecond values (e.g., "3µs" instead of "<1ms")
   - Graceful fallback when server doesn't support the endpoint or returns zero samples
 
 - **Server Version in Status Bar** - Feb 2
-  - Status bar now shows snapserver version alongside connection RTT (e.g., "Connected — v0.34.1 — RTT 3.2ms")
+  - Status bar now shows snapserver version alongside connection RTT (e.g., "Connected — v0.34.1 — 2.5ms")
 
 ### Fixed
 
 - **GetTimeStats Key Names** - Feb 2
-  - Corrected key names to match deployed server response (`rtt_median_ms`, `rtt_p95_ms` instead of `latency_median_ms`, `latency_p95_ms`)
+  - Corrected key names to match deployed server response (`jitter_median_ms`, `jitter_p95_ms` instead of `latency_median_ms`, `latency_p95_ms`)
+
+- **HTML Escape in RTT Display** - Feb 2
+  - `<1ms` values were invisible in properties panel because `<` was interpreted as HTML tag; now properly escaped
 
 ## [0.2.2] - 2026-02-01
 
