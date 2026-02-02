@@ -11,7 +11,7 @@
 | [REQ-007](REQ-007.md) | Connection Profiles | Connection | P1 | Draft |
 | [REQ-008](REQ-008.md) | Auto-Reconnection | Connection | P1 | Done |
 | [REQ-009](REQ-009.md) | System Theme Support | UI/UX | P1 | Done |
-| [REQ-010](REQ-010.md) | System Tray Integration | UI/UX | P1 | Partial |
+| [REQ-010](REQ-010.md) | System Tray Integration | UI/UX | P1 | Done |
 | [REQ-011](REQ-011.md) | Now Playing & MPD Integration | Display | P1 | Done |
 | [REQ-012](REQ-012.md) | Advanced Client Controls | Control | P1 | Done |
 | [REQ-013](REQ-013.md) | Build & Release Pipeline | Infrastructure | P1 | Done |
@@ -39,6 +39,5 @@
 
 | Status | Count |
 |--------|-------|
-| Done | 11 |
-| Partial | 1 |
+| Done | 12 |
 | Draft | 3 |

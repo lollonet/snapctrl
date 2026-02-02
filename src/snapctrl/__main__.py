@@ -344,6 +344,13 @@ def main() -> int:  # noqa: PLR0912, PLR0915
     # Connect tray quick volume to group volume handler
     tray.volume_changed.connect(on_group_volume_changed)
 
+    # Connect tray Mute All / Unmute All
+    def on_mute_all(muted: bool) -> None:
+        for group in state_store.groups:
+            worker.set_group_mute(group.id, muted)
+
+    tray.mute_all_changed.connect(on_mute_all)
+
     # Sync tray's selected group when user selects in UI
     def on_group_selected_for_tray(group_id: str) -> None:
         tray.selected_group_id = group_id

@@ -8,7 +8,6 @@ from PySide6.QtGui import QContextMenuEvent, QMouseEvent
 from PySide6.QtWidgets import (
     QFrame,
     QHBoxLayout,
-    QInputDialog,
     QLabel,
     QMenu,
 )
@@ -247,7 +246,9 @@ class ClientCard(QFrame):
         rename_action = menu.addAction("Rename...")
         action = menu.exec(event.globalPos())
         if action == rename_action:
-            new_name, ok = QInputDialog.getText(
+            from snapctrl.ui.widgets.dialogs import StyledInputDialog  # noqa: PLC0415
+
+            new_name, ok = StyledInputDialog.get_text(
                 self,
                 "Rename Client",
                 "New name:",

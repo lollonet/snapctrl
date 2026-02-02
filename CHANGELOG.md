@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Connection-Aware Tray Icon** - Feb 2
+  - Tray icon now shows green dot (connected) or red dot (disconnected) via QPainter overlay
+  - Tooltip updates to "SnapCTRL — Connected" / "SnapCTRL — Disconnected"
+
+- **Mute All / Unmute All** - Feb 2
+  - System tray context menu now includes "Mute All" and "Unmute All" actions
+  - Mutes/unmutes all groups on the server with a single click
+
+- **UI Aesthetics Polish** - Feb 2
+  - Platform-appropriate font stack: SF Pro (macOS), Segoe UI (Windows), Helvetica Neue (fallback)
+  - Styled rename dialog replacing plain QInputDialog — themed background, accent OK button, focus ring
+  - Global input control styling: QLineEdit, QSpinBox, QComboBox with themed borders, rounded corners, accent focus
+  - Softer border radii (4→6px cards, 8→10px dialogs)
+
 - **Resizable Album Art** - Feb 2
   - Cover art fills available panel width, scales dynamically on splitter drag/window resize
   - Changed from fixed 80×80px horizontal layout to vertical layout (art above text)

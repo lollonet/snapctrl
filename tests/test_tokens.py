@@ -81,8 +81,8 @@ class TestSizingTokens:
     def test_border_radius_values(self) -> None:
         """Test border radius tokens."""
         assert sizing.border_radius_sm == 2
-        assert sizing.border_radius_md == 4
-        assert sizing.border_radius_lg == 8
+        assert sizing.border_radius_md == 6
+        assert sizing.border_radius_lg == 10
 
     def test_icon_size_values(self) -> None:
         """Test icon size tokens."""

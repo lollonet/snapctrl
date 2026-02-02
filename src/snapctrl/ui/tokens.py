@@ -30,8 +30,9 @@ class SpacingTokens:
 
 @dataclass(frozen=True)
 class TypographyTokens:
-    """Font size scale in points."""
+    """Font size scale in points and font family stack."""
 
+    font_family: str = "'SF Pro Text', 'Segoe UI', 'Helvetica Neue', sans-serif"
     caption: int = 8  # IDs, fine print
     small: int = 9  # Status text, badges
     body: int = 10  # Default body text
@@ -45,8 +46,8 @@ class SizingTokens:
     """Widget sizing constants in pixels."""
 
     border_radius_sm: int = 2  # Badges, small elements
-    border_radius_md: int = 4  # Cards, buttons
-    border_radius_lg: int = 8  # Dialogs, panels
+    border_radius_md: int = 6  # Cards, buttons
+    border_radius_lg: int = 10  # Dialogs, panels
     icon_sm: int = 16  # Inline icons
     icon_md: int = 24  # Toolbar icons
     icon_lg: int = 32  # Panel header icons

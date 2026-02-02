@@ -20,7 +20,7 @@ from PySide6.QtCore import QObject, Signal
 from PySide6.QtGui import QGuiApplication
 from PySide6.QtWidgets import QApplication
 
-from snapctrl.ui.tokens import sizing, spacing
+from snapctrl.ui.tokens import sizing, spacing, typography
 
 logger = logging.getLogger(__name__)
 
@@ -225,6 +225,55 @@ class ThemeManager(QObject):
         """Generate a global stylesheet for QApplication."""
         p = self._palette
         return f"""
+            QWidget {{
+                font-family: {typography.font_family};
+            }}
+            QLineEdit {{
+                background: {p.surface_dim};
+                border: 1px solid {p.border};
+                border-radius: {sizing.border_radius_md}px;
+                padding: {spacing.xs}px {spacing.sm}px;
+                color: {p.text};
+                selection-background-color: {p.accent};
+            }}
+            QLineEdit:focus {{
+                border: 1px solid {p.accent};
+            }}
+            QSpinBox {{
+                background: {p.surface_dim};
+                border: 1px solid {p.border};
+                border-radius: {sizing.border_radius_md}px;
+                padding: {spacing.xs}px;
+                color: {p.text};
+            }}
+            QSpinBox:focus {{
+                border: 1px solid {p.accent};
+            }}
+            QSpinBox::up-button, QSpinBox::down-button {{
+                background: {p.surface_hover};
+                border: none;
+                width: {sizing.icon_sm}px;
+            }}
+            QComboBox {{
+                background: {p.surface_dim};
+                border: 1px solid {p.border};
+                border-radius: {sizing.border_radius_md}px;
+                padding: {spacing.xs}px {spacing.sm}px;
+                color: {p.text};
+            }}
+            QComboBox:focus, QComboBox:on {{
+                border: 1px solid {p.accent};
+            }}
+            QComboBox::drop-down {{
+                border: none;
+                width: 20px;
+            }}
+            QComboBox QAbstractItemView {{
+                background: {p.surface_elevated};
+                border: 1px solid {p.border};
+                selection-background-color: {p.surface_selected};
+                color: {p.text};
+            }}
             QToolTip {{
                 background-color: {p.surface};
                 color: {p.text};

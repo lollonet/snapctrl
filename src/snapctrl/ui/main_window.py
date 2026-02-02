@@ -148,6 +148,7 @@ class MainWindow(QMainWindow):
             QWidget {{
                 background-color: {p.surface};
                 color: {p.text};
+                font-family: {typography.font_family};
                 font-size: {typography.subtitle}pt;
             }}
         """)
