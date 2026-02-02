@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (
     QLabel,
     QListWidget,
     QListWidgetItem,
+    QProgressBar,
     QVBoxLayout,
     QWidget,
 )
@@ -181,6 +182,34 @@ class SourcesPanel(QWidget):
             Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop
         )
         now_playing_layout.addWidget(self._detail_now_playing)
+
+        # Track time label (e.g. "1:23 / 4:56")
+        self._time_label = QLabel()
+        self._time_label.setStyleSheet(
+            f"color: {p.text_secondary}; font-size: {typography.small}pt;"
+        )
+        self._time_label.setVisible(False)
+        now_playing_layout.addWidget(self._time_label)
+
+        # Progress bar (thin, accent-colored)
+        self._progress_bar = QProgressBar()
+        self._progress_bar.setRange(0, 1000)
+        self._progress_bar.setValue(0)
+        self._progress_bar.setTextVisible(False)
+        self._progress_bar.setFixedHeight(4)
+        self._progress_bar.setStyleSheet(f"""
+            QProgressBar {{
+                background-color: {p.surface_dim};
+                border: none;
+                border-radius: 2px;
+            }}
+            QProgressBar::chunk {{
+                background-color: {p.accent};
+                border-radius: 2px;
+            }}
+        """)
+        self._progress_bar.setVisible(False)
+        now_playing_layout.addWidget(self._progress_bar)
 
         self._detail_type = QLabel()
         self._detail_codec = QLabel()
@@ -566,6 +595,33 @@ class SourcesPanel(QWidget):
             self._detail_format.setVisible(True)
         else:
             self._detail_format.setVisible(False)
+
+    @staticmethod
+    def _format_time(seconds: float) -> str:
+        """Format seconds as mm:ss or h:mm:ss."""
+        total = int(seconds)
+        h, remainder = divmod(total, 3600)
+        m, s = divmod(remainder, 60)
+        if h > 0:
+            return f"{h}:{m:02d}:{s:02d}"
+        return f"{m}:{s:02d}"
+
+    def set_playback_status(self, elapsed: float, duration: float, state: str) -> None:
+        """Update the track time display and progress bar.
+
+        Args:
+            elapsed: Elapsed time in seconds.
+            duration: Total duration in seconds.
+            state: MPD state ("play", "pause", "stop").
+        """
+        show = state in ("play", "pause") and duration > 0
+        self._time_label.setVisible(show)
+        self._progress_bar.setVisible(show)
+        if show:
+            self._time_label.setText(
+                f"{self._format_time(elapsed)} / {self._format_time(duration)}"
+            )
+            self._progress_bar.setValue(int(elapsed / duration * 1000))
 
     def set_sources(self, sources: list[Source]) -> None:
         """Update the list of sources.

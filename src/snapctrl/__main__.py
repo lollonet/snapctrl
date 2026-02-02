@@ -484,8 +484,15 @@ def main() -> int:  # noqa: PLR0912, PLR0915
         """Handle MPD connection errors."""
         logger.warning(f"MPD error: {error}")
 
+    def on_mpd_status_changed(status: object) -> None:
+        from snapctrl.api.mpd.types import MpdStatus  # noqa: PLC0415
+
+        if isinstance(status, MpdStatus):
+            window.sources_panel.set_playback_status(status.elapsed, status.duration, status.state)
+
     mpd_monitor.track_changed.connect(on_mpd_track_changed)
     mpd_monitor.art_changed.connect(on_mpd_art_changed)
+    mpd_monitor.status_changed.connect(on_mpd_status_changed)
     mpd_monitor.error_occurred.connect(on_mpd_error)
 
     # Start MPD monitor
@@ -508,10 +515,15 @@ def main() -> int:  # noqa: PLR0912, PLR0915
         if sc_extra:
             snapclient_mgr.set_extra_args(sc_extra.split())
 
-        # Show/hide snapclient status
+        # Start/stop snapclient based on enabled toggle
         if config.get_snapclient_enabled():
+            if not snapclient_mgr.is_running:
+                sc_host = config.get_snapclient_server_host() or host
+                snapclient_mgr.start(sc_host, snapclient_port)
             window.set_snapclient_status(snapclient_mgr.status)
         else:
+            if snapclient_mgr.is_running:
+                snapclient_mgr.stop()
             window.set_snapclient_status("disabled")
 
         # Update MPD monitor if host/port changed
