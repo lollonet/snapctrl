@@ -157,7 +157,7 @@ class StyledInputDialog(QDialog):
                 font-weight: bold;
             }}
             QPushButton:hover {{
-                background: {p.surface_selected};
+                background: #CC7000;
             }}
         """)
         ok_btn.clicked.connect(self.accept)
