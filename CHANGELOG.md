@@ -30,7 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - **GetTimeStats Key Names** - Feb 2
-  - Corrected key names to match deployed server response (`jitter_median_ms`, `jitter_p95_ms` instead of `latency_median_ms`, `latency_p95_ms`)
+  - Corrected key names to match deployed server response (`jitter_median_ms`, `jitter_p95_ms` instead of `rtt_median_ms`, `rtt_p95_ms`)
 
 - **HTML Escape in RTT Display** - Feb 2
   - `<1ms` values were invisible in properties panel because `<` was interpreted as HTML tag; now properly escaped
