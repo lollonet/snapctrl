@@ -81,7 +81,7 @@ class SourcesPanel(QWidget):
         # Debounce timer for resize-driven album art height updates
         self._resize_timer = QTimer(self)
         self._resize_timer.setSingleShot(True)
-        self._resize_timer.setInterval(10)
+        self._resize_timer.setInterval(50)
         self._resize_timer.timeout.connect(self._update_art_height)
 
         # Generation counter to cancel stale fallback requests
@@ -284,6 +284,7 @@ class SourcesPanel(QWidget):
         if w == 0:
             return
         h = max(int(w * ph / pw), ALBUM_ART_SIZE)
+        h = min(h, 4 * ALBUM_ART_SIZE)  # Cap to prevent excessive heights
         self._album_art.setFixedHeight(h)
 
     def event(self, ev: QEvent) -> bool:
