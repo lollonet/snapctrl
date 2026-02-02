@@ -547,8 +547,17 @@ def main() -> int:  # noqa: PLR0912, PLR0915
     # Run the application
     exit_code = app.exec()
 
-    # Cleanup
-    snapclient_mgr.stop()
+    # Cleanup — ask before stopping snapclient
+    if snapclient_mgr.is_running:
+        reply = QMessageBox.question(
+            window,
+            "Stop Local Client?",
+            "A local snapclient is running.\nStop it before quitting?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.Yes,
+        )
+        if reply == QMessageBox.StandardButton.Yes:
+            snapclient_mgr.stop()
     mpd_monitor.stop()
     ping_monitor.stop()
     worker.stop()
