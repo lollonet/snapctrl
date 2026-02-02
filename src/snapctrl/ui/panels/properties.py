@@ -222,9 +222,7 @@ class PropertiesPanel(QWidget):
             f"{median_str}</td></tr>"
         )
         rows.append(
-            f"<tr><td><i>Jitter P95:</i></td>"
-            f"<td style='color: {p95_color};'>"
-            f"{p95_str}</td></tr>"
+            f"<tr><td><i>Jitter P95:</i></td><td style='color: {p95_color};'>{p95_str}</td></tr>"
         )
         rows.append(f"<tr><td><i>Samples:</i></td><td>{samples}</td></tr>")
 
