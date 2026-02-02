@@ -14,6 +14,18 @@ _KEY_SERVERS = "servers"
 _KEY_LAST_SERVER = "last_server"
 _KEY_AUTO_CONNECT = "auto_connect_enabled"
 
+# Appearance
+_KEY_THEME = "appearance/theme"
+
+# Monitoring
+_KEY_PING_INTERVAL = "monitoring/ping_interval"
+_KEY_TIME_STATS_INTERVAL = "monitoring/time_stats_interval"
+
+# MPD
+_KEY_MPD_HOST = "mpd/host"
+_KEY_MPD_PORT = "mpd/port"
+_KEY_MPD_POLL_INTERVAL = "mpd/poll_interval"
+
 # Snapclient settings keys
 _KEY_SNAPCLIENT_ENABLED = "snapclient/enabled"
 _KEY_SNAPCLIENT_BINARY_PATH = "snapclient/binary_path"
@@ -267,6 +279,114 @@ class ConfigManager:
             args: Extra CLI arguments string.
         """
         self._settings.setValue(_KEY_SNAPCLIENT_EXTRA_ARGS, args)
+
+    # -- Appearance settings ---------------------------------------------------
+
+    def get_theme(self) -> str:
+        """Return the theme preference.
+
+        Returns:
+            One of "system", "dark", "light". Default "system".
+        """
+        value = self._settings.value(_KEY_THEME, "system", str)
+        return str(value) if value in ("system", "dark", "light") else "system"
+
+    def set_theme(self, theme: str) -> None:
+        """Set the theme preference.
+
+        Args:
+            theme: One of "system", "dark", "light".
+        """
+        self._settings.setValue(_KEY_THEME, theme)
+
+    # -- Monitoring settings ---------------------------------------------------
+
+    def get_ping_interval(self) -> int:
+        """Return the ping interval in seconds.
+
+        Returns:
+            Interval in seconds (default 15).
+        """
+        value = self._settings.value(_KEY_PING_INTERVAL, 15, int)
+        return max(5, min(120, int(value)))  # type: ignore[arg-type]
+
+    def set_ping_interval(self, seconds: int) -> None:
+        """Set the ping interval.
+
+        Args:
+            seconds: Interval in seconds (5-120).
+        """
+        self._settings.setValue(_KEY_PING_INTERVAL, max(5, min(120, seconds)))
+
+    def get_time_stats_interval(self) -> int:
+        """Return the time stats polling interval in seconds.
+
+        Returns:
+            Interval in seconds (default 15).
+        """
+        value = self._settings.value(_KEY_TIME_STATS_INTERVAL, 15, int)
+        return max(5, min(120, int(value)))  # type: ignore[arg-type]
+
+    def set_time_stats_interval(self, seconds: int) -> None:
+        """Set the time stats polling interval.
+
+        Args:
+            seconds: Interval in seconds (5-120).
+        """
+        self._settings.setValue(_KEY_TIME_STATS_INTERVAL, max(5, min(120, seconds)))
+
+    # -- MPD settings ----------------------------------------------------------
+
+    def get_mpd_host(self) -> str:
+        """Return the MPD host.
+
+        Returns:
+            Host string, or empty string to use the Snapcast server host.
+        """
+        value = self._settings.value(_KEY_MPD_HOST, "", str)
+        return str(value) if value else ""
+
+    def set_mpd_host(self, host: str) -> None:
+        """Set the MPD host.
+
+        Args:
+            host: Hostname or IP, or empty string for Snapcast server host.
+        """
+        self._settings.setValue(_KEY_MPD_HOST, host)
+
+    def get_mpd_port(self) -> int:
+        """Return the MPD port.
+
+        Returns:
+            Port number (default 6600).
+        """
+        value = self._settings.value(_KEY_MPD_PORT, 6600, int)
+        return max(1, min(65535, int(value)))  # type: ignore[arg-type]
+
+    def set_mpd_port(self, port: int) -> None:
+        """Set the MPD port.
+
+        Args:
+            port: Port number (1-65535).
+        """
+        self._settings.setValue(_KEY_MPD_PORT, max(1, min(65535, port)))
+
+    def get_mpd_poll_interval(self) -> int:
+        """Return the MPD poll interval in seconds.
+
+        Returns:
+            Interval in seconds (default 2).
+        """
+        value = self._settings.value(_KEY_MPD_POLL_INTERVAL, 2, int)
+        return max(1, min(30, int(value)))  # type: ignore[arg-type]
+
+    def set_mpd_poll_interval(self, seconds: int) -> None:
+        """Set the MPD poll interval.
+
+        Args:
+            seconds: Interval in seconds (1-30).
+        """
+        self._settings.setValue(_KEY_MPD_POLL_INTERVAL, max(1, min(30, seconds)))
 
     # -- General settings ------------------------------------------------------
 

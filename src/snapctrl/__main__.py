@@ -122,11 +122,22 @@ def main() -> int:  # noqa: PLR0912, PLR0915
     # At this point host is guaranteed to be set (either from args or autodiscovery)
     assert host is not None
 
-    # Apply theme (auto-detects system dark/light mode)
-    theme_manager.apply_theme()
-    theme_manager.connect_system_theme_changes()
-
     # Create core components
+    config = ConfigManager()
+
+    # Apply theme from preferences (or auto-detect)
+    saved_theme = config.get_theme()
+    if saved_theme == "dark":
+        from snapctrl.ui.theme import DARK_PALETTE  # noqa: PLC0415
+
+        theme_manager.apply_theme(DARK_PALETTE)
+    elif saved_theme == "light":
+        from snapctrl.ui.theme import LIGHT_PALETTE  # noqa: PLC0415
+
+        theme_manager.apply_theme(LIGHT_PALETTE)
+    else:
+        theme_manager.apply_theme()
+    theme_manager.connect_system_theme_changes()
     state_store = StateStore()
     worker = SnapcastWorker(host, port)
 
@@ -210,7 +221,7 @@ def main() -> int:  # noqa: PLR0912, PLR0915
     worker.notification_received.connect(on_notification)
 
     # Create main window
-    window = MainWindow(state_store=state_store)
+    window = MainWindow(state_store=state_store, config=config)
     window.sources_panel.set_server_host(host)
     # Show hostname (FQDN) and IP in title if discovered via mDNS
     if hostname:
@@ -227,7 +238,6 @@ def main() -> int:  # noqa: PLR0912, PLR0915
     window.show()
 
     # Set up local snapclient manager
-    config = ConfigManager()
     snapclient_mgr = SnapclientManager()
 
     # Apply config to manager
@@ -350,6 +360,7 @@ def main() -> int:  # noqa: PLR0912, PLR0915
             worker.set_group_mute(group.id, muted)
 
     tray.mute_all_changed.connect(on_mute_all)
+    tray.preferences_requested.connect(window.open_preferences)
 
     # Sync tray's selected group when user selects in UI
     def on_group_selected_for_tray(group_id: str) -> None:
@@ -358,7 +369,7 @@ def main() -> int:  # noqa: PLR0912, PLR0915
     window.groups_panel.group_selected.connect(on_group_selected_for_tray)
 
     # Set up ping monitor for server RTT only (status bar)
-    ping_monitor = PingMonitor(interval_sec=15.0)
+    ping_monitor = PingMonitor(interval_sec=float(config.get_ping_interval()))
     server_ping_key = "__server__"
     ping_monitor.set_hosts({server_ping_key: host})
 
@@ -378,7 +389,7 @@ def main() -> int:  # noqa: PLR0912, PLR0915
 
     # Set up server-side latency polling via Client.GetTimeStats
     time_stats_timer = QTimer()
-    time_stats_timer.setInterval(15_000)  # 15s, same as old ping
+    time_stats_timer.setInterval(config.get_time_stats_interval() * 1000)
 
     def poll_time_stats() -> None:
         """Request server-side latency stats for connected clients."""
@@ -405,8 +416,9 @@ def main() -> int:  # noqa: PLR0912, PLR0915
     worker.state_received.connect(_on_first_state_for_time_stats)
 
     # Set up MPD monitor for track metadata
-    # MPD typically runs on the same host as Snapcast server
-    mpd_monitor = MpdMonitor(host=host, port=6600)
+    mpd_host = config.get_mpd_host() or host
+    mpd_port = config.get_mpd_port()
+    mpd_monitor = MpdMonitor(host=mpd_host, port=mpd_port)
 
     def find_mpd_source() -> Source | None:
         """Find the MPD source by name or scheme."""
@@ -478,6 +490,39 @@ def main() -> int:  # noqa: PLR0912, PLR0915
 
     # Start MPD monitor
     mpd_monitor.start()
+
+    # Handle preferences changes at runtime
+    def on_preferences_applied() -> None:
+        """Apply changed settings from preferences dialog."""
+        # Update ping interval
+        ping_monitor.set_interval(float(config.get_ping_interval()))
+
+        # Update time stats interval
+        time_stats_timer.setInterval(config.get_time_stats_interval() * 1000)
+
+        # Update snapclient config
+        sc_binary = config.get_snapclient_binary_path()
+        if sc_binary:
+            snapclient_mgr.set_configured_binary_path(sc_binary)
+        sc_extra = config.get_snapclient_extra_args()
+        if sc_extra:
+            snapclient_mgr.set_extra_args(sc_extra.split())
+
+        # Show/hide snapclient status
+        if config.get_snapclient_enabled():
+            window.set_snapclient_status(snapclient_mgr.status)
+        else:
+            window.set_snapclient_status("disabled")
+
+        # Update MPD monitor if host/port changed
+        new_mpd_host = config.get_mpd_host() or host
+        new_mpd_port = config.get_mpd_port()
+        if new_mpd_host != mpd_monitor.host or new_mpd_port != mpd_monitor.port:
+            mpd_monitor.set_host(new_mpd_host, new_mpd_port)
+
+        logger.info("Preferences applied")
+
+    window.preferences_applied.connect(on_preferences_applied)
 
     # Start worker thread
     worker.start()

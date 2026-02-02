@@ -11,10 +11,11 @@ Layout:
 import logging
 from typing import TYPE_CHECKING
 
-from PySide6.QtCore import Slot
+from PySide6.QtCore import Signal, Slot
 from PySide6.QtGui import QCloseEvent
-from PySide6.QtWidgets import QHBoxLayout, QLabel, QMainWindow, QSplitter, QWidget
+from PySide6.QtWidgets import QHBoxLayout, QLabel, QMainWindow, QPushButton, QSplitter, QWidget
 
+from snapctrl.core.config import ConfigManager
 from snapctrl.core.state import StateStore
 from snapctrl.models.client import Client
 from snapctrl.models.group import Group
@@ -49,20 +50,25 @@ class MainWindow(QMainWindow):
         window.show()
     """
 
+    preferences_applied = Signal()
+
     def __init__(
         self,
         state_store: StateStore | None = None,
         controller: "Controller | None" = None,
+        config: ConfigManager | None = None,
     ) -> None:
         """Initialize the main window.
 
         Args:
             state_store: Optional StateStore for reactive updates.
             controller: Optional Controller for wiring UI signals.
+            config: Optional ConfigManager for preferences.
         """
         super().__init__()
         self._state = state_store
         self._controller: Controller | None = controller
+        self._config = config
         self._selected_client_id: str | None = None  # Track selected client for properties updates
         self._ping_results: dict[str, float | None] = {}  # client_id -> RTT ms
         self._time_stats: dict[str, dict[str, object]] = {}  # client_id -> stats
@@ -135,6 +141,25 @@ class MainWindow(QMainWindow):
         )
         self._snapclient_label.setVisible(False)
         self.statusBar().addPermanentWidget(self._snapclient_label)
+
+        # Preferences gear button
+        gear_btn = QPushButton("\u2699")
+        gear_btn.setFixedSize(sizing.icon_md, sizing.icon_md)
+        gear_btn.setFlat(True)
+        gear_btn.setToolTip("Preferences")
+        gear_btn.setStyleSheet(f"""
+            QPushButton {{
+                font-size: {typography.heading}pt;
+                color: {p.text_secondary};
+                border: none;
+                background: transparent;
+            }}
+            QPushButton:hover {{
+                color: {p.text};
+            }}
+        """)
+        gear_btn.clicked.connect(self.open_preferences)
+        self.statusBar().addPermanentWidget(gear_btn)
 
         self.statusBar().setStyleSheet(f"background-color: {p.background};")
 
@@ -330,6 +355,11 @@ class MainWindow(QMainWindow):
         return self._properties_panel
 
     @property
+    def config(self) -> ConfigManager | None:
+        """Return the config manager."""
+        return self._config
+
+    @property
     def state_store(self) -> StateStore | None:
         """Return the state store."""
         return self._state
@@ -432,6 +462,16 @@ class MainWindow(QMainWindow):
         text, bg, fg = status_config.get(status, ("Local: Unknown", p.scrollbar, p.text_disabled))
         self._snapclient_label.setText(text)
         self._snapclient_label.setStyleSheet(f"background-color: {bg}; color: {fg};{base_style}")
+
+    def open_preferences(self) -> None:
+        """Open the preferences dialog."""
+        if not self._config:
+            return
+        from snapctrl.ui.widgets.preferences import PreferencesDialog  # noqa: PLC0415
+
+        dialog = PreferencesDialog(self._config, parent=self)
+        dialog.settings_changed.connect(self.preferences_applied.emit)
+        dialog.open()
 
     def set_hide_to_tray(self, enabled: bool) -> None:
         """Enable or disable hiding to tray on close.

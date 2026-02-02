@@ -254,6 +254,25 @@ class ThemeManager(QObject):
                 border: none;
                 width: {sizing.icon_sm}px;
             }}
+            QSpinBox::up-button:hover, QSpinBox::down-button:hover {{
+                background: {p.surface_selected};
+            }}
+            QSpinBox::up-arrow {{
+                image: none;
+                border-left: 4px solid transparent;
+                border-right: 4px solid transparent;
+                border-bottom: 5px solid {p.text_secondary};
+                width: 0px;
+                height: 0px;
+            }}
+            QSpinBox::down-arrow {{
+                image: none;
+                border-left: 4px solid transparent;
+                border-right: 4px solid transparent;
+                border-top: 5px solid {p.text_secondary};
+                width: 0px;
+                height: 0px;
+            }}
             QComboBox {{
                 background: {p.surface_dim};
                 border: 1px solid {p.border};
@@ -261,12 +280,23 @@ class ThemeManager(QObject):
                 padding: {spacing.xs}px {spacing.sm}px;
                 color: {p.text};
             }}
+            QComboBox:hover {{
+                border: 1px solid {p.text_disabled};
+            }}
             QComboBox:focus, QComboBox:on {{
                 border: 1px solid {p.accent};
             }}
             QComboBox::drop-down {{
                 border: none;
                 width: 20px;
+            }}
+            QComboBox::down-arrow {{
+                image: none;
+                border-left: 4px solid transparent;
+                border-right: 4px solid transparent;
+                border-top: 5px solid {p.text_secondary};
+                width: 0px;
+                height: 0px;
             }}
             QComboBox QAbstractItemView {{
                 background: {p.surface_elevated};

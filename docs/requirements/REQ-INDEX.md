@@ -15,7 +15,7 @@
 | [REQ-011](REQ-011.md) | Now Playing & MPD Integration | Display | P1 | Done |
 | [REQ-012](REQ-012.md) | Advanced Client Controls | Control | P1 | Done |
 | [REQ-013](REQ-013.md) | Build & Release Pipeline | Infrastructure | P1 | Done |
-| [REQ-014](REQ-014.md) | App Preferences | UI/UX | P1 | Draft |
+| [REQ-014](REQ-014.md) | App Preferences | UI/UX | P1 | Done |
 | [REQ-015](REQ-015.md) | Group Management & Drag-and-Drop | Control | P1 | Draft |
 
 ## Summary by Domain
@@ -39,5 +39,5 @@
 
 | Status | Count |
 |--------|-------|
-| Done | 12 |
-| Draft | 3 |
+| Done | 13 |
+| Draft | 2 |

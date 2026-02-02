@@ -59,6 +59,7 @@ class SystemTrayManager(QObject):
     # Signals forwarded from the quick volume slider
     volume_changed = Signal(str, int)  # group_id, volume
     mute_all_changed = Signal(bool)  # True=mute all, False=unmute all
+    preferences_requested = Signal()  # Open preferences dialog
 
     def __init__(
         self,
@@ -210,8 +211,12 @@ class SystemTrayManager(QObject):
             self._menu.addSeparator()
             self._add_quick_volume(target_group)
 
-        # Quit
+        # Preferences and Quit
         self._menu.addSeparator()
+        prefs_action = QAction("Preferences...", self._menu)
+        prefs_action.triggered.connect(self.preferences_requested.emit)
+        self._menu.addAction(prefs_action)
+
         quit_action = QAction("Quit", self._menu)
         quit_action.triggered.connect(self._on_quit)
         self._menu.addAction(quit_action)
