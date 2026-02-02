@@ -105,6 +105,7 @@ class StyledInputDialog(QDialog):
         # Input field
         self._input = QLineEdit(text)
         self._input.selectAll()
+        self._input.returnPressed.connect(self.accept)
         self._input.setStyleSheet(f"""
             QLineEdit {{
                 background: {p.surface_dim};
@@ -156,7 +157,7 @@ class StyledInputDialog(QDialog):
                 font-weight: bold;
             }}
             QPushButton:hover {{
-                background: {p.warning};
+                background: {p.surface_selected};
             }}
         """)
         ok_btn.clicked.connect(self.accept)

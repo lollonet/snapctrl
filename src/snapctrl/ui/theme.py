@@ -225,7 +225,7 @@ class ThemeManager(QObject):
         """Generate a global stylesheet for QApplication."""
         p = self._palette
         return f"""
-            * {{
+            QWidget {{
                 font-family: {typography.font_family};
             }}
             QLineEdit {{

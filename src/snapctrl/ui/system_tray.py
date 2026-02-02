@@ -27,6 +27,7 @@ from PySide6.QtWidgets import (
 
 from snapctrl.core.snapclient_manager import SnapclientManager
 from snapctrl.core.state import StateStore
+from snapctrl.ui.theme import theme_manager
 from snapctrl.ui.widgets.volume_slider import VolumeSlider
 
 if TYPE_CHECKING:
@@ -358,18 +359,21 @@ class SystemTrayManager(QObject):
         if pixmap.isNull():
             return self._base_icon
 
+        p = theme_manager.palette
         painter = QPainter(pixmap)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        try:
+            painter.setRenderHint(QPainter.RenderHint.Antialiasing)
 
-        dot_radius = 8
-        dot_x = size - dot_radius * 2 - 2
-        dot_y = size - dot_radius * 2 - 2
-        color = QColor("#4CAF50") if self._connected else QColor("#F44336")
+            dot_radius = 8
+            dot_x = size - dot_radius * 2 - 2
+            dot_y = size - dot_radius * 2 - 2
+            color = QColor(p.success) if self._connected else QColor(p.error)
 
-        painter.setPen(QPen(QColor("#1A1A1A"), 2))
-        painter.setBrush(QBrush(color))
-        painter.drawEllipse(dot_x, dot_y, dot_radius * 2, dot_radius * 2)
-        painter.end()
+            painter.setPen(QPen(QColor(p.background), 2))
+            painter.setBrush(QBrush(color))
+            painter.drawEllipse(dot_x, dot_y, dot_radius * 2, dot_radius * 2)
+        finally:
+            painter.end()
 
         return QIcon(pixmap)
 
