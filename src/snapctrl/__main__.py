@@ -383,6 +383,10 @@ def main() -> int:  # noqa: PLR0912, PLR0915
                 True,
                 f"Connected — {ver}{format_rtt(server_rtt)}",
             )
+        else:
+            # Ping failed — server may be unreachable
+            window.set_connection_status(False, "Server unreachable")
+            state_store.connection_changed.emit(False)
 
     ping_monitor.results_updated.connect(on_ping_results)
     ping_monitor.start()
