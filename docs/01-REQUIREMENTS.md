@@ -250,7 +250,6 @@ The app MUST allow users to reassign clients between groups via drag-and-drop an
 - [ ] `Group.SetClients` API call wired up in `SnapcastClient`
 - [ ] Server state refreshed after successful reassignment
 - [ ] Handle edge cases: last client in group (server auto-deletes empty groups)
-- [ ] Undo support: show brief toast/notification with "Undo" after move
 - [ ] Keyboard accessible: move client via context menu without mouse drag
 
 **Priority:** P1 (Important)
