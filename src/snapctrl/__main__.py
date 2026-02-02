@@ -135,6 +135,11 @@ def main() -> int:  # noqa: PLR0912, PLR0915
         logger.info(f"State received: {state}")
         state_store.update_from_server_state(state)  # type: ignore[arg-type]
 
+        # Update status bar with server version
+        version = state_store.server_version
+        if version:
+            window.set_connection_status(True, f"Connected — snapserver {version}")
+
         # Reset base volumes for groups whose slider hasn't been used recently
         # This allows external changes (from mobile app) to update the group slider
         current_time = time.time()
@@ -354,9 +359,11 @@ def main() -> int:  # noqa: PLR0912, PLR0915
         """Handle ping results — server RTT for status bar."""
         server_rtt = results.get(server_ping_key)
         if server_rtt is not None:
+            version = state_store.server_version
+            ver = f"v{version} — " if version else ""
             window.set_connection_status(
                 True,
-                f"Connected — {format_rtt(server_rtt)}",
+                f"Connected — {ver}{format_rtt(server_rtt)}",
             )
 
     ping_monitor.results_updated.connect(on_ping_results)
@@ -369,6 +376,7 @@ def main() -> int:  # noqa: PLR0912, PLR0915
     def poll_time_stats() -> None:
         """Request server-side latency stats for connected clients."""
         connected_ids = [c.id for c in state_store.clients if c.connected]
+        logger.debug("poll_time_stats: %d connected clients", len(connected_ids))
         if connected_ids:
             worker.fetch_time_stats(connected_ids)
 
@@ -376,6 +384,7 @@ def main() -> int:  # noqa: PLR0912, PLR0915
 
     def on_time_stats(results: dict[str, dict[str, object]]) -> None:
         """Handle server-side latency stats."""
+        logger.debug("time_stats received: %s", results)
         window.set_time_stats(results)
 
     worker.time_stats_updated.connect(on_time_stats)

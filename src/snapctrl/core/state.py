@@ -72,6 +72,11 @@ class StateStore(QObject):
         return self._state.server if self._state else None
 
     @property
+    def server_version(self) -> str:
+        """Return the snapserver version string, or empty if unknown."""
+        return self._state.version if self._state else ""
+
+    @property
     def groups(self) -> list[Group]:
         """Return all groups."""
         return list(self._groups.values())

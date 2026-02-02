@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.3] - 2026-02-02
+
+### Added
+
+- **Server-Side Latency Stats** ([#24](https://github.com/lollonet/snapctrl/pull/24)) - Feb 2
+  - Replaced ICMP ping to clients with server-measured latency via `Client.GetTimeStats` JSON-RPC endpoint
+  - Properties panel shows median RTT, p95 RTT, and jitter per client (requires snapserver fork with latency sampling)
+  - Graceful fallback when server doesn't support the endpoint or returns zero samples
+
+- **Server Version in Status Bar** - Feb 2
+  - Status bar now shows snapserver version alongside connection RTT (e.g., "Connected — v0.34.1 — RTT 3.2ms")
+
+### Fixed
+
+- **GetTimeStats Key Names** - Feb 2
+  - Corrected key names to match deployed server response (`rtt_median_ms`, `rtt_p95_ms` instead of `latency_median_ms`, `latency_p95_ms`)
+
 ## [0.2.2] - 2026-02-01
 
 ### Fixed
