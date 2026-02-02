@@ -5,7 +5,6 @@ from PySide6.QtGui import QContextMenuEvent, QMouseEvent
 from PySide6.QtWidgets import (
     QComboBox,
     QHBoxLayout,
-    QInputDialog,
     QLabel,
     QMenu,
     QPushButton,
@@ -167,13 +166,6 @@ class GroupCard(QWidget):
 
         self._source_combo = QComboBox()
         self._source_combo.setMinimumWidth(120)
-        self._source_combo.setStyleSheet(f"""
-            QComboBox {{
-                padding: {spacing.xs}px;
-                border-radius: {sizing.border_radius_md}px;
-                background-color: {p.surface_hover};
-            }}
-        """)
         self._source_combo.currentTextChanged.connect(self._on_source_changed)
         source_row.addWidget(self._source_combo)
 
@@ -228,7 +220,9 @@ class GroupCard(QWidget):
         rename_action = menu.addAction("Rename Group...")
         action = menu.exec(event.globalPos())
         if action == rename_action and self._group:
-            new_name, ok = QInputDialog.getText(
+            from snapctrl.ui.widgets.dialogs import StyledInputDialog  # noqa: PLC0415
+
+            new_name, ok = StyledInputDialog.get_text(
                 self,
                 "Rename Group",
                 "New name:",
