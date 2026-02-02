@@ -255,6 +255,95 @@ class TestPropertiesPanel:
         panel._on_latency_editing_finished()  # pyright: ignore[reportPrivateUsage]
         assert received == [("c1", 50)]
 
+    def test_set_client_with_time_stats(self, qtbot: QtBot) -> None:
+        """Test that server-side latency stats are displayed."""
+        panel = PropertiesPanel()
+        qtbot.addWidget(panel)
+
+        client = Client(
+            id="c1",
+            host="10.0.0.1",
+            name="Speaker",
+            volume=50,
+            muted=False,
+            connected=True,
+        )
+        stats = {
+            "latency_median_ms": 3.2,
+            "latency_p95_ms": 5.1,
+            "jitter_ms": 1.9,
+            "samples": 100,
+        }
+        panel.set_client(client, time_stats=stats)
+
+        text = panel._content.text()
+        assert "Latency (server)" in text
+        assert "Latency P95" in text
+        assert "Jitter" in text
+        assert "100" in text  # samples
+
+    def test_set_client_time_stats_preferred_over_ping(self, qtbot: QtBot) -> None:
+        """Test that time stats take priority over network RTT."""
+        panel = PropertiesPanel()
+        qtbot.addWidget(panel)
+
+        client = Client(
+            id="c1",
+            host="10.0.0.1",
+            name="Speaker",
+            volume=50,
+            muted=False,
+            connected=True,
+        )
+        stats = {
+            "latency_median_ms": 3.2,
+            "latency_p95_ms": 5.1,
+            "jitter_ms": 1.9,
+            "samples": 50,
+        }
+        panel.set_client(client, network_rtt=10.0, time_stats=stats)
+
+        text = panel._content.text()
+        # Should show server stats, not network RTT
+        assert "Latency (server)" in text
+        assert "Network RTT" not in text
+
+    def test_set_client_fallback_to_ping_rtt(self, qtbot: QtBot) -> None:
+        """Test that network RTT is shown when time stats unavailable."""
+        panel = PropertiesPanel()
+        qtbot.addWidget(panel)
+
+        client = Client(
+            id="c1",
+            host="10.0.0.1",
+            name="Speaker",
+            volume=50,
+            muted=False,
+            connected=True,
+        )
+        panel.set_client(client, network_rtt=10.5)
+
+        text = panel._content.text()
+        assert "Network RTT" in text
+
+    def test_set_client_measuring_state(self, qtbot: QtBot) -> None:
+        """Test that 'Measuring...' is shown when no latency data yet."""
+        panel = PropertiesPanel()
+        qtbot.addWidget(panel)
+
+        client = Client(
+            id="c1",
+            host="10.0.0.1",
+            name="Speaker",
+            volume=50,
+            muted=False,
+            connected=True,
+        )
+        panel.set_client(client)
+
+        text = panel._content.text()
+        assert "Measuring" in text
+
 
 class TestGroupsPanelRenameSignals:
     """Test rename signal forwarding in GroupsPanel."""

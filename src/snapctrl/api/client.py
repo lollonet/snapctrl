@@ -445,6 +445,33 @@ class SnapcastClient:
             {"id": client_id, "latency": latency},
         )
 
+    async def get_client_time_stats(
+        self,
+        client_id: str,
+    ) -> dict[str, Any]:
+        """Get server-measured latency stats (Client.GetTimeStats).
+
+        Requires a Snapcast server that supports this endpoint (fork).
+        Returns empty dict if the server doesn't support it.
+
+        Args:
+            client_id: ID of the client.
+
+        Returns:
+            Dict with latency_median_ms, latency_p95_ms, jitter_ms,
+            samples, suggested_buffer_ms. Empty dict on error.
+        """
+        try:
+            result = await self.call(
+                "Client.GetTimeStats",
+                {"id": client_id},
+            )
+            if isinstance(result, dict):
+                return cast(dict[str, Any], result)
+            return {}
+        except (RuntimeError, ConnectionError):
+            return {}
+
     async def set_group_name(self, group_id: str, name: str) -> None:
         """Set group name (Group.SetName).
 

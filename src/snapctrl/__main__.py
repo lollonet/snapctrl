@@ -72,16 +72,30 @@ def main() -> int:  # noqa: PLR0912, PLR0915
         description="SnapCTRL — Snapcast controller",
     )
     parser.add_argument(
-        "host", nargs="?", default=None, help="server hostname or IP",
+        "host",
+        nargs="?",
+        default=None,
+        help="server hostname or IP",
     )
     parser.add_argument(
-        "port", nargs="?", type=int, default=1705, help="TCP port (default: 1705)",
+        "port",
+        nargs="?",
+        type=int,
+        default=1705,
+        help="TCP port (default: 1705)",
     )
     parser.add_argument(
-        "--host", dest="host_flag", default=None, help="server hostname or IP",
+        "--host",
+        dest="host_flag",
+        default=None,
+        help="server hostname or IP",
     )
     parser.add_argument(
-        "--port", dest="port_flag", type=int, default=None, help="TCP port",
+        "--port",
+        dest="port_flag",
+        type=int,
+        default=None,
+        help="TCP port",
     )
     parsed = parser.parse_args(app.arguments()[1:])
 
@@ -137,8 +151,6 @@ def main() -> int:  # noqa: PLR0912, PLR0915
     def on_connected() -> None:
         logger.info("Connected to server")
         window.set_connection_status(True, "Connected")
-        # Seed the ping monitor with the server host immediately
-        update_ping_hosts()
 
     def on_disconnected() -> None:
         logger.warning("Disconnected from server")
@@ -333,40 +345,41 @@ def main() -> int:  # noqa: PLR0912, PLR0915
 
     window.groups_panel.group_selected.connect(on_group_selected_for_tray)
 
-    # Set up ping monitor for network RTT measurement
+    # Set up ping monitor for server RTT only (status bar)
     ping_monitor = PingMonitor(interval_sec=15.0)
-
-    # Special key for server host in ping results
     server_ping_key = "__server__"
-
-    def update_ping_hosts() -> None:
-        """Update ping monitor with current client IPs and server host."""
-        hosts = {c.id: c.host for c in state_store.clients if c.host}
-        # Always include the server itself
-        hosts[server_ping_key] = host
-        ping_monitor.set_hosts(hosts)
+    ping_monitor.set_hosts({server_ping_key: host})
 
     def on_ping_results(results: dict[str, float | None]) -> None:
-        """Handle ping results update."""
-        logger.debug(f"Ping results: {results}")
-
-        # Update status bar with server RTT
-        server_rtt = results.pop(server_ping_key, None)
+        """Handle ping results — server RTT for status bar."""
+        server_rtt = results.get(server_ping_key)
         if server_rtt is not None:
-            window.set_connection_status(True, f"Connected — {format_rtt(server_rtt)}")
-        # Store client results in window for PropertiesPanel access
-        window.set_ping_results(results)
+            window.set_connection_status(
+                True,
+                f"Connected — {format_rtt(server_rtt)}",
+            )
 
     ping_monitor.results_updated.connect(on_ping_results)
-
-    # Update ping hosts when state changes
-    def on_clients_changed_for_ping(_clients: list[object]) -> None:
-        update_ping_hosts()
-
-    state_store.clients_changed.connect(on_clients_changed_for_ping)
-
-    # Start ping monitor
     ping_monitor.start()
+
+    # Set up server-side latency polling via Client.GetTimeStats
+    time_stats_timer = QTimer()
+    time_stats_timer.setInterval(15_000)  # 15s, same as old ping
+
+    def poll_time_stats() -> None:
+        """Request server-side latency stats for connected clients."""
+        connected_ids = [c.id for c in state_store.clients if c.connected]
+        if connected_ids:
+            worker.fetch_time_stats(connected_ids)
+
+    time_stats_timer.timeout.connect(poll_time_stats)
+
+    def on_time_stats(results: dict[str, dict[str, object]]) -> None:
+        """Handle server-side latency stats."""
+        window.set_time_stats(results)
+
+    worker.time_stats_updated.connect(on_time_stats)
+    time_stats_timer.start()
 
     # Set up MPD monitor for track metadata
     # MPD typically runs on the same host as Snapcast server

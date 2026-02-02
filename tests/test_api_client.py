@@ -106,6 +106,41 @@ class TestSnapcastClient:
             await client.call("Server.GetStatus")
 
     @pytest.mark.asyncio
+    async def test_get_client_time_stats_success(self) -> None:
+        """Test fetching client time stats returns expected dict."""
+        client = SnapcastClient("localhost")
+        stats = {
+            "latency_median_ms": 3.2,
+            "latency_p95_ms": 5.1,
+            "jitter_ms": 1.9,
+            "samples": 100,
+            "suggested_buffer_ms": -1,
+        }
+        client.call = AsyncMock(return_value=stats)  # type: ignore[method-assign]
+        result = await client.get_client_time_stats("client-1")
+        assert result == stats
+        client.call.assert_awaited_once_with(
+            "Client.GetTimeStats",
+            {"id": "client-1"},
+        )
+
+    @pytest.mark.asyncio
+    async def test_get_client_time_stats_unsupported(self) -> None:
+        """Test that unsupported server returns empty dict."""
+        client = SnapcastClient("localhost")
+        client.call = AsyncMock(side_effect=RuntimeError("Method not found"))  # type: ignore[method-assign]
+        result = await client.get_client_time_stats("client-1")
+        assert result == {}
+
+    @pytest.mark.asyncio
+    async def test_get_client_time_stats_connection_error(self) -> None:
+        """Test that connection error returns empty dict."""
+        client = SnapcastClient("localhost")
+        client.call = AsyncMock(side_effect=ConnectionError("Not connected"))  # type: ignore[method-assign]
+        result = await client.get_client_time_stats("client-1")
+        assert result == {}
+
+    @pytest.mark.asyncio
     async def test_next_id_increments(self) -> None:
         """Test that request IDs increment."""
         client = SnapcastClient("localhost")
