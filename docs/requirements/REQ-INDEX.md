@@ -16,13 +16,14 @@
 | [REQ-012](REQ-012.md) | Advanced Client Controls | Control | P1 | Done |
 | [REQ-013](REQ-013.md) | Build & Release Pipeline | Infrastructure | P1 | Done |
 | [REQ-014](REQ-014.md) | App Preferences | UI/UX | P1 | Draft |
+| [REQ-015](REQ-015.md) | Group Management & Drag-and-Drop | Control | P1 | Draft |
 
 ## Summary by Domain
 
 | Domain | Count |
 |--------|-------|
 | Connection | 3 |
-| Control | 4 |
+| Control | 5 |
 | Display | 3 |
 | UI/UX | 3 |
 | Infrastructure | 1 |
@@ -32,7 +33,7 @@
 | Priority | Count |
 |----------|-------|
 | P0 (MVP) | 4 |
-| P1 (Important) | 10 |
+| P1 (Important) | 11 |
 
 ## Summary by Status
 
@@ -40,4 +41,4 @@
 |--------|-------|
 | Done | 11 |
 | Partial | 1 |
-| Draft | 2 |
+| Draft | 3 |

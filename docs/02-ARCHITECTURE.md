@@ -80,12 +80,14 @@ src/snapctrl/
 │   ├── discovery.py         # mDNS autodiscovery (zeroconf)
 │   ├── ping.py              # Network RTT ping (cross-platform)
 │   ├── mpd_monitor.py       # MPD metadata polling + art cache
+│   ├── snapclient_binary.py # Snapclient binary discovery + version validation
 │   └── snapclient_manager.py # Local snapclient process lifecycle
 │
 └── ui/                      # Qt UI layer
     ├── __init__.py
     ├── main_window.py       # MainWindow (tri-pane + toolbar)
     ├── theme.py             # ThemeManager, ThemePalette (dark/light)
+    ├── tokens.py            # Design tokens (spacing, typography, sizing)
     ├── system_tray.py       # SystemTrayManager (tray icon + menu)
     ├── panels/              # UI panels
     │   ├── __init__.py
