@@ -65,6 +65,7 @@ class MainWindow(QMainWindow):
         self._controller: Controller | None = controller
         self._selected_client_id: str | None = None  # Track selected client for properties updates
         self._ping_results: dict[str, float | None] = {}  # client_id -> RTT ms
+        self._time_stats: dict[str, dict[str, object]] = {}  # client_id -> stats
 
         self._setup_ui()
         self._setup_style()
@@ -230,12 +231,17 @@ class MainWindow(QMainWindow):
         # Update visual selection
         self._groups_panel.set_selected_client(client_id)
 
-        # Update properties panel with ping RTT
+        # Update properties panel with latency stats
         if self._state:
             client = self._state.get_client(client_id)
             if client:
                 rtt = self._ping_results.get(client_id)
-                self._properties_panel.set_client(client, network_rtt=rtt)
+                stats = self._time_stats.get(client_id)
+                self._properties_panel.set_client(
+                    client,
+                    network_rtt=rtt,
+                    time_stats=stats,
+                )
 
     @Slot(list)
     def _on_sources_changed(self, sources: list[Source]) -> None:
@@ -300,7 +306,12 @@ class MainWindow(QMainWindow):
             client = self._state.get_client(self._selected_client_id)
             if client:
                 rtt = self._ping_results.get(self._selected_client_id)
-                self._properties_panel.set_client(client, network_rtt=rtt)
+                stats = self._time_stats.get(self._selected_client_id)
+                self._properties_panel.set_client(
+                    client,
+                    network_rtt=rtt,
+                    time_stats=stats,
+                )
 
     @property
     def sources_panel(self) -> SourcesPanel:
@@ -334,7 +345,34 @@ class MainWindow(QMainWindow):
             client = self._state.get_client(self._selected_client_id)
             if client:
                 rtt = results.get(self._selected_client_id)
-                self._properties_panel.set_client(client, network_rtt=rtt)
+                stats = self._time_stats.get(self._selected_client_id)
+                self._properties_panel.set_client(
+                    client,
+                    network_rtt=rtt,
+                    time_stats=stats,
+                )
+
+    def set_time_stats(
+        self,
+        results: dict[str, dict[str, object]],
+    ) -> None:
+        """Set server-measured latency stats for clients.
+
+        Args:
+            results: Dict mapping client_id -> time stats dict.
+        """
+        self._time_stats = results
+        # Update properties panel if a client is selected
+        if self._selected_client_id and self._state:
+            client = self._state.get_client(self._selected_client_id)
+            if client:
+                rtt = self._ping_results.get(self._selected_client_id)
+                stats = results.get(self._selected_client_id)
+                self._properties_panel.set_client(
+                    client,
+                    network_rtt=rtt,
+                    time_stats=stats,
+                )
 
     def set_connection_status(self, connected: bool, message: str = "") -> None:
         """Update the connection status indicator.

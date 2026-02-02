@@ -6,11 +6,14 @@ events to the main thread via Qt signals.
 """
 
 import asyncio
+import logging
 
 from PySide6.QtCore import QThread, Signal
 
 from snapctrl.api.client import SnapcastClient
 from snapctrl.api.protocol import JsonRpcNotification
+
+logger = logging.getLogger(__name__)
 
 
 class SnapcastWorker(QThread):
@@ -35,6 +38,9 @@ class SnapcastWorker(QThread):
     # Data signals
     state_received = Signal(object)  # ServerState object
     notification_received = Signal(object)  # JsonRpcNotification
+
+    # Time stats signal
+    time_stats_updated = Signal(dict)  # {client_id: {latency_median_ms, ...}}
 
     # Error signal
     error_occurred = Signal(object)  # Exception
@@ -86,6 +92,38 @@ class SnapcastWorker(QThread):
         """
         if self._loop and self._loop.is_running() and self._client:
             asyncio.run_coroutine_threadsafe(self._fetch_status(), self._loop)
+
+    def fetch_time_stats(self, client_ids: list[str]) -> None:
+        """Fetch server-side latency stats for connected clients.
+
+        Thread-safe call from main thread.
+
+        Args:
+            client_ids: List of connected client IDs to query.
+        """
+        if self._loop and self._loop.is_running() and self._client:
+            asyncio.run_coroutine_threadsafe(
+                self._safe_fetch_time_stats(client_ids),
+                self._loop,
+            )
+
+    async def _safe_fetch_time_stats(self, client_ids: list[str]) -> None:
+        """Fetch time stats with per-client error handling."""
+        if not self._client or not self._client.is_connected:
+            return
+        results: dict[str, dict[str, object]] = {}
+        for client_id in client_ids:
+            if not self._client.is_connected:
+                break
+            try:
+                stats = await self._client.get_client_time_stats(client_id)
+                if stats:
+                    results[client_id] = stats
+            except Exception:  # noqa: BLE001
+                logger.debug("Failed to fetch time stats for %s", client_id, exc_info=True)
+                continue
+        if results:
+            self.time_stats_updated.emit(results)
 
     def set_client_volume(self, client_id: str, volume: int, muted: bool) -> None:
         """Set client volume.

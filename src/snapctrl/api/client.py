@@ -445,6 +445,46 @@ class SnapcastClient:
             {"id": client_id, "latency": latency},
         )
 
+    _TIME_STATS_KEYS = {"latency_median_ms", "latency_p95_ms", "jitter_ms", "samples"}
+
+    async def get_client_time_stats(
+        self,
+        client_id: str,
+    ) -> dict[str, Any]:
+        """Get server-measured latency stats (Client.GetTimeStats).
+
+        Requires a Snapcast server that supports this endpoint (fork).
+        Returns empty dict if the server doesn't support it.
+
+        Args:
+            client_id: ID of the client.
+
+        Returns:
+            Dict with latency_median_ms, latency_p95_ms, jitter_ms,
+            samples, suggested_buffer_ms. Empty dict on error.
+        """
+        try:
+            result = await self.call(
+                "Client.GetTimeStats",
+                {"id": client_id},
+            )
+            if not isinstance(result, dict):
+                return {}
+            typed = cast(dict[str, Any], result)
+            if not self._TIME_STATS_KEYS.issubset(typed):
+                logger.debug("GetTimeStats missing keys: %s", typed.keys())
+                return {}
+            return typed
+        except RuntimeError as e:
+            # JSON-RPC -32601 = Method not found (server doesn't support endpoint)
+            if "[-32601]" in str(e):
+                logger.debug("Server does not support Client.GetTimeStats")
+            else:
+                logger.warning("GetTimeStats failed for %s: %s", client_id, e)
+            return {}
+        except ConnectionError:
+            return {}
+
     async def set_group_name(self, group_id: str, name: str) -> None:
         """Set group name (Group.SetName).
 

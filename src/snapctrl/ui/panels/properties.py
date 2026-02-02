@@ -1,5 +1,7 @@
 """Properties panel - displays details of selected item."""
 
+from typing import Any
+
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QHBoxLayout,
@@ -88,12 +90,18 @@ class PropertiesPanel(QWidget):
         self._content.setStyleSheet(f"color: {theme_manager.palette.text};")
         self._content.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
 
-    def set_client(self, client: Client, network_rtt: float | None = None) -> None:
+    def set_client(
+        self,
+        client: Client,
+        network_rtt: float | None = None,
+        time_stats: dict[str, Any] | None = None,
+    ) -> None:
         """Display client properties.
 
         Args:
             client: Client to display.
-            network_rtt: Optional network RTT in milliseconds from ping.
+            network_rtt: Optional network RTT in ms from ping (status bar fallback).
+            time_stats: Optional server-measured latency stats from Client.GetTimeStats.
         """
         p = theme_manager.palette
         status = "Connected" if client.connected else "Disconnected"
@@ -108,9 +116,11 @@ class PropertiesPanel(QWidget):
         rows.append(f"<tr><td><i>Volume:</i></td><td>{client.volume}%</td></tr>")
         rows.append(f"<tr><td><i>Muted:</i></td><td>{'Yes' if client.muted else 'No'}</td></tr>")
 
-        # Network RTT (ping) - prominently displayed
-        # Note: RTT may not work for all clients due to firewalls, ICMP blocking, or VPNs
-        if network_rtt is not None:
+        # Server-side latency stats (preferred) or fallback to ping RTT
+        samples = time_stats.get("samples", 0) if time_stats else 0
+        if time_stats and isinstance(samples, (int, float)) and samples > 0:
+            self._add_time_stats_rows(rows, time_stats)
+        elif network_rtt is not None:
             rtt_str = format_rtt(network_rtt).replace("<", "&lt;")
             rtt_color = get_rtt_color(network_rtt)
             rows.append(
@@ -118,10 +128,9 @@ class PropertiesPanel(QWidget):
                 f"<td style='color: {rtt_color};'>{rtt_str}</td></tr>"
             )
         elif client.connected:
-            # RTT measurement pending or failed (ICMP may be blocked)
             rows.append(
-                f"<tr><td><i>Network RTT:</i></td>"
-                f"<td style='color: {p.text_disabled};'>N/A (ping blocked?)</td></tr>"
+                f"<tr><td><i>Latency:</i></td>"
+                f"<td style='color: {p.text_disabled};'>Measuring...</td></tr>"
             )
 
         # Latency offset — shown as interactive spinbox for connected clients,
@@ -168,6 +177,36 @@ class PropertiesPanel(QWidget):
         if client.connected:
             self._current_client_id = client.id
             self._add_latency_widget(client.latency)
+
+    @staticmethod
+    def _add_time_stats_rows(
+        rows: list[str],
+        stats: dict[str, Any],
+    ) -> None:
+        """Add server-measured latency rows to the properties table."""
+        try:
+            median = float(stats.get("latency_median_ms", 0.0))
+            p95 = float(stats.get("latency_p95_ms", 0.0))
+            jitter = float(stats.get("jitter_ms", 0.0))
+            samples = int(stats.get("samples", 0))
+        except (TypeError, ValueError):
+            return
+
+        median_color = get_rtt_color(median)
+        p95_color = get_rtt_color(p95)
+
+        rows.append(
+            f"<tr><td><i>Latency (server):</i></td>"
+            f"<td style='color: {median_color};'>"
+            f"{format_rtt(median)}</td></tr>"
+        )
+        rows.append(
+            f"<tr><td><i>Latency P95:</i></td>"
+            f"<td style='color: {p95_color};'>"
+            f"{format_rtt(p95)}</td></tr>"
+        )
+        rows.append(f"<tr><td><i>Jitter:</i></td><td>{format_rtt(jitter)}</td></tr>")
+        rows.append(f"<tr><td><i>Samples:</i></td><td>{samples}</td></tr>")
 
     def set_source(self, source: Source) -> None:
         """Display source properties.
