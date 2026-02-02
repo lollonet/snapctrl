@@ -357,7 +357,6 @@ def main() -> int:  # noqa: PLR0912, PLR0915
 
     def on_ping_results(results: dict[str, float | None]) -> None:
         """Handle ping results — server RTT for status bar."""
-        logger.debug("ping results: %s", results)
         server_rtt = results.get(server_ping_key)
         if server_rtt is not None:
             version = state_store.server_version

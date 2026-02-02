@@ -264,7 +264,7 @@ class SourcesPanel(QWidget):
             }}
         """)
         # Defer height update so layout has assigned the label's width
-        QTimer.singleShot(0, self._update_art_height)
+        QTimer.singleShot(10, self._update_art_height)
 
     def _update_art_height(self) -> None:
         """Set label height to match aspect ratio of the original pixmap."""
@@ -272,16 +272,21 @@ class SourcesPanel(QWidget):
             return
         pw = self._original_pixmap.width()
         ph = self._original_pixmap.height()
-        if pw == 0:
+        if pw == 0 or ph == 0:
             return
         w = self._album_art.width()
         h = max(int(w * ph / pw), ALBUM_ART_SIZE)
         self._album_art.setFixedHeight(h)
 
     def event(self, ev: QEvent) -> bool:
-        """Update album art height on resize (deferred so layout is complete)."""
+        """Update album art height on resize (debounced so layout is complete)."""
         if ev.type() == QEvent.Type.Resize:
-            QTimer.singleShot(0, self._update_art_height)
+            if not hasattr(self, "_resize_timer"):
+                self._resize_timer = QTimer(self)
+                self._resize_timer.setSingleShot(True)
+                self._resize_timer.setInterval(10)
+                self._resize_timer.timeout.connect(self._update_art_height)
+            self._resize_timer.start()
         return super().event(ev)
 
     def _try_fallback_art(self) -> None:

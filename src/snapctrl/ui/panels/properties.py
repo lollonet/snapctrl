@@ -1,6 +1,5 @@
 """Properties panel - displays details of selected item."""
 
-import logging
 from typing import Any
 
 from PySide6.QtCore import Qt, Signal
@@ -19,10 +18,9 @@ from snapctrl.models.source import Source
 from snapctrl.ui.theme import theme_manager
 from snapctrl.ui.tokens import spacing, typography
 
-logger = logging.getLogger(__name__)
-
 _JITTER_US_THRESHOLD = 0.001  # Below this, show as 0µs
 _JITTER_PRECISION_THRESHOLD = 10  # Below this, show one decimal
+_MS_TO_US = 1000  # Milliseconds to microseconds conversion
 
 
 def _format_jitter(ms: float) -> str:
@@ -30,7 +28,10 @@ def _format_jitter(ms: float) -> str:
     if ms < _JITTER_US_THRESHOLD:
         return "0\u00b5s"
     if ms < 1:
-        return f"{ms * 1000:.0f}\u00b5s"
+        us = int(ms * _MS_TO_US)
+        if us >= _MS_TO_US:
+            return "1.0ms"
+        return f"{us}\u00b5s"
     if ms < _JITTER_PRECISION_THRESHOLD:
         return f"{ms:.1f}ms"
     return f"{int(ms)}ms"
@@ -134,12 +135,9 @@ class PropertiesPanel(QWidget):
         rows.append(f"<tr><td><i>Muted:</i></td><td>{'Yes' if client.muted else 'No'}</td></tr>")
 
         # Server-side latency stats (preferred) or fallback to ping RTT
-        logger.debug("set_client time_stats=%s", time_stats)
         samples = time_stats.get("samples", 0) if time_stats else 0
         if time_stats and isinstance(samples, (int, float)) and samples > 0:
-            logger.debug("calling _add_time_stats_rows, samples=%s", samples)
             self._add_time_stats_rows(rows, time_stats)
-            logger.debug("rows after time_stats: %s", rows)
         elif network_rtt is not None:
             rtt_str = format_rtt(network_rtt).replace("<", "&lt;")
             rtt_color = get_rtt_color(network_rtt)
