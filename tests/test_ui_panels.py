@@ -269,8 +269,8 @@ class TestPropertiesPanel:
             connected=True,
         )
         stats = {
-            "latency_median_ms": 3.2,
-            "latency_p95_ms": 5.1,
+            "rtt_median_ms": 3.2,
+            "rtt_p95_ms": 5.1,
             "jitter_ms": 1.9,
             "samples": 100,
         }
@@ -299,8 +299,8 @@ class TestPropertiesPanel:
             connected=True,
         )
         stats = {
-            "latency_median_ms": 3.2,
-            "latency_p95_ms": 5.1,
+            "rtt_median_ms": 3.2,
+            "rtt_p95_ms": 5.1,
             "jitter_ms": 1.9,
             "samples": 50,
         }
@@ -343,8 +343,8 @@ class TestPropertiesPanel:
             connected=True,
         )
         stats = {
-            "latency_median_ms": 0.0,
-            "latency_p95_ms": 0.0,
+            "rtt_median_ms": 0.0,
+            "rtt_p95_ms": 0.0,
             "jitter_ms": 0.0,
             "samples": 0,
         }
@@ -369,8 +369,8 @@ class TestPropertiesPanel:
             connected=True,
         )
         stats = {
-            "latency_median_ms": "not a number",
-            "latency_p95_ms": None,
+            "rtt_median_ms": "not a number",
+            "rtt_p95_ms": None,
             "jitter_ms": 1.9,
             "samples": 50,
         }

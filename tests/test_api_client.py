@@ -110,11 +110,11 @@ class TestSnapcastClient:
         """Test fetching client time stats returns expected dict."""
         client = SnapcastClient("localhost")
         stats = {
-            "latency_median_ms": 3.2,
-            "latency_p95_ms": 5.1,
+            "rtt_median_ms": 3.2,
+            "rtt_p95_ms": 5.1,
             "jitter_ms": 1.9,
             "samples": 100,
-            "suggested_buffer_ms": -1,
+            "suggested_latency_ms": -1,
         }
         client.call = AsyncMock(return_value=stats)  # type: ignore[method-assign]
         result = await client.get_client_time_stats("client-1")
@@ -144,7 +144,7 @@ class TestSnapcastClient:
     async def test_get_client_time_stats_missing_keys(self) -> None:
         """Test that incomplete response returns empty dict."""
         client = SnapcastClient("localhost")
-        client.call = AsyncMock(return_value={"latency_median_ms": 3.0})  # type: ignore[method-assign]
+        client.call = AsyncMock(return_value={"rtt_median_ms": 3.0})  # type: ignore[method-assign]
         result = await client.get_client_time_stats("client-1")
         assert result == {}
 

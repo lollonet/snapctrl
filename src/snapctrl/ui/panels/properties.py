@@ -185,8 +185,8 @@ class PropertiesPanel(QWidget):
     ) -> None:
         """Add server-measured latency rows to the properties table."""
         try:
-            median = float(stats.get("latency_median_ms", 0.0))
-            p95 = float(stats.get("latency_p95_ms", 0.0))
+            median = float(stats.get("rtt_median_ms", 0.0))
+            p95 = float(stats.get("rtt_p95_ms", 0.0))
             jitter = float(stats.get("jitter_ms", 0.0))
             samples = int(stats.get("samples", 0))
         except (TypeError, ValueError):
