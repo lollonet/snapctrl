@@ -505,37 +505,40 @@ def main() -> int:  # noqa: PLR0912, PLR0915
     # Handle preferences changes at runtime
     def on_preferences_applied() -> None:
         """Apply changed settings from preferences dialog."""
-        # Update ping interval
-        ping_monitor.set_interval(float(config.get_ping_interval()))
+        try:
+            # Update ping interval
+            ping_monitor.set_interval(float(config.get_ping_interval()))
 
-        # Update time stats interval
-        time_stats_timer.setInterval(config.get_time_stats_interval() * 1000)
+            # Update time stats interval
+            time_stats_timer.setInterval(config.get_time_stats_interval() * 1000)
 
-        # Update snapclient config (clear if empty)
-        sc_binary = config.get_snapclient_binary_path()
-        snapclient_mgr.set_configured_binary_path(sc_binary or "")
-        sc_extra = config.get_snapclient_extra_args()
-        snapclient_mgr.set_extra_args(shlex.split(sc_extra) if sc_extra else [])
+            # Update snapclient config (clear if empty)
+            sc_binary = config.get_snapclient_binary_path()
+            snapclient_mgr.set_configured_binary_path(sc_binary or "")
+            sc_extra = config.get_snapclient_extra_args()
+            snapclient_mgr.set_extra_args(shlex.split(sc_extra) if sc_extra else [])
 
-        # Start/stop snapclient based on enabled toggle
-        if config.get_snapclient_enabled():
-            if not snapclient_mgr.is_running:
-                sc_host = config.get_snapclient_server_host() or host
-                snapclient_mgr.start(sc_host, snapclient_port)
-            window.set_snapclient_status(snapclient_mgr.status)
-        else:
-            if snapclient_mgr.is_running:
-                snapclient_mgr.stop()
-            window.set_snapclient_status("disabled")
+            # Start/stop snapclient based on enabled toggle
+            if config.get_snapclient_enabled():
+                if not snapclient_mgr.is_running:
+                    sc_host = config.get_snapclient_server_host() or host
+                    snapclient_mgr.start(sc_host, snapclient_port)
+                window.set_snapclient_status(snapclient_mgr.status)
+            else:
+                if snapclient_mgr.is_running:
+                    snapclient_mgr.stop()
+                window.set_snapclient_status("disabled")
 
-        # Update MPD monitor if host/port/interval changed
-        new_mpd_host = config.get_mpd_host() or host
-        new_mpd_port = config.get_mpd_port()
-        if new_mpd_host != mpd_monitor.host or new_mpd_port != mpd_monitor.port:
-            mpd_monitor.set_host(new_mpd_host, new_mpd_port)
-        mpd_monitor.set_poll_interval(float(config.get_mpd_poll_interval()))
+            # Update MPD monitor if host/port/interval changed
+            new_mpd_host = config.get_mpd_host() or host
+            new_mpd_port = config.get_mpd_port()
+            if new_mpd_host != mpd_monitor.host or new_mpd_port != mpd_monitor.port:
+                mpd_monitor.set_host(new_mpd_host, new_mpd_port)
+            mpd_monitor.set_poll_interval(float(config.get_mpd_poll_interval()))
 
-        logger.info("Preferences applied")
+            logger.info("Preferences applied")
+        except Exception:
+            logger.exception("Failed to apply preferences")
 
     window.preferences_applied.connect(on_preferences_applied)
 
