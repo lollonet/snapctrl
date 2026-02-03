@@ -20,12 +20,12 @@ from dataclasses import dataclass
 class SpacingTokens:
     """Spacing scale based on a 4px base unit."""
 
-    xxs: int = 2  # Tight: inner padding
-    xs: int = 4  # Default: margins, small gaps
-    sm: int = 8  # Comfortable: card padding, between elements
-    md: int = 12  # Loose: between cards, section gaps
-    lg: int = 16  # Spacious: panel padding
-    xl: int = 24  # Layout: between major sections
+    xxs: int = 1  # Tight: inner padding
+    xs: int = 2  # Default: margins, small gaps
+    sm: int = 4  # Comfortable: card padding, between elements
+    md: int = 8  # Loose: between cards, section gaps
+    lg: int = 12  # Spacious: panel padding
+    xl: int = 16  # Layout: between major sections
 
 
 @dataclass(frozen=True)
@@ -33,12 +33,12 @@ class TypographyTokens:
     """Font size scale in points and font family stack."""
 
     font_family: str = "'SF Pro Text', 'Segoe UI', 'Helvetica Neue', sans-serif"
-    caption: int = 8  # IDs, fine print
-    small: int = 9  # Status text, badges
-    body: int = 10  # Default body text
-    subtitle: int = 11  # Toolbar, secondary headers
-    title: int = 12  # Panel headers
-    heading: int = 14  # Dialog titles
+    caption: int = 9  # IDs, fine print
+    small: int = 10  # Status text, badges
+    body: int = 11  # Default body text
+    subtitle: int = 12  # Toolbar, secondary headers
+    title: int = 13  # Panel headers
+    heading: int = 15  # Dialog titles
 
 
 @dataclass(frozen=True)

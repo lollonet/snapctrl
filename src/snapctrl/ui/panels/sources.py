@@ -186,7 +186,7 @@ class SourcesPanel(QWidget):
         # Track time label (e.g. "1:23 / 4:56")
         self._time_label = QLabel()
         self._time_label.setStyleSheet(
-            f"color: {p.text_secondary}; font-size: {typography.small}pt;"
+            f"color: {p.text_secondary}; font-size: {typography.body}pt;"
         )
         self._time_label.setVisible(False)
         now_playing_layout.addWidget(self._time_label)
