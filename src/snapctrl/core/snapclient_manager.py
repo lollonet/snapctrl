@@ -381,6 +381,33 @@ class SnapclientManager(QObject):
             self._status = status
             self.status_changed.emit(status)
 
+    def detach(self) -> None:
+        """Detach the running process so it survives app exit.
+
+        After calling this, the process continues running independently
+        and this manager no longer tracks it.
+        """
+        if self._process is None:
+            return
+
+        self._auto_restart = False
+        self._restart_timer.stop()
+
+        # Disconnect signals so we don't receive events
+        try:
+            self._process.readyReadStandardOutput.disconnect(self._on_stdout)
+            self._process.finished.disconnect(self._on_finished)
+            self._process.errorOccurred.disconnect(self._on_error)
+        except RuntimeError:
+            pass  # Already disconnected
+
+        # Clear our reference without calling deleteLater() or terminate()
+        # The QProcess will be orphaned but the child process continues
+        self._process.setParent(None)  # Prevent destruction with parent
+        self._process = None
+        self._set_status("stopped")
+        logger.info("Detached snapclient process (will continue running)")
+
     def _cleanup_process(self) -> None:
         """Clean up the QProcess instance."""
         if self._process is not None:

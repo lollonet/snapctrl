@@ -562,6 +562,9 @@ def main() -> int:  # noqa: PLR0912, PLR0915
             )
             if reply == QMessageBox.StandardButton.Yes:
                 snapclient_mgr.stop()
+            else:
+                # Detach so process survives app exit
+                snapclient_mgr.detach()
 
     app.aboutToQuit.connect(on_about_to_quit)
 

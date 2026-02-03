@@ -326,3 +326,59 @@ class TestSnapclientManagerSignals:
         mgr._set_status("running")  # pyright: ignore[reportPrivateUsage]
 
         assert statuses == ["running"]
+
+
+class TestSnapclientManagerDetach:
+    """Test detach behavior."""
+
+    def test_detach_when_not_running(self) -> None:
+        """Detach does nothing when no process."""
+        mgr = SnapclientManager()
+        mgr.detach()  # Should not raise
+        assert mgr.status == "stopped"
+
+    def test_detach_clears_process(self) -> None:
+        """Detach clears process reference without terminating."""
+        mgr = SnapclientManager()
+        fake_binary = Path("/usr/bin/snapclient")
+
+        with (
+            patch("snapctrl.core.snapclient_manager.find_snapclient", return_value=fake_binary),
+            patch(
+                "snapctrl.core.snapclient_manager.validate_snapclient",
+                return_value=(True, "0.28.0"),
+            ),
+            patch.object(QProcess, "start"),
+            patch.object(QProcess, "state", return_value=QProcess.ProcessState.Running),
+        ):
+            mgr.start("192.168.1.100")
+            assert mgr._process is not None  # pyright: ignore[reportPrivateUsage]
+
+            mgr.detach()
+
+            assert mgr._process is None  # pyright: ignore[reportPrivateUsage]
+            assert mgr.status == "stopped"
+            assert not mgr._auto_restart  # pyright: ignore[reportPrivateUsage]
+
+    def test_detach_emits_stopped_status(self) -> None:
+        """Detach emits status_changed with 'stopped'."""
+        mgr = SnapclientManager()
+        fake_binary = Path("/usr/bin/snapclient")
+        statuses: list[str] = []
+        mgr.status_changed.connect(statuses.append)
+
+        with (
+            patch("snapctrl.core.snapclient_manager.find_snapclient", return_value=fake_binary),
+            patch(
+                "snapctrl.core.snapclient_manager.validate_snapclient",
+                return_value=(True, "0.28.0"),
+            ),
+            patch.object(QProcess, "start"),
+            patch.object(QProcess, "state", return_value=QProcess.ProcessState.Running),
+        ):
+            mgr.start("192.168.1.100")
+            statuses.clear()  # Clear "starting" status
+
+            mgr.detach()
+
+            assert "stopped" in statuses
