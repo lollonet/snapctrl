@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Auto-Connect Profile Priority** ([b24c545](https://github.com/lollonet/snapctrl/commit/b24c545)) - Feb 3
+  - Saved server connections now take precedence over mDNS discovery on startup
+  - Enables reliable connections to non-discoverable or remote servers
+
 - **Preferences Dialog** (REQ-014) - Feb 2
   - Tabbed preferences dialog (Connection, Appearance, Local Client, Monitoring) accessible via status bar gear icon and system tray menu
   - Theme selection with live preview (Dark / Light / System)
@@ -39,6 +43,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Cover art fills available panel width, scales dynamically on splitter drag/window resize
   - Changed from fixed 80×80px horizontal layout to vertical layout (art above text)
   - Qt `setScaledContents` with aspect-ratio-correct height for pixel-perfect rendering
+
+### Changed
+
+- **Typography Improvements** ([1c37847](https://github.com/lollonet/snapctrl/commit/1c37847)) - Feb 3
+  - Increased font sizes in group cards, client cards, and properties panel for better readability (caption: 8→9pt, body: 10→11pt, title: 12→13pt)
+  - Reduced vertical spacing in panel layouts for more compact display (spacing scale halved: xxs 2→1px, xs 4→2px, sm 8→4px)
+
+### Fixed
+
+- **Snapclient Process Detachment** ([d3ef070](https://github.com/lollonet/snapctrl/commit/d3ef070)) - Feb 3
+  - Local snapclient process now properly detaches when user chooses "Don't Stop" on quit
+  - Prevents orphaned process issues when closing the app while keeping local playback running
 
 ## [0.2.3] - 2026-02-02
 

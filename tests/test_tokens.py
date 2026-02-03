@@ -17,12 +17,12 @@ class TestSpacingTokens:
 
     def test_default_values(self) -> None:
         """Test that spacing tokens have expected default values."""
-        assert spacing.xxs == 2
-        assert spacing.xs == 4
-        assert spacing.sm == 8
-        assert spacing.md == 12
-        assert spacing.lg == 16
-        assert spacing.xl == 24
+        assert spacing.xxs == 1
+        assert spacing.xs == 2
+        assert spacing.sm == 4
+        assert spacing.md == 8
+        assert spacing.lg == 12
+        assert spacing.xl == 16
 
     def test_scale_is_increasing(self) -> None:
         """Test that spacing scale increases monotonically."""
@@ -45,12 +45,12 @@ class TestTypographyTokens:
 
     def test_default_values(self) -> None:
         """Test that typography tokens have expected default values."""
-        assert typography.caption == 8
-        assert typography.small == 9
-        assert typography.body == 10
-        assert typography.subtitle == 11
-        assert typography.title == 12
-        assert typography.heading == 14
+        assert typography.caption == 9
+        assert typography.small == 10
+        assert typography.body == 11
+        assert typography.subtitle == 12
+        assert typography.title == 13
+        assert typography.heading == 15
 
     def test_scale_is_increasing(self) -> None:
         """Test that typography scale increases monotonically."""
