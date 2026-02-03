@@ -3,6 +3,7 @@
 import argparse
 import base64
 import logging
+import shlex
 import sys
 import time
 from pathlib import Path
@@ -222,6 +223,7 @@ def main() -> int:  # noqa: PLR0912, PLR0915
 
     # Create main window
     window = MainWindow(state_store=state_store, config=config)
+    window.set_server_info(host, port)
     window.sources_panel.set_server_host(host)
     # Show hostname (FQDN) and IP in title if discovered via mDNS
     if hostname:
@@ -246,9 +248,7 @@ def main() -> int:  # noqa: PLR0912, PLR0915
         snapclient_mgr.set_configured_binary_path(sc_binary)
     sc_extra = config.get_snapclient_extra_args()
     if sc_extra:
-        # Simple whitespace split (not shlex) — config is untrusted input.
-        # set_extra_args() validates against blocked flags (--host, --port, etc.)
-        snapclient_mgr.set_extra_args(sc_extra.split())
+        snapclient_mgr.set_extra_args(shlex.split(sc_extra))
 
     # Connect snapclient signals to UI
     snapclient_mgr.status_changed.connect(window.set_snapclient_status)
@@ -517,7 +517,7 @@ def main() -> int:  # noqa: PLR0912, PLR0915
             snapclient_mgr.set_configured_binary_path(sc_binary)
         sc_extra = config.get_snapclient_extra_args()
         if sc_extra:
-            snapclient_mgr.set_extra_args(sc_extra.split())
+            snapclient_mgr.set_extra_args(shlex.split(sc_extra))
 
         # Start/stop snapclient based on enabled toggle
         if config.get_snapclient_enabled():
@@ -530,11 +530,12 @@ def main() -> int:  # noqa: PLR0912, PLR0915
                 snapclient_mgr.stop()
             window.set_snapclient_status("disabled")
 
-        # Update MPD monitor if host/port changed
+        # Update MPD monitor if host/port/interval changed
         new_mpd_host = config.get_mpd_host() or host
         new_mpd_port = config.get_mpd_port()
         if new_mpd_host != mpd_monitor.host or new_mpd_port != mpd_monitor.port:
             mpd_monitor.set_host(new_mpd_host, new_mpd_port)
+        mpd_monitor.set_poll_interval(float(config.get_mpd_poll_interval()))
 
         logger.info("Preferences applied")
 
@@ -548,20 +549,25 @@ def main() -> int:  # noqa: PLR0912, PLR0915
         sc_host = config.get_snapclient_server_host() or host
         snapclient_mgr.start(sc_host, snapclient_port)
 
+    # Ask before stopping snapclient on quit (while event loop is still running)
+    def on_about_to_quit() -> None:
+        if snapclient_mgr.is_running:
+            reply = QMessageBox.question(
+                window,
+                "Stop Local Client?",
+                "A local snapclient is running.\nStop it before quitting?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.Yes,
+            )
+            if reply == QMessageBox.StandardButton.Yes:
+                snapclient_mgr.stop()
+
+    app.aboutToQuit.connect(on_about_to_quit)
+
     # Run the application
     exit_code = app.exec()
 
-    # Cleanup — ask before stopping snapclient
-    if snapclient_mgr.is_running:
-        reply = QMessageBox.question(
-            window,
-            "Stop Local Client?",
-            "A local snapclient is running.\nStop it before quitting?",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.Yes,
-        )
-        if reply == QMessageBox.StandardButton.Yes:
-            snapclient_mgr.stop()
+    # Cleanup
     mpd_monitor.stop()
     ping_monitor.stop()
     worker.stop()

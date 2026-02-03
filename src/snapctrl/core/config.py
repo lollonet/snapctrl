@@ -195,6 +195,23 @@ class ConfigManager:
                 return profile
         return None
 
+    def get_auto_connect_enabled(self) -> bool:
+        """Return whether auto-connect on startup is enabled.
+
+        Returns:
+            True if auto-connect is enabled.
+        """
+        val = self._settings.value(_KEY_AUTO_CONNECT, False)
+        return bool(val)
+
+    def set_auto_connect_enabled(self, enabled: bool) -> None:
+        """Set whether to auto-connect on startup.
+
+        Args:
+            enabled: True to auto-connect.
+        """
+        self._settings.setValue(_KEY_AUTO_CONNECT, enabled)
+
     # -- Snapclient settings --------------------------------------------------
 
     def get_snapclient_enabled(self) -> bool:
@@ -296,7 +313,13 @@ class ConfigManager:
 
         Args:
             theme: One of "system", "dark", "light".
+
+        Raises:
+            ValueError: If theme is not a valid option.
         """
+        if theme not in ("system", "dark", "light"):
+            msg = f"Invalid theme: {theme!r}. Must be 'system', 'dark', or 'light'."
+            raise ValueError(msg)
         self._settings.setValue(_KEY_THEME, theme)
 
     # -- Monitoring settings ---------------------------------------------------

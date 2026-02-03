@@ -617,11 +617,12 @@ class SourcesPanel(QWidget):
         show = state in ("play", "pause") and duration > 0
         self._time_label.setVisible(show)
         self._progress_bar.setVisible(show)
-        if show:
+        if show and duration > 0:
             self._time_label.setText(
                 f"{self._format_time(elapsed)} / {self._format_time(duration)}"
             )
-            self._progress_bar.setValue(int(elapsed / duration * 1000))
+            pct = min(int(elapsed / duration * 1000), 1000)
+            self._progress_bar.setValue(pct)
 
     def set_sources(self, sources: list[Source]) -> None:
         """Update the list of sources.

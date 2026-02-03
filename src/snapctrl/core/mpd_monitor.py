@@ -132,6 +132,16 @@ class MpdMonitor(QObject):
         self._host = host
         self._port = port
 
+    def set_poll_interval(self, interval: float) -> None:
+        """Update the poll interval.
+
+        Takes effect on the next poll cycle.
+
+        Args:
+            interval: New interval in seconds.
+        """
+        self._poll_interval = interval
+
     def start(self) -> None:
         """Start the monitor."""
         if not self._running:

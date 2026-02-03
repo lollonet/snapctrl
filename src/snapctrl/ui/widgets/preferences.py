@@ -64,6 +64,7 @@ class PreferencesDialog(QDialog):
         self.setWindowTitle("Preferences")
         self.setMinimumWidth(480)
         self.setMinimumHeight(360)
+        self._original_theme: str | None = None
         self._setup_ui()
         self._load()
 
@@ -327,10 +328,11 @@ class PreferencesDialog(QDialog):
         c = self._config
 
         # Connection (host/port set externally via set_connection_info)
-        self._conn_auto.setChecked(c.get_auto_connect_profile() is not None)
+        self._conn_auto.setChecked(c.get_auto_connect_enabled())
 
-        # Appearance
+        # Appearance — remember original for cancel revert
         theme = c.get_theme()
+        self._original_theme = theme
         idx = self._theme_combo.findData(theme)
         if idx >= 0:
             self._theme_combo.blockSignals(True)
@@ -353,6 +355,9 @@ class PreferencesDialog(QDialog):
     def _save(self) -> None:
         """Save widget values to config."""
         c = self._config
+
+        # Connection
+        c.set_auto_connect_enabled(self._conn_auto.isChecked())
 
         # Appearance
         theme = self._theme_combo.currentData()
@@ -386,6 +391,18 @@ class PreferencesDialog(QDialog):
         self._apply_theme()
         self.settings_changed.emit()
         self.accept()
+
+    def reject(self) -> None:
+        """Cancel — revert theme preview and close."""
+        if self._original_theme is not None:
+            # Restore the theme that was active before opening the dialog
+            if self._original_theme == "dark":
+                theme_manager.apply_theme(DARK_PALETTE)
+            elif self._original_theme == "light":
+                theme_manager.apply_theme(LIGHT_PALETTE)
+            else:
+                theme_manager.apply_theme()
+        super().reject()
 
     def _apply_theme(self) -> None:
         """Apply the selected theme immediately."""

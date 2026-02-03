@@ -463,6 +463,16 @@ class MainWindow(QMainWindow):
         self._snapclient_label.setText(text)
         self._snapclient_label.setStyleSheet(f"background-color: {bg}; color: {fg};{base_style}")
 
+    def set_server_info(self, host: str, port: int) -> None:
+        """Store server host/port for display in preferences.
+
+        Args:
+            host: Server hostname or IP.
+            port: Server port.
+        """
+        self._server_host = host
+        self._server_port = port
+
     def open_preferences(self) -> None:
         """Open the preferences dialog."""
         if not self._config:
@@ -470,6 +480,10 @@ class MainWindow(QMainWindow):
         from snapctrl.ui.widgets.preferences import PreferencesDialog  # noqa: PLC0415
 
         dialog = PreferencesDialog(self._config, parent=self)
+        dialog.set_connection_info(
+            getattr(self, "_server_host", ""),
+            getattr(self, "_server_port", 1705),
+        )
         dialog.settings_changed.connect(self.preferences_applied.emit)
         dialog.open()
 
