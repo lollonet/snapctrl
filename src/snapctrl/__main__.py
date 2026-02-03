@@ -105,20 +105,29 @@ def main() -> int:  # noqa: PLR0912, PLR0915
     hostname: str = ""  # FQDN from mDNS discovery
 
     if not host:
-        # No arguments - try autodiscovery
-        result = discover_server()
-        if result:
-            host, port, hostname = result
+        # No CLI args - try saved config first, then mDNS discovery
+        startup_config = ConfigManager()
+        auto_profile = startup_config.get_auto_connect_profile()
+        if auto_profile:
+            logger.info("Using auto-connect profile: %s", auto_profile.name)
+            host = auto_profile.host
+            port = auto_profile.port
         else:
-            # Show error dialog and exit
-            QMessageBox.critical(
-                None,
-                "No Server Found",
-                "Could not find a Snapcast server on the network.\n\n"
-                "Please specify a server address:\n"
-                "  snapctrl <host> [port]",
-            )
-            return 1
+            # No saved config - try mDNS autodiscovery
+            result = discover_server()
+            if result:
+                host, port, hostname = result
+            else:
+                # Show error dialog and exit
+                QMessageBox.critical(
+                    None,
+                    "No Server Found",
+                    "Could not find a Snapcast server on the network.\n\n"
+                    "Please specify a server address:\n"
+                    "  snapctrl <host> [port]\n\n"
+                    "Or configure a server in Preferences with auto-connect enabled.",
+                )
+                return 1
 
     # At this point host is guaranteed to be set (either from args or autodiscovery)
     assert host is not None
