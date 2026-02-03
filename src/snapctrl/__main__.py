@@ -511,13 +511,11 @@ def main() -> int:  # noqa: PLR0912, PLR0915
         # Update time stats interval
         time_stats_timer.setInterval(config.get_time_stats_interval() * 1000)
 
-        # Update snapclient config
+        # Update snapclient config (clear if empty)
         sc_binary = config.get_snapclient_binary_path()
-        if sc_binary:
-            snapclient_mgr.set_configured_binary_path(sc_binary)
+        snapclient_mgr.set_configured_binary_path(sc_binary or "")
         sc_extra = config.get_snapclient_extra_args()
-        if sc_extra:
-            snapclient_mgr.set_extra_args(shlex.split(sc_extra))
+        snapclient_mgr.set_extra_args(shlex.split(sc_extra) if sc_extra else [])
 
         # Start/stop snapclient based on enabled toggle
         if config.get_snapclient_enabled():

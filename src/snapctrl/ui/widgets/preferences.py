@@ -175,7 +175,7 @@ class PreferencesDialog(QDialog):
                 font-weight: bold;
             }}
             QPushButton:hover {{
-                background: #CC7000;
+                background: {p.accent_hover};
             }}
         """)
         ok_btn.clicked.connect(self._ok)

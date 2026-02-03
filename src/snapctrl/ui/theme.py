@@ -53,6 +53,7 @@ class ThemePalette:
     error: str  # Disconnected / error
     warning: str  # Warning state
     accent: str  # Brand accent (orange)
+    accent_hover: str  # Accent hover state (darker)
 
     # Semantic
     scrollbar: str  # Scrollbar thumb
@@ -94,6 +95,7 @@ DARK_PALETTE = ThemePalette(
     error="#F44336",
     warning="#ffff80",
     accent="#FF8C00",
+    accent_hover="#CC7000",
     scrollbar="#555555",
     scrollbar_hover="#777777",
     surface_elevated="#353535",
@@ -119,6 +121,7 @@ LIGHT_PALETTE = ThemePalette(
     error="#D32F2F",
     warning="#F9A825",
     accent="#E67E00",
+    accent_hover="#B86900",
     scrollbar="#bbbbbb",
     scrollbar_hover="#999999",
     surface_elevated="#f0f0f0",
