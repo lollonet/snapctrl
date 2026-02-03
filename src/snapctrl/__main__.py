@@ -376,15 +376,15 @@ def main() -> int:  # noqa: PLR0912, PLR0915
     def on_ping_results(results: dict[str, float | None]) -> None:
         """Handle ping results — server RTT for status bar."""
         server_rtt = results.get(server_ping_key)
-        if server_rtt is not None:
+        if server_rtt is not None and state_store.is_connected:
             version = state_store.server_version
             ver = f"v{version} — " if version else ""
             window.set_connection_status(
                 True,
                 f"Connected — {ver}{format_rtt(server_rtt)}",
             )
-        else:
-            # Ping failed — server may be unreachable
+        elif server_rtt is None:
+            # Ping failed — server host unreachable
             window.set_connection_status(False, "Server unreachable")
             state_store.connection_changed.emit(False)
 
