@@ -383,10 +383,10 @@ def main() -> int:  # noqa: PLR0912, PLR0915
                 True,
                 f"Connected — {ver}{format_rtt(server_rtt)}",
             )
-        elif server_rtt is None:
-            # Ping failed — server host unreachable
+        elif server_rtt is None and not state_store.is_connected:
+            # Ping failed and TCP is down — server host unreachable
+            # Only update UI; don't emit connection_changed (TCP handler manages that)
             window.set_connection_status(False, "Server unreachable")
-            state_store.connection_changed.emit(False)
 
     ping_monitor.results_updated.connect(on_ping_results)
     ping_monitor.start()
