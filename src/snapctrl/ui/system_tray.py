@@ -87,6 +87,11 @@ class SystemTrayManager(QObject):
         # Connection state for icon overlay
         self._connected = False
 
+        # Cached target group for volume slider during transient states.
+        # Prevents slider from disappearing during brief empty-state transitions
+        # caused by signal timing during reconnection/state updates.
+        self._cached_target_group: Group | None = None
+
         # Quick volume slider (embedded in menu)
         self._volume_slider: VolumeSlider | None = None
 
@@ -319,38 +324,68 @@ class SystemTrayManager(QObject):
         # Toggle action
         if self._snapclient_mgr.is_running:
             toggle = QAction("Stop Local Client", self._menu)
-            toggle.triggered.connect(self._snapclient_mgr.stop)
+            toggle.triggered.connect(self._on_stop_snapclient)
         else:
             toggle = QAction("Start Local Client", self._menu)
             toggle.triggered.connect(self._on_start_snapclient)
         self._menu.addAction(toggle)
 
+    def _on_stop_snapclient(self) -> None:
+        """Stop the local snapclient."""
+        if self._snapclient_mgr:
+            logger.info("Stopping snapclient from tray")
+            self._snapclient_mgr.stop()
+
     def _on_start_snapclient(self) -> None:
         """Start the local snapclient with configured host/port."""
         if self._snapclient_mgr and self._snapclient_host:
+            logger.info(
+                "Starting snapclient from tray: %s:%d",
+                self._snapclient_host,
+                self._snapclient_port,
+            )
             try:
                 self._snapclient_mgr.start(self._snapclient_host, self._snapclient_port)
             except ValueError as e:
                 logger.error("Failed to start snapclient: %s", e)
                 self._snapclient_mgr.error_occurred.emit(str(e))
+        elif self._snapclient_mgr:
+            # Host not configured
+            msg = "No server configured for local snapclient"
+            logger.warning(msg)
+            self._snapclient_mgr.error_occurred.emit(msg)
+        else:
+            logger.warning("Snapclient manager not available")
 
     def _get_target_group(self) -> Group | None:
         """Get the group to control with the quick volume slider.
 
         Uses the selected group if set, otherwise the first group.
+        Caches the result to maintain slider stability during state transitions.
 
         Returns:
             The target group, or None if no groups exist.
         """
         groups = self._state.groups
+
+        # During transient empty states, return cached group if it's still valid
         if not groups:
+            # Validate cache is still in state (handles race with connection_changed)
+            if self._cached_target_group:
+                if self._state.get_group(self._cached_target_group.id):
+                    return self._cached_target_group
+                self._cached_target_group = None
             return None
 
+        # Try to use explicitly selected group
         if self._selected_group_id:
             group = self._state.get_group(self._selected_group_id)
             if group:
+                self._cached_target_group = group
                 return group
 
+        # Fall back to first group and update cache for consistency
+        self._cached_target_group = groups[0]
         return groups[0]
 
     def _build_status_icon(self) -> QIcon:
@@ -391,6 +426,10 @@ class SystemTrayManager(QObject):
         self._connected = connected
         self._tray.setIcon(self._build_status_icon())
         self._tray.setToolTip("SnapCTRL — Connected" if connected else "SnapCTRL — Disconnected")
+
+        # Invalidate cached group on disconnect to avoid stale references
+        if not connected:
+            self._cached_target_group = None
 
     def _toggle_window(self) -> None:
         """Toggle main window visibility."""
