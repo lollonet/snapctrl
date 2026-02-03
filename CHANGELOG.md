@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Preferences Dialog** (REQ-014) - Feb 2
+  - Tabbed preferences dialog (Connection, Appearance, Local Client, Monitoring) accessible via status bar gear icon and system tray menu
+  - Theme selection with live preview (Dark / Light / System)
+  - Configurable ping interval, jitter poll interval, MPD host/port/poll interval
+  - Local snapclient settings: enable toggle, binary path with file browser, auto-start, extra CLI args
+  - All settings persisted via QSettings and applied immediately without restart
+  - ConfigManager extended with theme, monitoring, and MPD settings accessors
+
+- **QSpinBox Arrow Indicators** - Feb 2
+  - CSS triangle arrows for QSpinBox up/down buttons (previously invisible on dark theme)
+  - QComboBox hover border and dropdown arrow indicator
+
 - **Connection-Aware Tray Icon** - Feb 2
   - Tray icon now shows green dot (connected) or red dot (disconnected) via QPainter overlay
   - Tooltip updates to "SnapCTRL — Connected" / "SnapCTRL — Disconnected"

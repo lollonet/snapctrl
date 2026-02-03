@@ -159,6 +159,12 @@ class GroupsPanel(QWidget):
             if group.id in expanded_groups:
                 card.set_expanded(True)
 
+        # Auto-expand if there's exactly one group and none were previously expanded
+        if len(groups) == 1 and not expanded_groups:
+            only_card = next(iter(self._group_cards.values()), None)
+            if only_card:
+                only_card.set_expanded(True)
+
         # Restore selection if possible
         if self._selected_group_id and self._selected_group_id in self._group_cards:
             self.set_selected_group(self._selected_group_id)

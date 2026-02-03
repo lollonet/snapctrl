@@ -53,6 +53,7 @@ class ThemePalette:
     error: str  # Disconnected / error
     warning: str  # Warning state
     accent: str  # Brand accent (orange)
+    accent_hover: str  # Accent hover state (darker)
 
     # Semantic
     scrollbar: str  # Scrollbar thumb
@@ -94,6 +95,7 @@ DARK_PALETTE = ThemePalette(
     error="#F44336",
     warning="#ffff80",
     accent="#FF8C00",
+    accent_hover="#CC7000",
     scrollbar="#555555",
     scrollbar_hover="#777777",
     surface_elevated="#353535",
@@ -119,6 +121,7 @@ LIGHT_PALETTE = ThemePalette(
     error="#D32F2F",
     warning="#F9A825",
     accent="#E67E00",
+    accent_hover="#B86900",
     scrollbar="#bbbbbb",
     scrollbar_hover="#999999",
     surface_elevated="#f0f0f0",
@@ -254,6 +257,25 @@ class ThemeManager(QObject):
                 border: none;
                 width: {sizing.icon_sm}px;
             }}
+            QSpinBox::up-button:hover, QSpinBox::down-button:hover {{
+                background: {p.surface_selected};
+            }}
+            QSpinBox::up-arrow {{
+                image: none;
+                border-left: 4px solid transparent;
+                border-right: 4px solid transparent;
+                border-bottom: 5px solid {p.text_secondary};
+                width: 0px;
+                height: 0px;
+            }}
+            QSpinBox::down-arrow {{
+                image: none;
+                border-left: 4px solid transparent;
+                border-right: 4px solid transparent;
+                border-top: 5px solid {p.text_secondary};
+                width: 0px;
+                height: 0px;
+            }}
             QComboBox {{
                 background: {p.surface_dim};
                 border: 1px solid {p.border};
@@ -261,12 +283,23 @@ class ThemeManager(QObject):
                 padding: {spacing.xs}px {spacing.sm}px;
                 color: {p.text};
             }}
+            QComboBox:hover {{
+                border: 1px solid {p.text_disabled};
+            }}
             QComboBox:focus, QComboBox:on {{
                 border: 1px solid {p.accent};
             }}
             QComboBox::drop-down {{
                 border: none;
                 width: 20px;
+            }}
+            QComboBox::down-arrow {{
+                image: none;
+                border-left: 4px solid transparent;
+                border-right: 4px solid transparent;
+                border-top: 5px solid {p.text_secondary};
+                width: 0px;
+                height: 0px;
             }}
             QComboBox QAbstractItemView {{
                 background: {p.surface_elevated};
