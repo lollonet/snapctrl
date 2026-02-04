@@ -42,6 +42,9 @@ _ART_HEIGHT_MAX_RETRIES = 3
 # Network request timeout (15 seconds)
 _NETWORK_TIMEOUT_MS = 15000
 
+# Tolerance for skipping redundant pixmap scaling (pixels)
+_SCALE_TOLERANCE_PX = 5
+
 
 class SourcesPanel(QWidget):
     """Left panel showing list of audio sources.
@@ -340,11 +343,23 @@ class SourcesPanel(QWidget):
         if w == 0:
             if _retries < _ART_HEIGHT_MAX_RETRIES:
                 QTimer.singleShot(10, lambda: self._update_art_height(_retries=_retries + 1))
+            else:
+                logger.warning(
+                    "Failed to get album art width after %d retries", _ART_HEIGHT_MAX_RETRIES
+                )
             return
         # Calculate height that preserves aspect ratio
         h = max(int(w * ph / pw), ALBUM_ART_SIZE)
         h = min(h, 4 * ALBUM_ART_SIZE)  # Cap to prevent excessive heights
         self._album_art.setFixedHeight(h)
+        # Skip scaling if current pixmap already matches target size (performance optimization)
+        current = self._album_art.pixmap()
+        if (
+            not current.isNull()
+            and abs(current.width() - w) <= _SCALE_TOLERANCE_PX
+            and abs(current.height() - h) <= _SCALE_TOLERANCE_PX
+        ):
+            return
         # Scale pixmap to fit label size while keeping aspect ratio
         scaled = self._original_pixmap.scaled(
             w,
