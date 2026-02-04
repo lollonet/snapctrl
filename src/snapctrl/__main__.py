@@ -33,11 +33,31 @@ logger = logging.getLogger(__name__)
 
 
 def get_resource_path(relative_path: str) -> Path:
-    """Get absolute path to resource, works for dev and PyInstaller bundle."""
+    """Get absolute path to resource, works for dev and PyInstaller bundle.
+
+    Args:
+        relative_path: Path relative to the resource root (no .. or absolute paths).
+
+    Returns:
+        Absolute path to the resource.
+
+    Raises:
+        ValueError: If the path attempts directory traversal.
+    """
+    # Prevent path traversal attacks
+    if ".." in relative_path or relative_path.startswith("/"):
+        raise ValueError(f"Invalid resource path: {relative_path}")
+
     meipass = getattr(sys, "_MEIPASS", None)
     # PyInstaller bundle uses _MEIPASS, dev uses project root
     base_path = Path(meipass) if meipass is not None else Path(__file__).parent.parent.parent
-    return base_path / relative_path
+    full_path = (base_path / relative_path).resolve()
+
+    # Ensure resolved path stays within base_path
+    if not str(full_path).startswith(str(base_path.resolve())):
+        raise ValueError(f"Invalid resource path: {relative_path}")
+
+    return full_path
 
 
 def discover_server() -> tuple[str, int, str] | None:

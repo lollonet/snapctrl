@@ -176,20 +176,23 @@ class SystemTrayManager(QObject):
 
     @staticmethod
     def _calc_avg_volume(client_ids: list[str], client_by_id: dict[str, Client]) -> int:
-        """Calculate average volume for a group's clients.
+        """Calculate average volume for a group's connected clients.
+
+        Only connected clients are included since disconnected clients
+        aren't actively playing audio.
 
         Args:
             client_ids: List of client IDs in the group.
             client_by_id: Dict mapping client IDs to Client objects.
 
         Returns:
-            Average volume (0-100), or 0 if no clients found.
+            Average volume (0-100), or 0 if no connected clients found.
         """
         total_vol = 0
         count = 0
         for cid in client_ids:
             client = client_by_id.get(cid)
-            if client:
+            if client and client.connected:
                 total_vol += client.volume
                 count += 1
         return total_vol // count if count > 0 else 0
