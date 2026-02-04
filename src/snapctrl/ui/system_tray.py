@@ -319,6 +319,10 @@ class SystemTrayManager(QObject):
     def _toggle_group_mute(self, group_id: str) -> None:
         """Toggle mute state for a group, reading current state at trigger time.
 
+        This reads the current mute state from StateStore when triggered, rather than
+        capturing the state when the menu was built. This prevents stale state bugs
+        where rapid clicks or external changes could cause incorrect toggle behavior.
+
         Args:
             group_id: The group to toggle.
         """

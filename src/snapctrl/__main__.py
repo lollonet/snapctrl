@@ -42,19 +42,24 @@ def get_resource_path(relative_path: str) -> Path:
         Absolute path to the resource.
 
     Raises:
-        ValueError: If the path attempts directory traversal.
+        ValueError: If the path is empty, absolute, or attempts directory traversal.
     """
-    # Prevent path traversal attacks
+    # Validate input
+    if not relative_path:
+        raise ValueError("Resource path cannot be empty")
+
+    # Prevent obvious path traversal attacks
     if ".." in relative_path or relative_path.startswith("/"):
         raise ValueError(f"Invalid resource path: {relative_path}")
 
     meipass = getattr(sys, "_MEIPASS", None)
     # PyInstaller bundle uses _MEIPASS, dev uses project root
     base_path = Path(meipass) if meipass is not None else Path(__file__).parent.parent.parent
+    base_resolved = base_path.resolve()
     full_path = (base_path / relative_path).resolve()
 
-    # Ensure resolved path stays within base_path
-    if not str(full_path).startswith(str(base_path.resolve())):
+    # Ensure resolved path stays within base_path (handles symlinks, etc.)
+    if not full_path.is_relative_to(base_resolved):
         raise ValueError(f"Invalid resource path: {relative_path}")
 
     return full_path
