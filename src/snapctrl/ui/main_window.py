@@ -73,9 +73,16 @@ class MainWindow(QMainWindow):
         self._ping_results: dict[str, float | None] = {}  # client_id -> RTT ms
         self._time_stats: dict[str, dict[str, object]] = {}  # client_id -> stats
 
+        # Cache for status bar stylesheets to avoid repeated generation
+        self._status_style_cache: dict[str, str] = {}
+        self._snapclient_style_cache: dict[str, tuple[str, str]] = {}  # status -> (text, style)
+
         self._setup_ui()
         self._setup_style()
         self._connect_signals()
+
+        # Connect theme changes to refresh styles
+        theme_manager.theme_changed.connect(self._refresh_theme)
 
     def _setup_ui(self) -> None:
         """Set up the user interface."""
@@ -120,8 +127,17 @@ class MainWindow(QMainWindow):
         # Add splitter to main layout
         main_layout.addWidget(splitter)
 
-        # Connection status bar
+        # Server info label (left side of status bar)
         p = theme_manager.palette
+        self._server_label = QLabel()
+        self._server_label.setStyleSheet(
+            f"color: {p.text_secondary};"
+            f" padding: {spacing.xs}px {spacing.sm}px;"
+            f" font-size: {typography.small}pt;"
+        )
+        self.statusBar().addWidget(self._server_label)
+
+        # Connection status bar (right side)
         self._status_label = QLabel("Connecting...")
         self._status_label.setStyleSheet(
             f"background-color: {p.scrollbar}; color: {p.text};"
@@ -143,11 +159,11 @@ class MainWindow(QMainWindow):
         self.statusBar().addPermanentWidget(self._snapclient_label)
 
         # Preferences gear button
-        gear_btn = QPushButton("\u2699")
-        gear_btn.setFixedSize(sizing.icon_md, sizing.icon_md)
-        gear_btn.setFlat(True)
-        gear_btn.setToolTip("Preferences")
-        gear_btn.setStyleSheet(f"""
+        self._gear_btn = QPushButton("\u2699")
+        self._gear_btn.setFixedSize(sizing.icon_md, sizing.icon_md)
+        self._gear_btn.setFlat(True)
+        self._gear_btn.setToolTip("Preferences")
+        self._gear_btn.setStyleSheet(f"""
             QPushButton {{
                 font-size: {typography.heading}pt;
                 color: {p.text_secondary};
@@ -158,8 +174,8 @@ class MainWindow(QMainWindow):
                 color: {p.text};
             }}
         """)
-        gear_btn.clicked.connect(self.open_preferences)
-        self.statusBar().addPermanentWidget(gear_btn)
+        self._gear_btn.clicked.connect(self.open_preferences)
+        self.statusBar().addPermanentWidget(self._gear_btn)
 
         self.statusBar().setStyleSheet(f"background-color: {p.background};")
 
@@ -177,6 +193,55 @@ class MainWindow(QMainWindow):
                 font-size: {typography.subtitle}pt;
             }}
         """)
+
+    def _refresh_theme(self) -> None:
+        """Refresh all styles when theme changes."""
+        p = theme_manager.palette
+
+        # Clear style caches to force regeneration with new palette
+        self._status_style_cache.clear()
+        self._snapclient_style_cache.clear()
+
+        # Re-apply main window stylesheet
+        self._setup_style()
+
+        # Re-apply server label style
+        self._server_label.setStyleSheet(
+            f"color: {p.text_secondary};"
+            f" padding: {spacing.xs}px {spacing.sm}px;"
+            f" font-size: {typography.small}pt;"
+        )
+
+        # Re-apply status bar styles
+        self._status_label.setStyleSheet(
+            f"background-color: {p.scrollbar}; color: {p.text};"
+            f" padding: {spacing.xs}px {spacing.sm}px;"
+            f" font-size: {typography.small}pt;"
+            f" border-radius: {sizing.border_radius_sm}px;"
+        )
+        self._snapclient_label.setStyleSheet(
+            f"background-color: {p.scrollbar}; color: {p.text_disabled};"
+            f" padding: {spacing.xs}px {spacing.sm}px;"
+            f" font-size: {typography.small}pt;"
+            f" border-radius: {sizing.border_radius_sm}px;"
+        )
+        self._gear_btn.setStyleSheet(f"""
+            QPushButton {{
+                font-size: {typography.heading}pt;
+                color: {p.text_secondary};
+                border: none;
+                background: transparent;
+            }}
+            QPushButton:hover {{
+                color: {p.text};
+            }}
+        """)
+        self.statusBar().setStyleSheet(f"background-color: {p.background};")
+
+        # Refresh panels
+        self._sources_panel.refresh_theme()
+        self._groups_panel.refresh_theme()
+        self._properties_panel.refresh_theme()
 
     def _connect_signals(self) -> None:
         """Connect StateStore signals to UI updates."""
@@ -412,66 +477,83 @@ class MainWindow(QMainWindow):
             connected: Whether the server is connected.
             message: Optional status message.
         """
-        p = theme_manager.palette
-        if connected:
-            text = message or "Connected"
-            self._status_label.setText(text)
-            self._status_label.setStyleSheet(
-                f"background-color: {p.surface_success}; color: {p.success};"
-                f" padding: {spacing.xs}px {spacing.sm}px;"
-                f" font-size: {typography.small}pt;"
-                f" border-radius: {sizing.border_radius_sm}px;"
-            )
-        else:
-            text = message or "Disconnected"
-            self._status_label.setText(text)
-            self._status_label.setStyleSheet(
-                f"background-color: {p.surface_error}; color: {p.error};"
-                f" padding: {spacing.xs}px {spacing.sm}px;"
-                f" font-size: {typography.small}pt;"
-                f" border-radius: {sizing.border_radius_sm}px;"
-            )
+        cache_key = "connected" if connected else "disconnected"
+        if cache_key not in self._status_style_cache:
+            p = theme_manager.palette
+            if connected:
+                self._status_style_cache[cache_key] = (
+                    f"background-color: {p.surface_success}; color: {p.success};"
+                    f" padding: {spacing.xs}px {spacing.sm}px;"
+                    f" font-size: {typography.small}pt;"
+                    f" border-radius: {sizing.border_radius_sm}px;"
+                )
+            else:
+                self._status_style_cache[cache_key] = (
+                    f"background-color: {p.surface_error}; color: {p.error};"
+                    f" padding: {spacing.xs}px {spacing.sm}px;"
+                    f" font-size: {typography.small}pt;"
+                    f" border-radius: {sizing.border_radius_sm}px;"
+                )
+
+        text = message or ("Connected" if connected else "Disconnected")
+        self._status_label.setText(text)
+        self._status_label.setStyleSheet(self._status_style_cache[cache_key])
 
     def set_snapclient_status(self, status: str) -> None:
         """Update the local snapclient status indicator.
 
         Args:
-            status: One of "running", "starting", "stopped", "error", "disabled".
+            status: One of "running", "starting", "stopped", "error", "disabled", "external".
         """
-        p = theme_manager.palette
-        base_style = (
-            f" padding: {spacing.xs}px {spacing.sm}px;"
-            f" font-size: {typography.small}pt;"
-            f" border-radius: {sizing.border_radius_sm}px;"
-        )
-
         if status == "disabled":
             self._snapclient_label.setVisible(False)
             return
 
         self._snapclient_label.setVisible(True)
 
-        status_config: dict[str, tuple[str, str, str]] = {
-            "running": ("Local: Running", p.surface_success, p.success),
-            "starting": ("Local: Starting...", p.scrollbar, p.warning),
-            "stopped": ("Local: Stopped", p.scrollbar, p.text_disabled),
-            "error": ("Local: Error", p.surface_error, p.error),
-        }
-        if status not in status_config:
-            logger.warning("Unknown snapclient status: %r", status)
-        text, bg, fg = status_config.get(status, ("Local: Unknown", p.scrollbar, p.text_disabled))
-        self._snapclient_label.setText(text)
-        self._snapclient_label.setStyleSheet(f"background-color: {bg}; color: {fg};{base_style}")
+        # Build style cache on demand
+        if status not in self._snapclient_style_cache:
+            p = theme_manager.palette
+            base_style = (
+                f" padding: {spacing.xs}px {spacing.sm}px;"
+                f" font-size: {typography.small}pt;"
+                f" border-radius: {sizing.border_radius_sm}px;"
+            )
+            status_config: dict[str, tuple[str, str, str]] = {
+                "running": ("Local: Running", p.surface_success, p.success),
+                "starting": ("Local: Starting...", p.scrollbar, p.warning),
+                "stopped": ("Local: Stopped", p.scrollbar, p.text_disabled),
+                "error": ("Local: Error", p.surface_error, p.error),
+                "external": ("Local: External", p.surface_success, p.success),
+            }
+            if status not in status_config:
+                logger.warning("Unknown snapclient status: %r", status)
+            default = ("Local: Unknown", p.scrollbar, p.text_disabled)
+            text, bg, fg = status_config.get(status, default)
+            style = f"background-color: {bg}; color: {fg};{base_style}"
+            self._snapclient_style_cache[status] = (text, style)
 
-    def set_server_info(self, host: str, port: int) -> None:
-        """Store server host/port for display in preferences.
+        text, style = self._snapclient_style_cache[status]
+        self._snapclient_label.setText(text)
+        self._snapclient_label.setStyleSheet(style)
+
+    def set_server_info(self, host: str, port: int, hostname: str = "") -> None:
+        """Store server host/port and display in status bar.
 
         Args:
             host: Server hostname or IP.
             port: Server port.
+            hostname: Optional FQDN from mDNS discovery.
         """
         self._server_host = host
         self._server_port = port
+        self._server_hostname = hostname
+
+        # Update status bar label
+        if hostname:
+            self._server_label.setText(f"{hostname} ({host}):{port}")
+        else:
+            self._server_label.setText(f"{host}:{port}")
 
     def open_preferences(self) -> None:
         """Open the preferences dialog."""
@@ -483,6 +565,7 @@ class MainWindow(QMainWindow):
         dialog.set_connection_info(
             getattr(self, "_server_host", ""),
             getattr(self, "_server_port", 1705),
+            getattr(self, "_server_hostname", ""),
         )
         dialog.settings_changed.connect(self.preferences_applied.emit)
         dialog.open()

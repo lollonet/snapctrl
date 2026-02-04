@@ -221,7 +221,15 @@ class TestStateStoreSignals:
     def test_state_changed_signal(
         self, state: StateStore, sample_server_state: ServerState, qtbot: QtBot
     ) -> None:
-        """Test state_changed signal emission."""
+        """Test state_changed signal only emits when no specific signals emitted.
+
+        When specific signals (groups_changed, clients_changed, etc.) are emitted,
+        state_changed is NOT emitted to prevent double UI updates.
+        """
+        # First update emits specific signals, so state_changed should NOT emit
+        state.update_from_server_state(sample_server_state)
+
+        # Second update with same state - no changes, so state_changed WILL emit
         with qtbot.wait_signal(state.state_changed, timeout=100) as blocker:
             state.update_from_server_state(sample_server_state)
 
@@ -234,8 +242,7 @@ class TestStateStoreSignals:
         """Test that signals don't emit if data hasn't changed."""
         state.update_from_server_state(sample_server_state)
 
-        # Update with same state - should still emit state_changed but not others
-        # Actually state_changed always emits per implementation
+        # Update with same state - no specific changes, so only state_changed emits
         with qtbot.wait_signal(state.state_changed, timeout=100):
             state.update_from_server_state(sample_server_state)
 
@@ -341,12 +348,14 @@ class TestSignalOrdering:
 
         state.update_from_server_state(sample_server_state)
 
-        # All signals should be received
+        # Specific signals should be received (state_changed is NOT emitted
+        # when specific signals are emitted, to prevent double UI updates)
         assert "connection" in signals_received
         assert "groups" in signals_received
         assert "clients" in signals_received
         assert "sources" in signals_received
-        assert "state" in signals_received
+        # state_changed should NOT be in the list when specific signals fired
+        assert "state" not in signals_received
 
 
 class TestSourceMetadata:

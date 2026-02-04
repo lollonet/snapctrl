@@ -1,0 +1,16 @@
+#!/bin/bash
+# SnapCTRL macOS launcher
+# This script finds and runs SnapCTRL from its development directory
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PROJECT_DIR="$(cd "$SCRIPT_DIR/../../.." && pwd)"
+
+cd "$PROJECT_DIR" || exit 1
+
+# Use uv to run the application
+if command -v uv &> /dev/null; then
+    exec uv run python -m snapctrl "$@"
+else
+    # Fallback to venv python
+    exec "$PROJECT_DIR/.venv/bin/python" -m snapctrl "$@"
+fi

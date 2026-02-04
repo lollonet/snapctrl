@@ -57,9 +57,9 @@ class PropertiesPanel(QWidget):
         layout.setSpacing(spacing.xs)
 
         # Header
-        header = QLabel("Properties")
-        header.setStyleSheet(f"font-weight: bold; font-size: {typography.title}pt;")
-        layout.addWidget(header)
+        self._header = QLabel("Properties")
+        self._header.setStyleSheet(f"font-weight: bold; font-size: {typography.title}pt;")
+        layout.addWidget(self._header)
 
         # Content area (placeholder for now)
         p = theme_manager.palette
@@ -359,3 +359,11 @@ class PropertiesPanel(QWidget):
         """Emit latency_changed when the user finishes editing."""
         if self._current_client_id and self._latency_spinbox:
             self.latency_changed.emit(self._current_client_id, self._latency_spinbox.value())
+
+    def refresh_theme(self) -> None:
+        """Refresh styles when theme changes."""
+        p = theme_manager.palette
+        self._header.setStyleSheet(
+            f"font-weight: bold; font-size: {typography.title}pt; color: {p.text};"
+        )
+        self._content.setStyleSheet(f"color: {p.text};")

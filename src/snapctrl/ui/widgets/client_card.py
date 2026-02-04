@@ -275,3 +275,25 @@ class ClientCard(QFrame):
             self.clicked.emit(self._client_id)
             return True
         return super().eventFilter(watched, event)
+
+    def refresh_theme(self) -> None:
+        """Refresh styles when theme changes."""
+        p = theme_manager.palette
+        # Re-apply card style based on selection state
+        self._update_style(self._selected)
+        # Update name label
+        self._name_label.setStyleSheet(
+            f"font-size: {typography.body}pt; color: {p.text}; padding: {spacing.xs}px;"
+        )
+        # Update status indicator
+        indicator_size = sizing.emoji_indicator
+        if self._connected:
+            self._status_indicator.setStyleSheet(
+                f"color: {p.success}; font-size: {indicator_size}px;"
+            )
+        else:
+            self._status_indicator.setStyleSheet(
+                f"color: {p.error}; font-size: {indicator_size}px;"
+            )
+        # Refresh volume slider
+        self._volume_slider.refresh_theme()

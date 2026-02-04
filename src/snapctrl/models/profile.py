@@ -5,7 +5,7 @@ from dataclasses import dataclass, replace
 from typing import Self
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class ServerProfile:
     """Connection profile for a Snapcast server.
 

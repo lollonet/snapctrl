@@ -187,3 +187,17 @@ class VolumeSlider(QWidget):
             self._slider.blockSignals(False)
             self._volume_label.setText(f"{volume}%")
             self._mute_button.setText("🔊")
+
+    def refresh_theme(self) -> None:
+        """Refresh styles when theme changes."""
+        p = theme_manager.palette
+        self._mute_button.setStyleSheet(f"""
+            QPushButton {{
+                border: none;
+                font-size: {sizing.emoji_button}px;
+            }}
+            QPushButton:hover {{
+                background-color: {p.surface_hover};
+                border-radius: {sizing.border_radius_md}px;
+            }}
+        """)
