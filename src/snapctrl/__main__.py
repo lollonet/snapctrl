@@ -34,12 +34,9 @@ logger = logging.getLogger(__name__)
 
 def get_resource_path(relative_path: str) -> Path:
     """Get absolute path to resource, works for dev and PyInstaller bundle."""
-    if hasattr(sys, "_MEIPASS"):
-        # PyInstaller bundle - resources are in _MEIPASS
-        base_path = Path(sys._MEIPASS)  # type: ignore[attr-defined]
-    else:
-        # Development - resources are relative to project root
-        base_path = Path(__file__).parent.parent.parent
+    meipass = getattr(sys, "_MEIPASS", None)
+    # PyInstaller bundle uses _MEIPASS, dev uses project root
+    base_path = Path(meipass) if meipass is not None else Path(__file__).parent.parent.parent
     return base_path / relative_path
 
 

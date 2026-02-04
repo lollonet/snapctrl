@@ -202,7 +202,7 @@ class SystemTrayManager(QObject):
                     total_vol += client.volume
                     count += 1
             avg_vol = total_vol // count if count > 0 else 0
-            parts.append(f"g:{group.id}:{group.muted}:{avg_vol}:{group.stream_id}")
+            parts.append(f"g:{group.id}:{group.name}:{group.muted}:{avg_vol}:{group.stream_id}")
 
         # Now playing - only include playing source (skip idle sources for perf)
         for source in self._state.sources:
