@@ -60,6 +60,7 @@ class SystemTrayManager(QObject):
 
     # Signals forwarded from the quick volume slider
     volume_changed = Signal(str, int)  # group_id, volume
+    mute_changed = Signal(str, bool)  # group_id, muted
     mute_all_changed = Signal(bool)  # True=mute all, False=unmute all
     preferences_requested = Signal()  # Open preferences dialog
 
@@ -282,7 +283,7 @@ class SystemTrayManager(QObject):
         self._menu.addAction(quit_action)
 
     def _add_group_entry(self, group: Group, client_by_id: dict[str, Client]) -> None:
-        """Add a read-only group entry to the menu.
+        """Add a clickable group entry to toggle mute.
 
         Args:
             group: The group to display.
@@ -298,10 +299,14 @@ class SystemTrayManager(QObject):
                 count += 1
         avg_vol = total_vol // count if count > 0 else 0
 
-        mute_icon = "🔇" if group.muted else "🔊"
-        label = f"{mute_icon} {group.name} — {avg_vol}%"
+        # Visual distinction: muted shows "(muted)" instead of volume percentage
+        label = f"🔇 {group.name} — (muted)" if group.muted else f"🔊 {group.name} — {avg_vol}%"
+
         action = QAction(label, self._menu)
-        action.setEnabled(False)  # Read-only
+        # Clicking toggles mute state
+        group_id = group.id
+        is_muted = group.muted
+        action.triggered.connect(lambda: self.mute_changed.emit(group_id, not is_muted))
         self._menu.addAction(action)
 
     def _add_now_playing(self) -> None:

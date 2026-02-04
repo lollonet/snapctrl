@@ -379,6 +379,7 @@ def main() -> int:  # noqa: PLR0912, PLR0915
             worker.set_group_mute(group.id, muted)
 
     tray.mute_all_changed.connect(on_mute_all)
+    tray.mute_changed.connect(worker.set_group_mute)
     tray.preferences_requested.connect(window.open_preferences)
 
     # Sync tray's selected group when user selects in UI
