@@ -853,7 +853,7 @@ wheels = [
 
 [[package]]
 name = "snapctrl"
-version = "0.2.4"
+version = "0.2.6"
 source = { editable = "." }
 dependencies = [
     { name = "pyobjc-framework-cocoa", marker = "sys_platform == 'darwin'" },

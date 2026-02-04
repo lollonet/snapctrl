@@ -76,8 +76,8 @@ app = BUNDLE(
     info_plist={
         "CFBundleName": "SnapCTRL",
         "CFBundleDisplayName": "SnapCTRL",
-        "CFBundleVersion": "0.2.5",
-        "CFBundleShortVersionString": "0.2.5",
+        "CFBundleVersion": "0.2.6",
+        "CFBundleShortVersionString": "0.2.6",
         "NSHighResolutionCapable": True,
         "NSRequiresAquaSystemAppearance": False,  # Support dark mode
         "LSMinimumSystemVersion": "10.15",
