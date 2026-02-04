@@ -174,6 +174,26 @@ class SystemTrayManager(QObject):
         """Schedule a debounced menu rebuild."""
         self._rebuild_timer.start()
 
+    @staticmethod
+    def _calc_avg_volume(client_ids: list[str], client_by_id: dict[str, Client]) -> int:
+        """Calculate average volume for a group's clients.
+
+        Args:
+            client_ids: List of client IDs in the group.
+            client_by_id: Dict mapping client IDs to Client objects.
+
+        Returns:
+            Average volume (0-100), or 0 if no clients found.
+        """
+        total_vol = 0
+        count = 0
+        for cid in client_ids:
+            client = client_by_id.get(cid)
+            if client:
+                total_vol += client.volume
+                count += 1
+        return total_vol // count if count > 0 else 0
+
     def _compute_menu_fingerprint(self) -> str:
         """Compute a fingerprint of state relevant to the menu.
 
@@ -195,14 +215,7 @@ class SystemTrayManager(QObject):
 
         # Groups and their mute/volume/name/stream state
         for group in self._state.groups:
-            total_vol = 0
-            count = 0
-            for cid in group.client_ids:
-                client = client_by_id.get(cid)
-                if client:
-                    total_vol += client.volume
-                    count += 1
-            avg_vol = total_vol // count if count > 0 else 0
+            avg_vol = self._calc_avg_volume(group.client_ids, client_by_id)
             parts.append(f"g:{group.id}:{group.name}:{group.muted}:{avg_vol}:{group.stream_id}")
 
         # Now playing - only include playing source (skip idle sources for perf)
@@ -289,25 +302,26 @@ class SystemTrayManager(QObject):
             group: The group to display.
             client_by_id: Dict mapping client IDs to Client objects.
         """
-        # Calculate average volume using lookup dict (O(k) where k = clients in group)
-        total_vol = 0
-        count = 0
-        for cid in group.client_ids:
-            client = client_by_id.get(cid)
-            if client:
-                total_vol += client.volume
-                count += 1
-        avg_vol = total_vol // count if count > 0 else 0
+        avg_vol = self._calc_avg_volume(group.client_ids, client_by_id)
 
         # Visual distinction: muted shows "(muted)" instead of volume percentage
         label = f"🔇 {group.name} — (muted)" if group.muted else f"🔊 {group.name} — {avg_vol}%"
 
         action = QAction(label, self._menu)
-        # Clicking toggles mute state
+        # Clicking toggles mute state - read current state at trigger time, not build time
         group_id = group.id
-        is_muted = group.muted
-        action.triggered.connect(lambda: self.mute_changed.emit(group_id, not is_muted))
+        action.triggered.connect(lambda _checked=False, gid=group_id: self._toggle_group_mute(gid))
         self._menu.addAction(action)
+
+    def _toggle_group_mute(self, group_id: str) -> None:
+        """Toggle mute state for a group, reading current state at trigger time.
+
+        Args:
+            group_id: The group to toggle.
+        """
+        group = self._state.get_group(group_id)
+        if group:
+            self.mute_changed.emit(group_id, not group.muted)
 
     def _add_now_playing(self) -> None:
         """Add now playing entry from source metadata."""
