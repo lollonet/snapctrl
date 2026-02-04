@@ -167,6 +167,11 @@ class SnapclientManager(QObject):
         self._restart_timer.setSingleShot(True)
         self._restart_timer.timeout.connect(self._do_restart)
 
+        # Timer for periodic external status refresh (every 5 seconds)
+        self._external_check_timer = QTimer(self)
+        self._external_check_timer.setInterval(5000)
+        self._external_check_timer.timeout.connect(self._check_external_status)
+
     @property
     def status(self) -> str:
         """Return current status string."""
@@ -242,14 +247,14 @@ class SnapclientManager(QObject):
 
         # Check if snapclient is already running on the system (not managed by us)
         # Note: There's an inherent TOCTOU race here - the external process could die
-        # between detection and adoption. This is handled by refresh_external_status()
-        # which should be called periodically to detect when external clients stop.
+        # between detection and adoption. This is handled by the periodic timer started below.
         if not self._process and is_snapclient_running():
             logger.info("Detected external snapclient already running, adopting it")
             self._is_external = True
             self._host = host
             self._port = port
             self._set_status("external")
+            self._external_check_timer.start()  # Start monitoring for external client changes
             return
 
         if self.is_running:
@@ -351,6 +356,9 @@ class SnapclientManager(QObject):
     def detect_external(self) -> bool:
         """Check if an external snapclient is running and adopt it.
 
+        Also starts a periodic timer to monitor for external snapclient
+        status changes (started/stopped externally).
+
         Returns:
             True if external snapclient was detected and adopted.
         """
@@ -362,14 +370,48 @@ class SnapclientManager(QObject):
             logger.info("Detected external snapclient running")
             self._is_external = True
             self._set_status("external")
+            self._external_check_timer.start()  # Start monitoring
             return True
+
+        # No external found, but start monitoring in case one starts later
+        self._external_check_timer.start()
         return False
+
+    def _check_external_status(self) -> None:
+        """Periodic check for external snapclient status changes.
+
+        Called by timer to detect:
+        - External snapclient stopped (if we were tracking one)
+        - External snapclient started (if we weren't tracking one)
+        """
+        if self._process is not None:
+            # We're managing our own process, stop monitoring
+            self._external_check_timer.stop()
+            return
+
+        running = is_snapclient_running()
+
+        if self._is_external and not running:
+            # External snapclient stopped
+            logger.info("External snapclient stopped")
+            self._is_external = False
+            invalidate_process_cache()
+            self._set_status("stopped")
+        elif not self._is_external and running:
+            # External snapclient started
+            logger.info("External snapclient detected")
+            self._is_external = True
+            invalidate_process_cache()
+            self._set_status("external")
 
     def refresh_external_status(self) -> None:
         """Check if external snapclient is still running.
 
         If we were using an external snapclient and it stopped,
         update status to stopped.
+
+        Note: This is called on-demand. For continuous monitoring,
+        detect_external() starts a periodic timer.
         """
         if not self._is_external:
             return
@@ -384,6 +426,10 @@ class SnapclientManager(QObject):
         """Launch the snapclient process."""
         if self._binary_path is None:
             return
+
+        # Stop external monitoring since we're starting our own process
+        self._external_check_timer.stop()
+        self._is_external = False
 
         # Clean up any existing process first (prevents memory leak)
         if self._process is not None:
@@ -544,6 +590,7 @@ class SnapclientManager(QObject):
 
         self._auto_restart = False
         self._restart_timer.stop()
+        self._external_check_timer.stop()
 
         # Disconnect signals so we don't receive events
         try:
