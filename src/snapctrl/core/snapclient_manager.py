@@ -90,7 +90,7 @@ def is_snapclient_running() -> bool:
     Results are cached for 2 seconds to avoid expensive subprocess calls
     on repeated checks (e.g., during UI updates).
 
-    Thread-safe: Uses lock for cache access.
+    Thread-safe: Uses double-checked locking pattern.
 
     Returns:
         True if snapclient is found in the process list.
@@ -98,19 +98,24 @@ def is_snapclient_running() -> bool:
     cache_key = "snapclient"
     now = time.monotonic()
 
+    # First check without lock (fast path)
+    if cache_key in _process_check_cache:
+        cached_time, cached_result = _process_check_cache[cache_key]
+        if now - cached_time < _PROCESS_CHECK_CACHE_TTL:
+            return cached_result
+
+    # Cache miss or stale - acquire lock and double-check
     with _cache_lock:
-        # Check cache
+        # Re-check cache after acquiring lock (another thread may have updated)
         if cache_key in _process_check_cache:
             cached_time, cached_result = _process_check_cache[cache_key]
             if now - cached_time < _PROCESS_CHECK_CACHE_TTL:
                 return cached_result
 
-    # Cache miss - perform actual check (outside lock to avoid blocking)
-    result = _do_process_check()
-
-    with _cache_lock:
-        _process_check_cache[cache_key] = (now, result)
-    return result
+        # Still stale - perform actual check while holding lock
+        result = _do_process_check()
+        _process_check_cache[cache_key] = (time.monotonic(), result)
+        return result
 
 
 def invalidate_process_cache() -> None:

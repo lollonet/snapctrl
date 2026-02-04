@@ -250,10 +250,12 @@ class StateStore(QObject):
             else:
                 merged_sources[source_id] = new_source
 
+        # Check if sources changed (either from dict comparison above, or from merging)
+        # Set sources_changed here so signal emission below is triggered
         if sources_changed or merged_sources != self._sources:
             self._sources = merged_sources
             self._sources_cache = None
-            sources_changed = True
+            sources_changed = True  # Ensure signal is emitted below
 
         # Now emit signals (handlers can safely read any property)
         if groups_changed:

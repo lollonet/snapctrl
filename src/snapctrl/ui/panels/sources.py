@@ -3,6 +3,7 @@
 import asyncio
 import base64
 import binascii
+import ipaddress
 import logging
 import threading
 from urllib.parse import urlparse, urlunparse
@@ -453,6 +454,26 @@ class SourcesPanel(QWidget):
         logger.debug("Unsupported album art URL scheme: %s", art_url[:50])
         self._try_fallback_art()
 
+    def _is_private_ip(self, hostname: str) -> bool:
+        """Check if hostname is a private/local IP address.
+
+        Args:
+            hostname: Hostname or IP address to check.
+
+        Returns:
+            True if hostname is localhost, loopback, or private IP range.
+        """
+        # Check localhost names
+        if hostname in ("localhost", "localhost.localdomain"):
+            return True
+
+        try:
+            ip = ipaddress.ip_address(hostname)
+            return ip.is_private or ip.is_loopback or ip.is_link_local
+        except ValueError:
+            # Not an IP address - check for .local domain
+            return hostname.endswith(".local")
+
     def _fetch_http_art(self, url: str) -> None:
         """Fetch album art from HTTP URL.
 
@@ -465,9 +486,7 @@ class SourcesPanel(QWidget):
         if self._server_host:
             parsed = urlparse(url)
             hostname = parsed.hostname or ""
-            is_local = hostname in ("localhost", "127.0.0.1", "::1") or hostname.startswith(
-                "192.168."
-            )
+            is_local = self._is_private_ip(hostname)
             if is_local and hostname != self._server_host:
                 port = parsed.port or (443 if parsed.scheme == "https" else 80)
                 new_netloc = f"{self._server_host}:{port}"
