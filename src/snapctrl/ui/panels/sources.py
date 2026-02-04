@@ -39,6 +39,9 @@ ALBUM_ART_SIZE = sizing.album_art
 MAX_ALBUM_ART_B64_SIZE = 10 * 1024 * 1024
 _ART_HEIGHT_MAX_RETRIES = 3
 
+# Network request timeout (15 seconds)
+_NETWORK_TIMEOUT_MS = 15000
+
 
 class SourcesPanel(QWidget):
     """Left panel showing list of audio sources.
@@ -504,6 +507,8 @@ class SourcesPanel(QWidget):
             QNetworkRequest.Attribute.RedirectPolicyAttribute,
             QNetworkRequest.RedirectPolicy.NoLessSafeRedirectPolicy,
         )
+        # Set timeout to prevent indefinite hanging
+        request.setTransferTimeout(_NETWORK_TIMEOUT_MS)
         self._network_manager.get(request)
         logger.debug("Fetching album art from: %s", url)
 
