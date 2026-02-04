@@ -48,8 +48,8 @@ def get_resource_path(relative_path: str) -> Path:
     if not relative_path:
         raise ValueError("Resource path cannot be empty")
 
-    # Prevent obvious path traversal attacks
-    if ".." in relative_path or relative_path.startswith("/"):
+    # Prevent path traversal attacks (including null byte injection)
+    if ".." in relative_path or relative_path.startswith("/") or "\x00" in relative_path:
         raise ValueError(f"Invalid resource path: {relative_path}")
 
     meipass = getattr(sys, "_MEIPASS", None)

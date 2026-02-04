@@ -329,6 +329,8 @@ class SystemTrayManager(QObject):
         group = self._state.get_group(group_id)
         if group:
             self.mute_changed.emit(group_id, not group.muted)
+        else:
+            logger.debug("Cannot toggle mute: group %s not found (may have been removed)", group_id)
 
     def _add_now_playing(self) -> None:
         """Add now playing entry from source metadata."""
