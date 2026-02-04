@@ -82,8 +82,10 @@ class SourcesPanel(QWidget):
         self._current_title: str = ""
 
         # Pending fallback art result (data, mime_type, source)
+        # Protected by _fallback_lock for thread-safe access from background threads
         self._pending_fallback_art: tuple[bytes, str, str] | None = None
         self._pending_fallback_generation: int = 0
+        self._fallback_lock = threading.Lock()
 
         # Flag to cancel fallback when valid art arrives
         self._art_loaded: bool = False
@@ -381,8 +383,9 @@ class SourcesPanel(QWidget):
                 art = loop.run_until_complete(self._art_provider.fetch(artist, album, title))
                 if art and art.is_valid:
                     # Store result with generation and schedule UI update on main thread
-                    self._pending_fallback_art = (art.data, art.mime_type, art.source)
-                    self._pending_fallback_generation = current_generation
+                    with self._fallback_lock:
+                        self._pending_fallback_art = (art.data, art.mime_type, art.source)
+                        self._pending_fallback_generation = current_generation
                     QTimer.singleShot(0, self._apply_fallback_art)
             except Exception as e:  # noqa: BLE001
                 logger.debug("Fallback album art failed: %s", e)
@@ -395,27 +398,29 @@ class SourcesPanel(QWidget):
 
     def _apply_fallback_art(self) -> None:
         """Apply fallback album art to UI (called on main thread)."""
-        if self._pending_fallback_art is None:
-            return
+        # Safely read and clear pending art under lock
+        with self._fallback_lock:
+            if self._pending_fallback_art is None:
+                return
+            pending_art = self._pending_fallback_art
+            pending_gen = self._pending_fallback_generation
+            self._pending_fallback_art = None
 
         # Skip if this is a stale request (new fallback was started)
-        if self._pending_fallback_generation != self._fallback_generation:
-            self._pending_fallback_art = None
+        if pending_gen != self._fallback_generation:
             logger.debug(
                 "Skipping stale fallback art (gen %d != %d)",
-                self._pending_fallback_generation,
+                pending_gen,
                 self._fallback_generation,
             )
             return
 
         # Skip if valid art already loaded (prevents race condition)
         if self._art_loaded:
-            self._pending_fallback_art = None
             logger.debug("Skipping fallback art - valid art already loaded")
             return
 
-        data, _mime_type, source = self._pending_fallback_art
-        self._pending_fallback_art = None
+        data, _mime_type, source = pending_art
 
         pixmap = QPixmap()
         if pixmap.loadFromData(data):
@@ -575,8 +580,9 @@ class SourcesPanel(QWidget):
                 try:
                     image_data = base64.b64decode(data_b64)
                     # Store result and signal main thread to apply
-                    self._pending_fallback_art = (image_data, "image/jpeg", "data-uri")
-                    self._pending_fallback_generation = current_generation
+                    with self._fallback_lock:
+                        self._pending_fallback_art = (image_data, "image/jpeg", "data-uri")
+                        self._pending_fallback_generation = current_generation
                     # Emit signal to trigger UI update on main thread
                     self._art_decoded.emit()
                 except (ValueError, binascii.Error) as e:
@@ -596,23 +602,27 @@ class SourcesPanel(QWidget):
 
     def _apply_data_uri_art(self) -> None:
         """Apply decoded data URI art to UI (called on main thread)."""
+        # Safely read and clear pending art under lock
+        with self._fallback_lock:
+            pending_art = self._pending_fallback_art
+            pending_gen = self._pending_fallback_generation
+            self._pending_fallback_art = None
+
         logger.debug(
             "_apply_data_uri_art: pending=%s, pending_gen=%d, current_gen=%d",
-            self._pending_fallback_art is not None,
-            getattr(self, "_pending_fallback_generation", -1),
+            pending_art is not None,
+            pending_gen,
             self._fallback_generation,
         )
-        if self._pending_fallback_art is None:
+        if pending_art is None:
             return
 
         # Skip if this is a stale request
-        if self._pending_fallback_generation != self._fallback_generation:
+        if pending_gen != self._fallback_generation:
             logger.debug("Skipping stale art request")
-            self._pending_fallback_art = None
             return
 
-        data, _mime_type, _source = self._pending_fallback_art
-        self._pending_fallback_art = None
+        data, _mime_type, _source = pending_art
 
         pixmap = QPixmap()
         if pixmap.loadFromData(data):

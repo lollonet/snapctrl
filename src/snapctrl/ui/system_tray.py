@@ -539,18 +539,23 @@ class SystemTrayManager(QObject):
         showing modal dialogs during Qt shutdown (which can cause SIGSEGV).
         """
         # Handle snapclient confirmation BEFORE quit (not in aboutToQuit)
+        # Check window validity to avoid issues if event loop is in bad state
         if self._snapclient_mgr and self._snapclient_mgr.is_running:
-            reply = QMessageBox.question(
-                self._window,
-                "Stop Local Client?",
-                "A local snapclient is running.\nStop it before quitting?",
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-                QMessageBox.StandardButton.Yes,
-            )
-            if reply == QMessageBox.StandardButton.Yes:
-                self._snapclient_mgr.stop()
-            else:
-                # Detach so process survives app exit
+            try:
+                reply = QMessageBox.question(
+                    self._window if self._window and self._window.isVisible() else None,
+                    "Stop Local Client?",
+                    "A local snapclient is running.\nStop it before quitting?",
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                    QMessageBox.StandardButton.Yes,
+                )
+                if reply == QMessageBox.StandardButton.Yes:
+                    self._snapclient_mgr.stop()
+                else:
+                    # Detach so process survives app exit
+                    self._snapclient_mgr.detach()
+            except RuntimeError:
+                # Widget deleted or event loop shutdown - just detach
                 self._snapclient_mgr.detach()
 
         # Clean up tray resources before quitting

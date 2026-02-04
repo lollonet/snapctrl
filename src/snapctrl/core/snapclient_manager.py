@@ -99,8 +99,10 @@ def is_snapclient_running() -> bool:
     now = time.monotonic()
 
     # First check without lock (fast path)
-    if cache_key in _process_check_cache:
-        cached_time, cached_result = _process_check_cache[cache_key]
+    # Use .get() to avoid KeyError if cache is invalidated between check and read
+    cached = _process_check_cache.get(cache_key)
+    if cached is not None:
+        cached_time, cached_result = cached
         if now - cached_time < _PROCESS_CHECK_CACHE_TTL:
             return cached_result
 
