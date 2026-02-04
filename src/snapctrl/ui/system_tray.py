@@ -187,7 +187,7 @@ class SystemTrayManager(QObject):
         # Window visibility affects toggle label
         parts.append(f"vis:{self._window.isVisible()}")
 
-        # Groups and their mute/volume state
+        # Groups and their mute/volume/name/stream state
         for group in self._state.groups:
             clients = [c for c in self._state.clients if c.id in group.client_ids]
             connected = [c for c in clients if c.connected]
@@ -197,12 +197,15 @@ class SystemTrayManager(QObject):
                 avg_vol = sum(c.volume for c in clients) // len(clients)
             else:
                 avg_vol = 0
-            parts.append(f"g:{group.id}:{group.muted}:{avg_vol}")
+            # Include name and stream_id for complete state tracking
+            parts.append(f"g:{group.id}:{group.name}:{group.muted}:{avg_vol}:{group.stream_id}")
 
-        # Now playing metadata
+        # Now playing metadata and source status
         for source in self._state.sources:
+            # Include source name and status even without metadata
+            parts.append(f"s:{source.id}:{source.name}:{source.status}")
             if source.is_playing and source.has_metadata:
-                parts.append(f"s:{source.id}:{source.meta_title}:{source.meta_artist}")
+                parts.append(f"sm:{source.id}:{source.meta_title}:{source.meta_artist}")
 
         # Snapclient status
         if self._snapclient_mgr:

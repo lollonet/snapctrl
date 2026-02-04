@@ -114,7 +114,7 @@ def is_snapclient_running() -> bool:
 
         # Still stale - perform actual check while holding lock
         result = _do_process_check()
-        _process_check_cache[cache_key] = (time.monotonic(), result)
+        _process_check_cache[cache_key] = (now, result)
         return result
 
 
@@ -241,6 +241,9 @@ class SnapclientManager(QObject):
         self.refresh_external_status()
 
         # Check if snapclient is already running on the system (not managed by us)
+        # Note: There's an inherent TOCTOU race here - the external process could die
+        # between detection and adoption. This is handled by refresh_external_status()
+        # which should be called periodically to detect when external clients stop.
         if not self._process and is_snapclient_running():
             logger.info("Detected external snapclient already running, adopting it")
             self._is_external = True
