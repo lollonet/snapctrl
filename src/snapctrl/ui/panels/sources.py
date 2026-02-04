@@ -302,7 +302,8 @@ class SourcesPanel(QWidget):
         """
         logger.info("_set_pixmap: %dx%d", pixmap.width(), pixmap.height())
         # Scale down large images to save memory (UI only needs ~300px display)
-        if pixmap.width() > self._MAX_STORED_PIXMAP_SIZE or pixmap.height() > self._MAX_STORED_PIXMAP_SIZE:
+        max_size = self._MAX_STORED_PIXMAP_SIZE
+        if pixmap.width() > max_size or pixmap.height() > max_size:
             pixmap = pixmap.scaled(
                 self._MAX_STORED_PIXMAP_SIZE,
                 self._MAX_STORED_PIXMAP_SIZE,
