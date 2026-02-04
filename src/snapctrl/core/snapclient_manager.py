@@ -18,6 +18,8 @@ from __future__ import annotations
 
 import logging
 import re
+import subprocess
+import time
 
 from PySide6.QtCore import QObject, QProcess, QTimer, Signal
 
@@ -41,9 +43,75 @@ MAX_CLIENT_ID_LEN = 64
 _MAC_RE = re.compile(r"^([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2}$")
 _HOSTNAME_LABEL = r"[a-zA-Z0-9](?:[a-zA-Z0-9_-]{0,61}[a-zA-Z0-9])?"
 _HOST_RE = re.compile(rf"^{_HOSTNAME_LABEL}(?:\.{_HOSTNAME_LABEL})*$")
+_CLIENT_ID_RE = re.compile(r"\bhostID:\s*([a-zA-Z0-9:._-]+)")  # Pre-compiled for stdout parsing
 
 # Dangerous snapclient flags that must not be set via extra_args
 _BLOCKED_ARGS = frozenset({"--host", "--port", "--hostID", "--logsink", "--logfilter"})
+
+# Process detection cache (reduces subprocess overhead from ~100ms to ~0ms for repeated calls)
+_PROCESS_CHECK_CACHE_TTL = 2.0  # seconds
+_process_check_cache: dict[str, tuple[float, bool]] = {}
+
+
+def _do_process_check() -> bool:
+    """Actually perform the process check (no caching)."""
+    try:
+        # Use pgrep for cross-platform process detection
+        result = subprocess.run(
+            ["pgrep", "-x", "snapclient"],
+            capture_output=True,
+            timeout=5,
+            check=False,
+        )
+        return result.returncode == 0
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        # pgrep not available or timed out - try ps fallback
+        try:
+            result = subprocess.run(
+                ["ps", "-A", "-o", "comm="],
+                capture_output=True,
+                text=True,
+                timeout=5,
+                check=False,
+            )
+            if result.returncode == 0:
+                processes = result.stdout.strip().split("\n")
+                return any(proc.strip() == "snapclient" for proc in processes)
+        except (FileNotFoundError, subprocess.TimeoutExpired):
+            pass
+    return False
+
+
+def is_snapclient_running() -> bool:
+    """Check if a snapclient process is running on the system.
+
+    Results are cached for 2 seconds to avoid expensive subprocess calls
+    on repeated checks (e.g., during UI updates).
+
+    Returns:
+        True if snapclient is found in the process list.
+    """
+    cache_key = "snapclient"
+    now = time.monotonic()
+
+    # Check cache
+    if cache_key in _process_check_cache:
+        cached_time, cached_result = _process_check_cache[cache_key]
+        if now - cached_time < _PROCESS_CHECK_CACHE_TTL:
+            return cached_result
+
+    # Cache miss - perform actual check
+    result = _do_process_check()
+    _process_check_cache[cache_key] = (now, result)
+    return result
+
+
+def invalidate_process_cache() -> None:
+    """Invalidate the process check cache.
+
+    Call this after starting/stopping a process to force a fresh check.
+    """
+    _process_check_cache.clear()
 
 
 class SnapclientManager(QObject):
@@ -63,7 +131,7 @@ class SnapclientManager(QObject):
         mgr.start("192.168.1.100")
     """
 
-    status_changed = Signal(str)  # "running", "stopped", "starting", "error"
+    status_changed = Signal(str)  # "running", "stopped", "starting", "error", "external"
     error_occurred = Signal(str)  # error message
     client_id_detected = Signal(str)  # client ID from snapclient output
 
@@ -80,6 +148,7 @@ class SnapclientManager(QObject):
         self._auto_restart = True
         self._backoff_ms = INITIAL_BACKOFF_MS
         self._consecutive_failures = 0
+        self._is_external = False  # True if using externally-started snapclient
         self._restart_timer = QTimer(self)
         self._restart_timer.setSingleShot(True)
         self._restart_timer.timeout.connect(self._do_restart)
@@ -91,10 +160,17 @@ class SnapclientManager(QObject):
 
     @property
     def is_running(self) -> bool:
-        """Return True if the snapclient process is running."""
+        """Return True if the snapclient process is running (managed or external)."""
+        if self._is_external:
+            return True
         return (
             self._process is not None and self._process.state() != QProcess.ProcessState.NotRunning
         )
+
+    @property
+    def is_external(self) -> bool:
+        """Return True if using an externally-started snapclient."""
+        return self._is_external
 
     def set_configured_binary_path(self, path: str | None) -> None:
         """Set user-configured binary path for discovery.
@@ -130,7 +206,8 @@ class SnapclientManager(QObject):
     def start(self, host: str, port: int = 1704) -> None:
         """Start the snapclient subprocess.
 
-        If already running, stops the current process first.
+        If already running (either managed by this instance or externally),
+        stops or reports the existing process first.
 
         Args:
             host: Snapserver hostname or IP.
@@ -145,6 +222,18 @@ class SnapclientManager(QObject):
         if not (1 <= port <= MAX_PORT):
             msg = f"Port must be 1–{MAX_PORT}, got {port}"
             raise ValueError(msg)
+
+        # Refresh external status in case it was killed since we last checked
+        self.refresh_external_status()
+
+        # Check if snapclient is already running on the system (not managed by us)
+        if not self._process and is_snapclient_running():
+            logger.info("Detected external snapclient already running, adopting it")
+            self._is_external = True
+            self._host = host
+            self._port = port
+            self._set_status("external")
+            return
 
         if self.is_running:
             logger.info("Stopping existing snapclient before restart")
@@ -187,6 +276,13 @@ class SnapclientManager(QObject):
         self._auto_restart = False
         self._restart_timer.stop()
 
+        # If using external snapclient, we don't manage its lifecycle
+        if self._is_external:
+            logger.info("External snapclient - not stopping (not managed by us)")
+            self._is_external = False
+            self._set_status("stopped")
+            return
+
         if self._process is not None:
             if self._process.state() != QProcess.ProcessState.NotRunning:
                 logger.info("Stopping snapclient (SIGTERM)")
@@ -206,6 +302,7 @@ class SnapclientManager(QObject):
             self._cleanup_process()
 
         self._set_status("stopped")
+        invalidate_process_cache()  # Force fresh check after stopping
 
     def restart(self) -> None:
         """Restart the snapclient subprocess.
@@ -234,10 +331,44 @@ class SnapclientManager(QObject):
         """
         self._auto_restart = enabled
 
+    def detect_external(self) -> bool:
+        """Check if an external snapclient is running and adopt it.
+
+        Returns:
+            True if external snapclient was detected and adopted.
+        """
+        if self._process is not None:
+            return False  # Already managing our own process
+
+        if is_snapclient_running():
+            logger.info("Detected external snapclient running")
+            self._is_external = True
+            self._set_status("external")
+            return True
+        return False
+
+    def refresh_external_status(self) -> None:
+        """Check if external snapclient is still running.
+
+        If we were using an external snapclient and it stopped,
+        update status to stopped.
+        """
+        if not self._is_external:
+            return
+
+        if not is_snapclient_running():
+            logger.info("External snapclient stopped")
+            self._is_external = False
+            self._set_status("stopped")
+
     def _launch(self) -> None:
         """Launch the snapclient process."""
         if self._binary_path is None:
             return
+
+        # Clean up any existing process first (prevents memory leak)
+        if self._process is not None:
+            self._cleanup_process()
 
         self._process = QProcess(self)
         self._process.setProcessChannelMode(QProcess.ProcessChannelMode.MergedChannels)
@@ -250,6 +381,7 @@ class SnapclientManager(QObject):
 
         self._set_status("starting")
         self._process.start(self._binary_path, args)
+        invalidate_process_cache()  # Force fresh check after starting
 
     def _build_args(self) -> list[str]:
         """Build snapclient CLI arguments."""
@@ -292,9 +424,10 @@ class SnapclientManager(QObject):
                 self._set_status("running")
                 self._backoff_ms = INITIAL_BACKOFF_MS
                 self._consecutive_failures = 0
+                continue  # Skip regex check - connection line won't have hostID
 
             # Detect client ID from output (e.g. "hostID: aa:bb:cc:dd:ee:ff")
-            id_match = re.search(r"\bhostID:\s*([a-zA-Z0-9:._-]+)", line)
+            id_match = _CLIENT_ID_RE.search(line)
             if id_match:
                 client_id = id_match.group(1)
                 # Validate client ID: MAC address or hostname format

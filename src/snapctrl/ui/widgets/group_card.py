@@ -160,9 +160,9 @@ class GroupCard(QWidget):
         source_row.setSpacing(spacing.sm)
 
         p = theme_manager.palette
-        source_label = QLabel("Source:")
-        source_label.setStyleSheet(f"color: {p.text_disabled};")
-        source_row.addWidget(source_label)
+        self._source_label = QLabel("Source:")
+        self._source_label.setStyleSheet(f"color: {p.text_disabled};")
+        source_row.addWidget(self._source_label)
 
         self._source_combo = QComboBox()
         self._source_combo.setMinimumWidth(120)
@@ -515,3 +515,25 @@ class GroupCard(QWidget):
 
         self._client_cards[client_id] = card
         self._clients_layout.addWidget(card)
+
+    def refresh_theme(self) -> None:
+        """Refresh styles when theme changes."""
+        # Re-run _setup_styles to update base/selected styles
+        self._setup_styles()
+        # Re-apply current selection state
+        self.setStyleSheet(self._selected_style if self._selected else self._base_style)
+
+        p = theme_manager.palette
+        self._name_label.setStyleSheet(
+            f"font-weight: bold; font-size: {typography.title}pt;"
+            f" padding: {spacing.xs}px; color: {p.text};"
+        )
+        self._source_label.setStyleSheet(f"color: {p.text_disabled};")
+        self._client_list_label.setStyleSheet(
+            f"color: {p.text_disabled}; font-size: {typography.body}pt;"
+        )
+        # Refresh volume slider
+        self._volume_slider.refresh_theme()
+        # Refresh all client cards
+        for card in self._client_cards.values():
+            card.refresh_theme()

@@ -428,12 +428,16 @@ class PreferencesDialog(QDialog):
         if path:
             self._sc_binary.setText(path)
 
-    def set_connection_info(self, host: str, port: int) -> None:
+    def set_connection_info(self, host: str, port: int, hostname: str = "") -> None:
         """Set the current connection info (read-only display).
 
         Args:
             host: Current server host.
             port: Current server port.
+            hostname: Optional FQDN from mDNS discovery.
         """
-        self._conn_host.setText(host)
+        if hostname:
+            self._conn_host.setText(f"{hostname} ({host})")
+        else:
+            self._conn_host.setText(host)
         self._conn_port.setValue(port)

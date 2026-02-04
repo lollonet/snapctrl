@@ -24,7 +24,7 @@ class SourceStatus(StrEnum):
 _SAMPLE_FORMAT_PARTS = 3
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Source:
     """An audio source/stream in the Snapcast server.
 

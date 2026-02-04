@@ -58,6 +58,9 @@ class SourcesPanel(QWidget):
     # Signal emitted when a source is double-clicked (for switching groups)
     source_selected = Signal(str)  # source_id
 
+    # Internal signal for thread-safe album art updates
+    _art_decoded = Signal()
+
     def __init__(self) -> None:
         """Initialize the sources panel."""
         super().__init__()
@@ -76,9 +79,13 @@ class SourcesPanel(QWidget):
 
         # Pending fallback art result (data, mime_type, source)
         self._pending_fallback_art: tuple[bytes, str, str] | None = None
+        self._pending_fallback_generation: int = 0
 
         # Flag to cancel fallback when valid art arrives
         self._art_loaded: bool = False
+
+        # Connect internal signal for thread-safe art updates
+        self._art_decoded.connect(self._apply_data_uri_art)
 
         # Debounce timer for resize-driven album art height updates
         self._resize_timer = QTimer(self)
@@ -88,7 +95,6 @@ class SourcesPanel(QWidget):
 
         # Generation counter to cancel stale fallback requests
         self._fallback_generation: int = 0
-        self._pending_fallback_generation: int = 0
 
         # Fallback album art provider chain: iTunes -> MusicBrainz
         self._art_provider = FallbackAlbumArtProvider(
@@ -103,9 +109,9 @@ class SourcesPanel(QWidget):
         layout.setSpacing(spacing.xs)
 
         # Header
-        header = QLabel("Sources")
-        header.setStyleSheet(f"font-weight: bold; font-size: {typography.title}pt;")
-        layout.addWidget(header)
+        self._header = QLabel("Sources")
+        self._header.setStyleSheet(f"font-weight: bold; font-size: {typography.title}pt;")
+        layout.addWidget(self._header)
 
         # Source list
         p = theme_manager.palette
@@ -285,12 +291,24 @@ class SourcesPanel(QWidget):
         self._album_art.setText("No\nArt")
         self._album_art.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
+    # Max stored pixmap size (larger images scaled down to save memory)
+    _MAX_STORED_PIXMAP_SIZE = 512
+
     def _set_pixmap(self, pixmap: QPixmap) -> None:
         """Store original pixmap and let Qt scale via setScaledContents.
 
         Args:
             pixmap: Full-resolution pixmap to display.
         """
+        logger.info("_set_pixmap: %dx%d", pixmap.width(), pixmap.height())
+        # Scale down large images to save memory (UI only needs ~300px display)
+        if pixmap.width() > self._MAX_STORED_PIXMAP_SIZE or pixmap.height() > self._MAX_STORED_PIXMAP_SIZE:
+            pixmap = pixmap.scaled(
+                self._MAX_STORED_PIXMAP_SIZE,
+                self._MAX_STORED_PIXMAP_SIZE,
+                Qt.AspectRatioMode.KeepAspectRatio,
+                Qt.TransformationMode.SmoothTransformation,
+            )
         self._original_pixmap = pixmap
         self._album_art.setScaledContents(True)
         self._album_art.setPixmap(pixmap)
@@ -410,6 +428,7 @@ class SourcesPanel(QWidget):
         Args:
             art_url: Album art URL (data URI or http URL).
         """
+        logger.debug("_set_album_art called with: %s", art_url[:80] if art_url else "None")
         if not art_url:
             # No URL from source, try fallback providers
             self._try_fallback_art()
@@ -417,6 +436,7 @@ class SourcesPanel(QWidget):
 
         # Handle data URIs
         if art_url.startswith("data:"):
+            logger.debug("Loading data URI (gen=%d)", self._fallback_generation)
             if self._load_data_uri_image(art_url):
                 return
             # Data URI failed, try fallback
@@ -438,10 +458,16 @@ class SourcesPanel(QWidget):
         Args:
             url: HTTP/HTTPS URL to fetch.
         """
-        # Rewrite URL hostname if we have a server host
+        # Rewrite URL hostname only for local/loopback addresses
+        # (e.g., http://localhost:1780/... → http://192.168.1.100:1780/...)
+        # External URLs (coverartarchive.org, etc.) should not be rewritten
         if self._server_host:
             parsed = urlparse(url)
-            if parsed.hostname:
+            hostname = parsed.hostname or ""
+            is_local = hostname in ("localhost", "127.0.0.1", "::1") or hostname.startswith(
+                "192.168."
+            )
+            if is_local and hostname != self._server_host:
                 port = parsed.port or (443 if parsed.scheme == "https" else 80)
                 new_netloc = f"{self._server_host}:{port}"
                 url = urlunparse(parsed._replace(netloc=new_netloc))
@@ -453,6 +479,11 @@ class SourcesPanel(QWidget):
         self._pending_art_url = url
         request = QNetworkRequest(QUrl(url))
         request.setHeader(QNetworkRequest.KnownHeaders.UserAgentHeader, "SnapCTRL/1.0")
+        # Follow redirects (coverartarchive.org returns 307 redirects)
+        request.setAttribute(
+            QNetworkRequest.Attribute.RedirectPolicyAttribute,
+            QNetworkRequest.RedirectPolicy.NoLessSafeRedirectPolicy,
+        )
         self._network_manager.get(request)
         logger.debug("Fetching album art from: %s", url)
 
@@ -493,13 +524,13 @@ class SourcesPanel(QWidget):
         self._try_fallback_art()
 
     def _load_data_uri_image(self, art_url: str) -> bool:
-        """Load image from data URI.
+        """Load image from data URI in background thread.
 
         Args:
             art_url: Data URI containing base64 image data.
 
         Returns:
-            True if successfully loaded, False otherwise.
+            True if decode started (async), False if invalid format.
         """
         try:
             # Parse data URI: data:mime_type;base64,<data>
@@ -510,29 +541,61 @@ class SourcesPanel(QWidget):
                 logger.warning("Album art too large (%d bytes), skipping", len(data_b64))
                 return False
 
-            image_data = base64.b64decode(data_b64)
-            pixmap = QPixmap()
-            pixmap.loadFromData(image_data)
+            # Increment generation to invalidate stale requests
+            self._fallback_generation += 1
+            current_generation = self._fallback_generation
 
-            if pixmap.isNull():
-                return False
+            def decode_in_thread() -> None:
+                """Decode base64 in background thread to avoid UI blocking."""
+                try:
+                    image_data = base64.b64decode(data_b64)
+                    # Store result and signal main thread to apply
+                    self._pending_fallback_art = (image_data, "image/jpeg", "data-uri")
+                    self._pending_fallback_generation = current_generation
+                    # Emit signal to trigger UI update on main thread
+                    self._art_decoded.emit()
+                except (ValueError, binascii.Error) as e:
+                    logger.debug("Invalid album art data URI format: %s", e)
+                except MemoryError:
+                    logger.error("Out of memory loading album art")
 
-            self._set_pixmap(pixmap)
-            # Mark art as loaded to prevent fallback overwriting
-            self._art_loaded = True
+            # Start background thread for decode
+            thread = threading.Thread(target=decode_in_thread, daemon=True)
+            thread.start()
             return True
-        except (ValueError, binascii.Error) as e:
+
+        except ValueError as e:
             logger.debug("Invalid album art data URI format: %s", e)
-        except MemoryError:
-            logger.error("Out of memory loading album art")
-        except OSError as e:
-            logger.warning("System error loading album art: %s", e)
-        except Exception as e:  # noqa: BLE001
-            logger.warning(
-                "Unexpected error loading album art: %s", type(e).__name__, exc_info=True
-            )
 
         return False
+
+    def _apply_data_uri_art(self) -> None:
+        """Apply decoded data URI art to UI (called on main thread)."""
+        logger.debug(
+            "_apply_data_uri_art: pending=%s, pending_gen=%d, current_gen=%d",
+            self._pending_fallback_art is not None,
+            getattr(self, "_pending_fallback_generation", -1),
+            self._fallback_generation,
+        )
+        if self._pending_fallback_art is None:
+            return
+
+        # Skip if this is a stale request
+        if self._pending_fallback_generation != self._fallback_generation:
+            logger.debug("Skipping stale art request")
+            self._pending_fallback_art = None
+            return
+
+        data, _mime_type, _source = self._pending_fallback_art
+        self._pending_fallback_art = None
+
+        pixmap = QPixmap()
+        if pixmap.loadFromData(data):
+            self._set_pixmap(pixmap)
+            self._art_loaded = True
+            logger.info("Loaded album art from data URI (%d bytes)", len(data))
+        else:
+            logger.warning("Failed to load pixmap from data URI (%d bytes)", len(data))
 
     def _update_details(self, source: Source) -> None:
         """Update the details panel with source info."""
@@ -557,14 +620,14 @@ class SourcesPanel(QWidget):
             # Show title on first line, artist/album on second if available
             if source.meta_album:
                 self._detail_now_playing.setText(
-                    f"<b>{source.meta_title}</b><br/>"
+                    f"<b style='color: {p.text};'>{source.meta_title}</b><br/>"
                     f"<span style='color: {p.text_secondary};'>{source.meta_artist}</span><br/>"
                     f"<span style='color: {p.text_disabled}; font-style: italic;'>"
                     f"{source.meta_album}</span>"
                 )
             else:
                 self._detail_now_playing.setText(
-                    f"<b>{source.meta_title}</b><br/>"
+                    f"<b style='color: {p.text};'>{source.meta_title}</b><br/>"
                     f"<span style='color: {p.text_secondary};'>{source.meta_artist}</span>"
                 )
             self._detail_now_playing.setTextFormat(Qt.TextFormat.RichText)
@@ -677,3 +740,81 @@ class SourcesPanel(QWidget):
         if item:
             return item.data(Qt.ItemDataRole.UserRole)
         return None
+
+    def refresh_theme(self) -> None:
+        """Refresh styles when theme changes."""
+        p = theme_manager.palette
+
+        self._header.setStyleSheet(
+            f"font-weight: bold; font-size: {typography.title}pt; color: {p.text};"
+        )
+        self._list.setStyleSheet(f"""
+            QListWidget {{
+                background-color: {p.surface_dim};
+                border: none;
+                padding: {spacing.xs}px;
+            }}
+            QListWidget::item {{
+                padding: {spacing.sm}px;
+                border-radius: {sizing.border_radius_md}px;
+            }}
+            QListWidget::item:selected {{
+                background-color: {p.surface_hover};
+            }}
+            QListWidget::item:hover {{
+                background-color: {p.surface_elevated};
+            }}
+        """)
+        self._details_frame.setStyleSheet(f"""
+            QFrame {{
+                background-color: {p.surface_dim};
+                border-radius: {sizing.border_radius_md}px;
+                padding: {spacing.sm}px;
+            }}
+            QLabel {{
+                color: {p.text_secondary};
+                font-size: {typography.small}pt;
+            }}
+        """)
+        self._album_art.setStyleSheet(f"""
+            QLabel {{
+                background-color: {p.background};
+                border-radius: {sizing.border_radius_md}px;
+            }}
+        """)
+        self._detail_now_playing.setStyleSheet(
+            f"color: {p.text}; font-size: {typography.body}pt;"
+        )
+        self._time_label.setStyleSheet(
+            f"color: {p.text_secondary}; font-size: {typography.body}pt;"
+        )
+        self._progress_bar.setStyleSheet(f"""
+            QProgressBar {{
+                background-color: {p.surface_dim};
+                border: none;
+                border-radius: 2px;
+            }}
+            QProgressBar::chunk {{
+                background-color: {p.accent};
+                border-radius: 2px;
+            }}
+        """)
+
+        # Re-render now playing text with updated colors (HTML has embedded colors)
+        if self._current_title:
+            if self._current_album:
+                self._detail_now_playing.setText(
+                    f"<b style='color: {p.text};'>{self._current_title}</b><br/>"
+                    f"<span style='color: {p.text_secondary};'>{self._current_artist}</span><br/>"
+                    f"<span style='color: {p.text_disabled}; font-style: italic;'>"
+                    f"{self._current_album}</span>"
+                )
+            elif self._current_artist:
+                self._detail_now_playing.setText(
+                    f"<b style='color: {p.text};'>{self._current_title}</b><br/>"
+                    f"<span style='color: {p.text_secondary};'>{self._current_artist}</span>"
+                )
+            else:
+                self._detail_now_playing.setText(
+                    f"<b style='color: {p.text};'>{self._current_title}</b>"
+                )

@@ -18,6 +18,13 @@ from snapctrl.core.snapclient_manager import (
 )
 
 
+@pytest.fixture(autouse=True)
+def mock_system_snapclient_check() -> object:
+    """Disable system-wide snapclient check for all tests."""
+    with patch("snapctrl.core.snapclient_manager.is_snapclient_running", return_value=False):
+        yield
+
+
 class TestSnapclientManagerInit:
     """Test initialization and defaults."""
 
@@ -120,6 +127,22 @@ class TestSnapclientManagerStartValidation:
 
 class TestSnapclientManagerStart:
     """Test start behavior."""
+
+    def test_start_rejects_when_external_snapclient_running(self) -> None:
+        """Start emits warning when another snapclient is already running."""
+        mgr = SnapclientManager()
+        errors: list[str] = []
+        mgr.error_occurred.connect(errors.append)
+
+        with patch(
+            "snapctrl.core.snapclient_manager.is_snapclient_running", return_value=True
+        ):
+            mgr.start("192.168.1.100")
+
+        # Status stays at "stopped" (not error) - just warns user
+        assert mgr.status == "stopped"
+        assert len(errors) == 1
+        assert "already running" in errors[0]
 
     def test_start_emits_error_when_binary_not_found(self) -> None:
         """Start emits error_occurred when binary not found."""

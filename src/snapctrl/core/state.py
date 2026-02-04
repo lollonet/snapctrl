@@ -7,6 +7,7 @@ This follows the Observer pattern via Qt's signal/slot mechanism.
 """
 
 import logging
+from collections.abc import Mapping
 from dataclasses import replace
 
 from PySide6.QtCore import QObject, Signal
@@ -60,6 +61,10 @@ class StateStore(QObject):
         self._groups: dict[str, Group] = {}
         self._clients: dict[str, Client] = {}
         self._sources: dict[str, Source] = {}
+        # List caches to avoid repeated list() conversions
+        self._groups_cache: list[Group] | None = None
+        self._clients_cache: list[Client] | None = None
+        self._sources_cache: list[Source] | None = None
 
     @property
     def is_connected(self) -> bool:
@@ -78,18 +83,44 @@ class StateStore(QObject):
 
     @property
     def groups(self) -> list[Group]:
-        """Return all groups."""
-        return list(self._groups.values())
+        """Return all groups (cached)."""
+        if self._groups_cache is None:
+            self._groups_cache = list(self._groups.values())
+        return self._groups_cache
 
     @property
     def clients(self) -> list[Client]:
-        """Return all clients."""
-        return list(self._clients.values())
+        """Return all clients (cached)."""
+        if self._clients_cache is None:
+            self._clients_cache = list(self._clients.values())
+        return self._clients_cache
 
     @property
     def sources(self) -> list[Source]:
-        """Return all sources."""
-        return list(self._sources.values())
+        """Return all sources (cached)."""
+        if self._sources_cache is None:
+            self._sources_cache = list(self._sources.values())
+        return self._sources_cache
+
+    def _invalidate_caches(self) -> None:
+        """Invalidate all list caches."""
+        self._groups_cache = None
+        self._clients_cache = None
+        self._sources_cache = None
+
+    @staticmethod
+    def _dict_changed(old: Mapping[str, object], new: Mapping[str, object]) -> bool:
+        """Check if dictionary changed using optimized comparison.
+
+        First compares keys (fast set operation), then compares values
+        only for matching keys. This avoids expensive deep comparison
+        when keys differ.
+        """
+        # Fast path: different key sets
+        if old.keys() != new.keys():
+            return True
+        # Slow path: compare values only if keys match
+        return any(old[k] != new[k] for k in new)
 
     def get_group(self, group_id: str) -> Group | None:
         """Get a group by ID.
@@ -178,14 +209,18 @@ class StateStore(QObject):
         new_clients = {c.id: c for c in state.clients}
         new_sources = {s.id: s for s in state.sources}
 
-        # Store all values FIRST, then emit signals
-        # (handlers may read other properties, so all must be updated)
-        groups_changed = new_groups != self._groups
-        clients_changed = new_clients != self._clients
-        sources_changed = new_sources != self._sources
+        # Optimized change detection: check keys first (fast), then values only if needed
+        groups_changed = self._dict_changed(self._groups, new_groups)
+        clients_changed = self._dict_changed(self._clients, new_clients)
+        sources_changed = self._dict_changed(self._sources, new_sources)
 
-        self._groups = new_groups
-        self._clients = new_clients
+        # Update dictionaries and invalidate caches
+        if groups_changed:
+            self._groups = new_groups
+            self._groups_cache = None
+        if clients_changed:
+            self._clients = new_clients
+            self._clients_cache = None
 
         # Merge sources: preserve metadata we've added (from MpdMonitor etc.)
         # when Snapcast server sends updates with empty metadata
@@ -201,9 +236,20 @@ class StateStore(QObject):
                     meta_album=old_source.meta_album,
                     meta_art_url=old_source.meta_art_url,
                 )
+            elif old_source and old_source.meta_art_url.startswith("data:"):
+                # Prefer locally-fetched art (data URI) over server HTTP URLs
+                # Data URIs are from MPD embedded art which is more reliable
+                merged_sources[source_id] = replace(
+                    new_source,
+                    meta_art_url=old_source.meta_art_url,
+                )
             else:
                 merged_sources[source_id] = new_source
-        self._sources = merged_sources
+
+        if sources_changed or merged_sources != self._sources:
+            self._sources = merged_sources
+            self._sources_cache = None
+            sources_changed = True
 
         # Now emit signals (handlers can safely read any property)
         if groups_changed:
@@ -213,14 +259,16 @@ class StateStore(QObject):
             self.clients_changed.emit(state.clients)
 
         if sources_changed:
-            self.sources_changed.emit(list(merged_sources.values()))
+            self.sources_changed.emit(self.sources)  # Use cached property
 
         # Emit connection state if changed (including initial connection)
         if connection_changed:
             self.connection_changed.emit(state.connected)
 
-        # Always emit state_changed for full updates
-        self.state_changed.emit(state)
+        # Only emit state_changed if no specific signals were emitted
+        # This prevents double UI updates when specific handlers already processed
+        if not (groups_changed or clients_changed or sources_changed or connection_changed):
+            self.state_changed.emit(state)
 
     def update_client_volume(self, client_id: str, volume: int, muted: bool) -> None:
         """Update a specific client's volume in the local state.
@@ -236,19 +284,17 @@ class StateStore(QObject):
         if client:
             updated = replace(client, volume=volume, muted=muted)
             self._clients[client_id] = updated
+            self._clients_cache = None  # Invalidate cache
 
-            # Rebuild clients list and emit
-            new_clients = list(self._clients.values())
-            self.clients_changed.emit(new_clients)
+            # Emit using cached property
+            self.clients_changed.emit(self.clients)
 
-            # Update state if we have it
+            # Update state if we have it (but don't emit state_changed)
             if self._state:
-                # Update clients in state
                 new_state_clients = [
                     updated if c.id == client_id else c for c in self._state.clients
                 ]
                 self._state = replace(self._state, clients=new_state_clients)
-                self.state_changed.emit(self._state)
 
     def update_client_latency(self, client_id: str, latency: int) -> None:
         """Update a specific client's latency offset in the local state.
@@ -261,16 +307,16 @@ class StateStore(QObject):
         if client:
             updated = replace(client, latency=latency)
             self._clients[client_id] = updated
+            self._clients_cache = None  # Invalidate cache
 
-            new_clients = list(self._clients.values())
-            self.clients_changed.emit(new_clients)
+            self.clients_changed.emit(self.clients)
 
+            # Update state but don't emit state_changed (clients_changed is sufficient)
             if self._state:
                 new_state_clients = [
                     updated if c.id == client_id else c for c in self._state.clients
                 ]
                 self._state = replace(self._state, clients=new_state_clients)
-                self.state_changed.emit(self._state)
 
     def update_group_mute(self, group_id: str, muted: bool) -> None:
         """Update a specific group's mute state in the local state.
@@ -283,16 +329,15 @@ class StateStore(QObject):
         if group:
             updated = replace(group, muted=muted)
             self._groups[group_id] = updated
+            self._groups_cache = None  # Invalidate cache
 
-            # Rebuild groups list and emit
-            new_groups = list(self._groups.values())
-            self.groups_changed.emit(new_groups)
+            # Emit using cached property
+            self.groups_changed.emit(self.groups)
 
-            # Update state if we have it
+            # Update state but don't emit state_changed (groups_changed is sufficient)
             if self._state:
                 new_state_groups = [updated if g.id == group_id else g for g in self._state.groups]
                 self._state = replace(self._state, groups=new_state_groups)
-                self.state_changed.emit(self._state)
 
     def update_source_metadata(
         self,
@@ -332,17 +377,17 @@ class StateStore(QObject):
             meta_art_url=meta_art_url,
         )
         self._sources[source_id] = updated
+        self._sources_cache = None  # Invalidate cache
 
-        # Emit sources changed
-        self.sources_changed.emit(list(self._sources.values()))
+        # Emit sources changed (no state_changed to avoid double updates)
+        self.sources_changed.emit(self.sources)
 
-        # Update state if we have it
+        # Update state but don't emit state_changed (sources_changed is sufficient)
         if self._state:
             new_state_sources = tuple(
                 updated if s.id == source_id else s for s in self._state.sources
             )
             self._state = replace(self._state, sources=new_state_sources)
-            self.state_changed.emit(self._state)
 
     def find_source_by_name(self, name: str) -> Source | None:
         """Find a source by name (case-insensitive).
@@ -390,6 +435,7 @@ class StateStore(QObject):
         self._groups.clear()
         self._clients.clear()
         self._sources.clear()
+        self._invalidate_caches()
 
         if was_connected:
             self.connection_changed.emit(False)

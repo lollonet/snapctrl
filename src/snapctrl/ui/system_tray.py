@@ -12,6 +12,7 @@ Usage:
 
 from __future__ import annotations
 
+import contextlib
 import logging
 from typing import TYPE_CHECKING, cast
 
@@ -21,6 +22,7 @@ from PySide6.QtWidgets import (
     QApplication,
     QMainWindow,
     QMenu,
+    QMessageBox,
     QSystemTrayIcon,
     QWidgetAction,
 )
@@ -95,6 +97,9 @@ class SystemTrayManager(QObject):
         # Quick volume slider (embedded in menu)
         self._volume_slider: VolumeSlider | None = None
 
+        # State fingerprint for skipping unnecessary menu rebuilds
+        self._last_menu_fingerprint: str = ""
+
         # Debounce timer for menu rebuild
         self._rebuild_timer = QTimer()
         self._rebuild_timer.setSingleShot(True)
@@ -168,8 +173,48 @@ class SystemTrayManager(QObject):
         """Schedule a debounced menu rebuild."""
         self._rebuild_timer.start()
 
+    def _compute_menu_fingerprint(self) -> str:
+        """Compute a fingerprint of state relevant to the menu.
+
+        This is used to skip menu rebuilds when nothing visible has changed.
+        Returns a string hash of the relevant state components.
+        """
+        parts: list[str] = []
+
+        # Window visibility affects toggle label
+        parts.append(f"vis:{self._window.isVisible()}")
+
+        # Groups and their mute/volume state
+        for group in self._state.groups:
+            clients = [c for c in self._state.clients if c.id in group.client_ids]
+            connected = [c for c in clients if c.connected]
+            if connected:
+                avg_vol = sum(c.volume for c in connected) // len(connected)
+            elif clients:
+                avg_vol = sum(c.volume for c in clients) // len(clients)
+            else:
+                avg_vol = 0
+            parts.append(f"g:{group.id}:{group.muted}:{avg_vol}")
+
+        # Now playing metadata
+        for source in self._state.sources:
+            if source.is_playing and source.has_metadata:
+                parts.append(f"s:{source.id}:{source.meta_title}:{source.meta_artist}")
+
+        # Snapclient status
+        if self._snapclient_mgr:
+            parts.append(f"sc:{self._snapclient_mgr.status}:{self._snapclient_mgr.is_external}")
+
+        return "|".join(parts)
+
     def _rebuild_menu(self) -> None:
         """Rebuild the tray context menu from current state."""
+        # Check if rebuild is actually needed
+        fingerprint = self._compute_menu_fingerprint()
+        if fingerprint == self._last_menu_fingerprint:
+            return  # Nothing changed, skip rebuild
+        self._last_menu_fingerprint = fingerprint
+
         self._menu.clear()
         self._volume_slider = None
 
@@ -314,6 +359,7 @@ class SystemTrayManager(QObject):
             "starting": "Local Client: Starting...",
             "stopped": "Local Client: Stopped",
             "error": "Local Client: Error",
+            "external": "Local Client: External",
         }
         label = status_labels.get(status, f"Local Client: {status}")
 
@@ -321,14 +367,18 @@ class SystemTrayManager(QObject):
         status_action.setEnabled(False)
         self._menu.addAction(status_action)
 
-        # Toggle action
-        if self._snapclient_mgr.is_running:
+        # Toggle action - external clients can't be stopped from here
+        if self._snapclient_mgr.is_external:
+            # External snapclient - no toggle action
+            pass
+        elif self._snapclient_mgr.is_running:
             toggle = QAction("Stop Local Client", self._menu)
             toggle.triggered.connect(self._on_stop_snapclient)
+            self._menu.addAction(toggle)
         else:
             toggle = QAction("Start Local Client", self._menu)
             toggle.triggered.connect(self._on_start_snapclient)
-        self._menu.addAction(toggle)
+            self._menu.addAction(toggle)
 
     def _on_stop_snapclient(self) -> None:
         """Stop the local snapclient."""
@@ -427,9 +477,10 @@ class SystemTrayManager(QObject):
         self._tray.setIcon(self._build_status_icon())
         self._tray.setToolTip("SnapCTRL — Connected" if connected else "SnapCTRL — Disconnected")
 
-        # Invalidate cached group on disconnect to avoid stale references
+        # Invalidate cached group and menu fingerprint on disconnect
         if not connected:
             self._cached_target_group = None
+            self._last_menu_fingerprint = ""  # Force menu rebuild on reconnect
 
     def _toggle_window(self) -> None:
         """Toggle main window visibility."""
@@ -449,8 +500,56 @@ class SystemTrayManager(QObject):
         if reason == QSystemTrayIcon.ActivationReason.DoubleClick:
             self._toggle_window()
 
+    def cleanup(self) -> None:
+        """Clean up resources before quitting.
+
+        Stops timers and disconnects signals to prevent crashes during shutdown.
+        Must be called before app.quit() or during aboutToQuit handling.
+        """
+        # Stop the rebuild timer to prevent callbacks during shutdown
+        self._rebuild_timer.stop()
+
+        # Disconnect state signals to prevent callbacks during destruction
+        with contextlib.suppress(RuntimeError):
+            self._state.groups_changed.disconnect(self._schedule_rebuild)
+            self._state.sources_changed.disconnect(self._schedule_rebuild)
+            self._state.clients_changed.disconnect(self._schedule_rebuild)
+            self._state.connection_changed.disconnect(self._on_connection_changed)
+
+        if self._snapclient_mgr:
+            with contextlib.suppress(RuntimeError):
+                self._snapclient_mgr.status_changed.disconnect(self._schedule_rebuild)
+
+        # Clear menu to release widget references
+        self._menu.clear()
+        self._volume_slider = None
+        self._cached_target_group = None
+        self._last_menu_fingerprint = ""
+
     def _on_quit(self) -> None:
-        """Quit the application."""
+        """Quit the application.
+
+        Shows snapclient confirmation dialog BEFORE initiating quit to avoid
+        showing modal dialogs during Qt shutdown (which can cause SIGSEGV).
+        """
+        # Handle snapclient confirmation BEFORE quit (not in aboutToQuit)
+        if self._snapclient_mgr and self._snapclient_mgr.is_running:
+            reply = QMessageBox.question(
+                self._window,
+                "Stop Local Client?",
+                "A local snapclient is running.\nStop it before quitting?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.Yes,
+            )
+            if reply == QMessageBox.StandardButton.Yes:
+                self._snapclient_mgr.stop()
+            else:
+                # Detach so process survives app exit
+                self._snapclient_mgr.detach()
+
+        # Clean up tray resources before quitting
+        self.cleanup()
+
         app = QApplication.instance()
         if app:
             app.quit()

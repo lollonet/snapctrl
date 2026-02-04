@@ -22,7 +22,7 @@ def _format_time_ago(seconds: int) -> str:
     return f"{seconds // _SECONDS_PER_DAY}d ago"
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Client:
     """A Snapcast client (audio endpoint/speaker).
 

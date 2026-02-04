@@ -53,11 +53,11 @@ class GroupsPanel(QWidget):
 
         # Header
         p = theme_manager.palette
-        header = QLabel("Groups")
-        header.setStyleSheet(
+        self._header = QLabel("Groups")
+        self._header.setStyleSheet(
             f"font-weight: bold; font-size: {typography.title}pt; color: {p.text};"
         )
-        layout.addWidget(header)
+        layout.addWidget(self._header)
 
         # Scroll area for group cards
         scroll = QScrollArea()
@@ -109,58 +109,64 @@ class GroupsPanel(QWidget):
         sources: list[Source] | None = None,
         clients: dict[str, list[Client]] | None = None,
     ) -> None:
-        """Update the list of groups.
+        """Update the list of groups using differential updates.
+
+        Only creates/removes widgets that actually changed. Existing widgets
+        are updated in place to avoid expensive recreation.
 
         Args:
             groups: List of Group objects to display.
             sources: Optional list of available sources.
             clients: Optional dict mapping group_id to list of clients.
         """
-        # Preserve expanded state before clearing
-        expanded_groups: set[str] = {
-            gid for gid, card in self._group_cards.items() if card.is_expanded
-        }
+        new_group_ids = {g.id for g in groups}
+        existing_group_ids = set(self._group_cards.keys())
 
-        # Clear existing cards
-        for card in self._group_cards.values():
+        # Remove cards for groups that no longer exist
+        removed_ids = existing_group_ids - new_group_ids
+        for gid in removed_ids:
+            card = self._group_cards.pop(gid)
             card.setParent(None)
-        self._group_cards.clear()
 
-        # Add new cards
+        # Track if we need to auto-expand (only if starting from empty)
+        was_empty = len(existing_group_ids) == 0
+
+        # Update existing cards and add new ones
         for group in groups:
-            card = GroupCard(group)
-            card.set_sources(sources or [])
-
-            # Add client cards if available
             group_clients = clients.get(group.id) if clients else None
-            if group_clients:
-                card.update_clients(group_clients)
 
-            # Connect card signals to panel signals
-            card.volume_changed.connect(self.volume_changed.emit)
-            card.mute_toggled.connect(self.mute_toggled.emit)
-            card.source_changed.connect(self.source_changed.emit)
-            card.clicked.connect(lambda gid=group.id: self._on_card_clicked(gid))
+            if group.id in self._group_cards:
+                # Update existing card in place (no recreation!)
+                card = self._group_cards[group.id]
+                card.update_from_state(group, sources or [], group_clients)
+            else:
+                # Create new card only for new groups
+                card = GroupCard(group)
+                card.set_sources(sources or [])
+                if group_clients:
+                    card.update_clients(group_clients)
 
-            # Connect client signals to panel signals
-            card.client_volume_changed.connect(self.client_volume_changed.emit)
-            card.client_mute_toggled.connect(self.client_mute_toggled.emit)
-            card.client_clicked.connect(self.client_selected.emit)
+                # Connect card signals to panel signals
+                card.volume_changed.connect(self.volume_changed.emit)
+                card.mute_toggled.connect(self.mute_toggled.emit)
+                card.source_changed.connect(self.source_changed.emit)
+                card.clicked.connect(lambda gid=group.id: self._on_card_clicked(gid))
 
-            # Connect rename signals
-            card.rename_requested.connect(self.group_rename_requested.emit)
-            card.client_rename_requested.connect(self.client_rename_requested.emit)
+                # Connect client signals to panel signals
+                card.client_volume_changed.connect(self.client_volume_changed.emit)
+                card.client_mute_toggled.connect(self.client_mute_toggled.emit)
+                card.client_clicked.connect(self.client_selected.emit)
 
-            self._group_cards[group.id] = card
-            # Insert before the stretch
-            self._container_layout.insertWidget(self._container_layout.count() - 1, card)
+                # Connect rename signals
+                card.rename_requested.connect(self.group_rename_requested.emit)
+                card.client_rename_requested.connect(self.client_rename_requested.emit)
 
-            # Restore expanded state if it was expanded before
-            if group.id in expanded_groups:
-                card.set_expanded(True)
+                self._group_cards[group.id] = card
+                # Insert before the stretch
+                self._container_layout.insertWidget(self._container_layout.count() - 1, card)
 
-        # Auto-expand if there's exactly one group and none were previously expanded
-        if len(groups) == 1 and not expanded_groups:
+        # Auto-expand if there's exactly one group and we started from empty
+        if len(groups) == 1 and was_empty:
             only_card = next(iter(self._group_cards.values()), None)
             if only_card:
                 only_card.set_expanded(True)
@@ -264,3 +270,13 @@ class GroupsPanel(QWidget):
         # Clear client selection in all groups, then select in the right one
         for card in self._group_cards.values():
             card.set_selected_client(client_id)
+
+    def refresh_theme(self) -> None:
+        """Refresh styles when theme changes."""
+        p = theme_manager.palette
+        self._header.setStyleSheet(
+            f"font-weight: bold; font-size: {typography.title}pt; color: {p.text};"
+        )
+        # Refresh all group cards
+        for card in self._group_cards.values():
+            card.refresh_theme()

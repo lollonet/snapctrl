@@ -8,6 +8,7 @@ import sys
 import time
 from pathlib import Path
 
+import setproctitle
 from PySide6.QtCore import QTimer
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QApplication, QMessageBox
@@ -59,13 +60,19 @@ def main() -> int:  # noqa: PLR0912, PLR0915
     Returns:
         Exit code (0 for success).
     """
+    # Set process title (for ps/top display)
+    setproctitle.setproctitle("SnapCTRL")
+
     # Set app metadata before creating QApplication (required for macOS)
     QApplication.setApplicationName("SnapCTRL")
     QApplication.setApplicationDisplayName("SnapCTRL")
     QApplication.setOrganizationName("SnapCTRL")
     QApplication.setOrganizationDomain("snapctrl.local")
 
-    app = QApplication(sys.argv)
+    # Override argv[0] to set macOS menu bar name
+    argv = sys.argv.copy()
+    argv[0] = "SnapCTRL"
+    app = QApplication(argv)
 
     # Parse command line arguments
     parser = argparse.ArgumentParser(
@@ -232,13 +239,8 @@ def main() -> int:  # noqa: PLR0912, PLR0915
 
     # Create main window
     window = MainWindow(state_store=state_store, config=config)
-    window.set_server_info(host, port)
+    window.set_server_info(host, port, hostname)
     window.sources_panel.set_server_host(host)
-    # Show hostname (FQDN) and IP in title if discovered via mDNS
-    if hostname:
-        window.setWindowTitle(f"SnapCTRL - {hostname} ({host}):{port}")
-    else:
-        window.setWindowTitle(f"SnapCTRL - {host}:{port}")
 
     # Set app icon
     icon_path = Path(__file__).parent.parent.parent / "resources" / "icon.svg"
@@ -406,6 +408,9 @@ def main() -> int:  # noqa: PLR0912, PLR0915
 
     def poll_time_stats() -> None:
         """Request server-side latency stats for connected clients."""
+        # Skip polling if not connected to server
+        if not state_store.is_connected:
+            return
         connected_ids = [c.id for c in state_store.clients if c.connected]
         logger.debug("poll_time_stats: %d connected clients", len(connected_ids))
         if connected_ids:
@@ -555,25 +560,18 @@ def main() -> int:  # noqa: PLR0912, PLR0915
     worker.start()
 
     # Auto-start local snapclient if configured
-    if config.get_snapclient_enabled() and config.get_snapclient_auto_start():
-        sc_host = config.get_snapclient_server_host() or host
-        snapclient_mgr.start(sc_host, snapclient_port)
+    if config.get_snapclient_enabled():
+        if config.get_snapclient_auto_start():
+            sc_host = config.get_snapclient_server_host() or host
+            snapclient_mgr.start(sc_host, snapclient_port)
+        else:
+            # Even without auto-start, detect if external snapclient is running
+            snapclient_mgr.detect_external()
 
-    # Ask before stopping snapclient on quit (while event loop is still running)
+    # Cleanup on quit (non-interactive - dialogs are handled by tray._on_quit BEFORE quit)
     def on_about_to_quit() -> None:
-        if snapclient_mgr.is_running:
-            reply = QMessageBox.question(
-                window,
-                "Stop Local Client?",
-                "A local snapclient is running.\nStop it before quitting?",
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-                QMessageBox.StandardButton.Yes,
-            )
-            if reply == QMessageBox.StandardButton.Yes:
-                snapclient_mgr.stop()
-            else:
-                # Detach so process survives app exit
-                snapclient_mgr.detach()
+        # Tray cleanup (disconnect signals, stop timers)
+        tray.cleanup()
 
     app.aboutToQuit.connect(on_about_to_quit)
 

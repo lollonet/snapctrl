@@ -8,7 +8,7 @@ from snapctrl.models.server import Server
 from snapctrl.models.source import Source
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class ServerState:
     """Complete snapshot of server state at a point in time.
 
