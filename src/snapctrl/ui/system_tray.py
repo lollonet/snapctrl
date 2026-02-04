@@ -178,6 +178,8 @@ class SystemTrayManager(QObject):
 
         This is used to skip menu rebuilds when nothing visible has changed.
         Returns a string hash of the relevant state components.
+
+        Optimized: Uses pre-built client lookup dict to avoid O(n*m) filtering.
         """
         parts: list[str] = []
 
@@ -187,29 +189,30 @@ class SystemTrayManager(QObject):
         # Window visibility affects toggle label
         parts.append(f"vis:{self._window.isVisible()}")
 
+        # Build client lookup once (O(n) instead of O(n*m))
+        client_by_id = {c.id: c for c in self._state.clients}
+
         # Groups and their mute/volume/name/stream state
         for group in self._state.groups:
-            clients = [c for c in self._state.clients if c.id in group.client_ids]
-            connected = [c for c in clients if c.connected]
-            if connected:
-                avg_vol = sum(c.volume for c in connected) // len(connected)
-            elif clients:
-                avg_vol = sum(c.volume for c in clients) // len(clients)
-            else:
-                avg_vol = 0
-            # Include name and stream_id for complete state tracking
-            parts.append(f"g:{group.id}:{group.name}:{group.muted}:{avg_vol}:{group.stream_id}")
+            total_vol = 0
+            count = 0
+            for cid in group.client_ids:
+                client = client_by_id.get(cid)
+                if client:
+                    total_vol += client.volume
+                    count += 1
+            avg_vol = total_vol // count if count > 0 else 0
+            parts.append(f"g:{group.id}:{group.muted}:{avg_vol}:{group.stream_id}")
 
-        # Now playing metadata and source status
+        # Now playing - only include playing source (skip idle sources for perf)
         for source in self._state.sources:
-            # Include source name and status even without metadata
-            parts.append(f"s:{source.id}:{source.name}:{source.status}")
-            if source.is_playing and source.has_metadata:
-                parts.append(f"sm:{source.id}:{source.meta_title}:{source.meta_artist}")
+            if source.is_playing:
+                parts.append(f"s:{source.id}:{source.meta_title}:{source.meta_artist}")
+                break  # Only show first playing source
 
         # Snapclient status
         if self._snapclient_mgr:
-            parts.append(f"sc:{self._snapclient_mgr.status}:{self._snapclient_mgr.is_external}")
+            parts.append(f"sc:{self._snapclient_mgr.status}")
 
         return "|".join(parts)
 
@@ -234,13 +237,14 @@ class SystemTrayManager(QObject):
 
         self._menu.addSeparator()
 
+        # Build client lookup once for all group entries
+        client_by_id = {c.id: c for c in self._state.clients}
+
         # Group entries
         groups = self._state.groups
-        clients = self._state.clients
         if groups:
             for group in groups:
-                group_clients = [c for c in clients if c.id in group.client_ids]
-                self._add_group_entry(group, group_clients)
+                self._add_group_entry(group, client_by_id)
 
             # Mute All / Unmute All
             mute_all = QAction("Mute All", self._menu)
@@ -277,21 +281,22 @@ class SystemTrayManager(QObject):
         quit_action.triggered.connect(self._on_quit)
         self._menu.addAction(quit_action)
 
-    def _add_group_entry(self, group: Group, clients: list[Client]) -> None:
+    def _add_group_entry(self, group: Group, client_by_id: dict[str, Client]) -> None:
         """Add a read-only group entry to the menu.
 
         Args:
             group: The group to display.
-            clients: Clients in this group.
+            client_by_id: Dict mapping client IDs to Client objects.
         """
-        # Calculate average volume
-        connected = [c for c in clients if c.connected]
-        if connected:
-            avg_vol = sum(c.volume for c in connected) // len(connected)
-        elif clients:
-            avg_vol = sum(c.volume for c in clients) // len(clients)
-        else:
-            avg_vol = 0
+        # Calculate average volume using lookup dict (O(k) where k = clients in group)
+        total_vol = 0
+        count = 0
+        for cid in group.client_ids:
+            client = client_by_id.get(cid)
+            if client:
+                total_vol += client.volume
+                count += 1
+        avg_vol = total_vol // count if count > 0 else 0
 
         mute_icon = "🔇" if group.muted else "🔊"
         label = f"{mute_icon} {group.name} — {avg_vol}%"

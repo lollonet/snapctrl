@@ -32,6 +32,17 @@ logging.basicConfig(level=logging.DEBUG, format="%(asctime)s %(levelname)s %(nam
 logger = logging.getLogger(__name__)
 
 
+def get_resource_path(relative_path: str) -> Path:
+    """Get absolute path to resource, works for dev and PyInstaller bundle."""
+    if hasattr(sys, "_MEIPASS"):
+        # PyInstaller bundle - resources are in _MEIPASS
+        base_path = Path(sys._MEIPASS)  # type: ignore[attr-defined]
+    else:
+        # Development - resources are relative to project root
+        base_path = Path(__file__).parent.parent.parent
+    return base_path / relative_path
+
+
 def discover_server() -> tuple[str, int, str] | None:
     """Discover a Snapcast server on the network.
 
@@ -242,8 +253,8 @@ def main() -> int:  # noqa: PLR0912, PLR0915
     window.set_server_info(host, port, hostname)
     window.sources_panel.set_server_host(host)
 
-    # Set app icon
-    icon_path = Path(__file__).parent.parent.parent / "resources" / "icon.svg"
+    # Set app icon (works in both dev and PyInstaller bundle)
+    icon_path = get_resource_path("resources/icon.svg")
     if icon_path.exists():
         app.setWindowIcon(QIcon(str(icon_path)))
         window.setWindowIcon(QIcon(str(icon_path)))

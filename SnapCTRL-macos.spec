@@ -21,6 +21,10 @@ a = Analysis(
     hiddenimports=[
         "PySide6.QtSvg",
         "PySide6.QtSvgWidgets",
+        # zeroconf for mDNS discovery
+        "zeroconf",
+        "zeroconf._utils.ipaddress",
+        "zeroconf._handlers.answers",
     ],
     hookspath=[],
     hooksconfig={},
@@ -72,8 +76,8 @@ app = BUNDLE(
     info_plist={
         "CFBundleName": "SnapCTRL",
         "CFBundleDisplayName": "SnapCTRL",
-        "CFBundleVersion": "0.2.1",
-        "CFBundleShortVersionString": "0.2.1",
+        "CFBundleVersion": "0.2.5",
+        "CFBundleShortVersionString": "0.2.5",
         "NSHighResolutionCapable": True,
         "NSRequiresAquaSystemAppearance": False,  # Support dark mode
         "LSMinimumSystemVersion": "10.15",
