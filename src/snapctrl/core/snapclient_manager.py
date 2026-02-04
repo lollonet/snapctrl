@@ -19,6 +19,7 @@ from __future__ import annotations
 import logging
 import re
 import subprocess
+import threading
 import time
 
 from PySide6.QtCore import QObject, QProcess, QTimer, Signal
@@ -51,6 +52,7 @@ _BLOCKED_ARGS = frozenset({"--host", "--port", "--hostID", "--logsink", "--logfi
 # Process detection cache (reduces subprocess overhead from ~100ms to ~0ms for repeated calls)
 _PROCESS_CHECK_CACHE_TTL = 2.0  # seconds
 _process_check_cache: dict[str, tuple[float, bool]] = {}
+_cache_lock = threading.Lock()  # Thread-safe cache access
 
 
 def _do_process_check() -> bool:
@@ -60,7 +62,7 @@ def _do_process_check() -> bool:
         result = subprocess.run(
             ["pgrep", "-x", "snapclient"],
             capture_output=True,
-            timeout=5,
+            timeout=1,  # Short timeout to avoid UI freeze
             check=False,
         )
         return result.returncode == 0
@@ -71,7 +73,7 @@ def _do_process_check() -> bool:
                 ["ps", "-A", "-o", "comm="],
                 capture_output=True,
                 text=True,
-                timeout=5,
+                timeout=1,  # Short timeout to avoid UI freeze
                 check=False,
             )
             if result.returncode == 0:
@@ -88,21 +90,26 @@ def is_snapclient_running() -> bool:
     Results are cached for 2 seconds to avoid expensive subprocess calls
     on repeated checks (e.g., during UI updates).
 
+    Thread-safe: Uses lock for cache access.
+
     Returns:
         True if snapclient is found in the process list.
     """
     cache_key = "snapclient"
     now = time.monotonic()
 
-    # Check cache
-    if cache_key in _process_check_cache:
-        cached_time, cached_result = _process_check_cache[cache_key]
-        if now - cached_time < _PROCESS_CHECK_CACHE_TTL:
-            return cached_result
+    with _cache_lock:
+        # Check cache
+        if cache_key in _process_check_cache:
+            cached_time, cached_result = _process_check_cache[cache_key]
+            if now - cached_time < _PROCESS_CHECK_CACHE_TTL:
+                return cached_result
 
-    # Cache miss - perform actual check
+    # Cache miss - perform actual check (outside lock to avoid blocking)
     result = _do_process_check()
-    _process_check_cache[cache_key] = (now, result)
+
+    with _cache_lock:
+        _process_check_cache[cache_key] = (now, result)
     return result
 
 
@@ -110,8 +117,10 @@ def invalidate_process_cache() -> None:
     """Invalidate the process check cache.
 
     Call this after starting/stopping a process to force a fresh check.
+    Thread-safe: Uses lock for cache access.
     """
-    _process_check_cache.clear()
+    with _cache_lock:
+        _process_check_cache.clear()
 
 
 class SnapclientManager(QObject):
@@ -340,6 +349,7 @@ class SnapclientManager(QObject):
         if self._process is not None:
             return False  # Already managing our own process
 
+        invalidate_process_cache()  # Force fresh check
         if is_snapclient_running():
             logger.info("Detected external snapclient running")
             self._is_external = True
@@ -359,6 +369,7 @@ class SnapclientManager(QObject):
         if not is_snapclient_running():
             logger.info("External snapclient stopped")
             self._is_external = False
+            invalidate_process_cache()  # Ensure cache reflects new state
             self._set_status("stopped")
 
     def _launch(self) -> None:

@@ -236,7 +236,11 @@ class StateStore(QObject):
                     meta_album=old_source.meta_album,
                     meta_art_url=old_source.meta_art_url,
                 )
-            elif old_source and old_source.meta_art_url.startswith("data:"):
+            elif (
+                old_source
+                and old_source.meta_art_url
+                and old_source.meta_art_url.startswith("data:")
+            ):
                 # Prefer locally-fetched art (data URI) over server HTTP URLs
                 # Data URIs are from MPD embedded art which is more reliable
                 merged_sources[source_id] = replace(

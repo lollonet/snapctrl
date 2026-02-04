@@ -783,9 +783,7 @@ class SourcesPanel(QWidget):
                 border-radius: {sizing.border_radius_md}px;
             }}
         """)
-        self._detail_now_playing.setStyleSheet(
-            f"color: {p.text}; font-size: {typography.body}pt;"
-        )
+        self._detail_now_playing.setStyleSheet(f"color: {p.text}; font-size: {typography.body}pt;")
         self._time_label.setStyleSheet(
             f"color: {p.text_secondary}; font-size: {typography.body}pt;"
         )

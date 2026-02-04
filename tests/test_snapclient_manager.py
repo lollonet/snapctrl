@@ -128,21 +128,19 @@ class TestSnapclientManagerStartValidation:
 class TestSnapclientManagerStart:
     """Test start behavior."""
 
-    def test_start_rejects_when_external_snapclient_running(self) -> None:
-        """Start emits warning when another snapclient is already running."""
+    def test_start_adopts_external_snapclient_when_running(self) -> None:
+        """Start adopts external snapclient instead of blocking."""
         mgr = SnapclientManager()
-        errors: list[str] = []
-        mgr.error_occurred.connect(errors.append)
+        statuses: list[str] = []
+        mgr.status_changed.connect(statuses.append)
 
-        with patch(
-            "snapctrl.core.snapclient_manager.is_snapclient_running", return_value=True
-        ):
+        with patch("snapctrl.core.snapclient_manager.is_snapclient_running", return_value=True):
             mgr.start("192.168.1.100")
 
-        # Status stays at "stopped" (not error) - just warns user
-        assert mgr.status == "stopped"
-        assert len(errors) == 1
-        assert "already running" in errors[0]
+        # Should adopt external snapclient
+        assert mgr.status == "external"
+        assert mgr.is_external is True
+        assert "external" in statuses
 
     def test_start_emits_error_when_binary_not_found(self) -> None:
         """Start emits error_occurred when binary not found."""

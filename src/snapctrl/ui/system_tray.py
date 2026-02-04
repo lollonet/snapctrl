@@ -181,6 +181,9 @@ class SystemTrayManager(QObject):
         """
         parts: list[str] = []
 
+        # Connection state affects icon and tooltip
+        parts.append(f"conn:{self._connected}")
+
         # Window visibility affects toggle label
         parts.append(f"vis:{self._window.isVisible()}")
 
