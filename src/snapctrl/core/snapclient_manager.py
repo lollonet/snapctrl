@@ -585,14 +585,23 @@ class SnapclientManager(QObject):
         """Detach the running process so it survives app exit.
 
         After calling this, the process continues running independently
-        and this manager no longer tracks it.
+        and this manager no longer tracks it. Also handles external
+        snapclient cleanup.
         """
-        if self._process is None:
-            return
-
+        # Always stop timers, even for external snapclient
         self._auto_restart = False
         self._restart_timer.stop()
         self._external_check_timer.stop()
+
+        # Handle external snapclient - just clear state
+        if self._is_external:
+            self._is_external = False
+            self._set_status("stopped")
+            logger.info("Detached external snapclient tracking")
+            return
+
+        if self._process is None:
+            return
 
         # Disconnect signals so we don't receive events
         try:
