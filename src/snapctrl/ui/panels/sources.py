@@ -45,6 +45,9 @@ _NETWORK_TIMEOUT_MS = 15000
 # Tolerance for skipping redundant pixmap scaling (pixels).
 # Small size changes (<5px) don't warrant expensive SmoothTransformation rescaling.
 _SCALE_TOLERANCE_PX = 5
+# Tolerance for aspect ratio comparison (1% difference).
+# Ensures rescaling when album art changes to different aspect ratio.
+_ASPECT_RATIO_TOLERANCE = 0.01
 
 
 class SourcesPanel(QWidget):
@@ -358,14 +361,18 @@ class SourcesPanel(QWidget):
         current = self._album_art.pixmap()
         if not current.isNull():
             cw, ch = current.width(), current.height()
-            # Check both dimensions are valid and close to target
-            if (
-                cw > 0
-                and ch > 0
-                and abs(cw - w) <= _SCALE_TOLERANCE_PX
-                and abs(ch - h) <= _SCALE_TOLERANCE_PX
-            ):
-                return
+            # Check dimensions are valid, close to target, AND aspect ratio matches original
+            # (aspect ratio check prevents skipping when new art with different ratio arrives)
+            if cw > 0 and ch > 0:
+                current_ratio = cw / ch
+                original_ratio = pw / ph
+                ratio_matches = abs(current_ratio - original_ratio) < _ASPECT_RATIO_TOLERANCE
+                if (
+                    ratio_matches
+                    and abs(cw - w) <= _SCALE_TOLERANCE_PX
+                    and abs(ch - h) <= _SCALE_TOLERANCE_PX
+                ):
+                    return
         # Scale pixmap to fit label size while keeping aspect ratio
         scaled = self._original_pixmap.scaled(
             w,

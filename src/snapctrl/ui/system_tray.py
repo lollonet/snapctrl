@@ -316,7 +316,7 @@ class SystemTrayManager(QObject):
         action = QAction(label, self._menu)
         # Clicking toggles mute state - read current state at trigger time, not build time
         group_id = group.id
-        action.triggered.connect(lambda _checked=False, gid=group_id: self._toggle_group_mute(gid))
+        action.triggered.connect(lambda *, gid=group_id: self._toggle_group_mute(gid))
         self._menu.addAction(action)
 
     def _toggle_group_mute(self, group_id: str) -> None:
@@ -360,6 +360,18 @@ class SystemTrayManager(QObject):
         Args:
             group: The group to control.
         """
+        # Build client lookup for volume calculation
+        client_by_id = {c.id: c for c in self._state.clients}
+
+        # Calculate volume using the same helper as group entries (consistent rounding)
+        avg_vol = self._calc_avg_volume(group.client_ids, client_by_id)
+
+        # Don't show slider if no connected clients (volume would be 0/unknown)
+        if avg_vol == 0 and not any(
+            client_by_id.get(cid) and client_by_id[cid].connected for cid in group.client_ids
+        ):
+            return
+
         # Label
         label_action = QAction(f"Volume: {group.name}", self._menu)
         label_action.setEnabled(False)
@@ -367,14 +379,6 @@ class SystemTrayManager(QObject):
 
         # Embedded slider via QWidgetAction
         slider = VolumeSlider()
-
-        # Calculate current volume from clients
-        clients = self._state.clients
-        group_clients = [c for c in clients if c.id in group.client_ids and c.connected]
-        if group_clients:
-            avg_vol = sum(c.volume for c in group_clients) // len(group_clients)
-        else:
-            avg_vol = 50
         slider.set_volume(avg_vol)
         slider.set_muted(group.muted)
 
