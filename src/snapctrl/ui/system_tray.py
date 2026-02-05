@@ -238,6 +238,12 @@ class SystemTrayManager(QObject):
 
     def _rebuild_menu(self) -> None:
         """Rebuild the tray context menu from current state."""
+        # Don't rebuild while the menu is open — destroying widgets mid-interaction
+        # causes the slider to vanish and recreate, producing erratic volume jumps.
+        if self._menu.isVisible():
+            self._rebuild_timer.start()  # Retry after menu closes
+            return
+
         # Check if rebuild is actually needed
         fingerprint = self._compute_menu_fingerprint()
         if fingerprint == self._last_menu_fingerprint:
@@ -380,10 +386,13 @@ class SystemTrayManager(QObject):
         slider.set_volume(avg_vol)
         slider.set_muted(group.muted)
 
-        # Connect slider to emit volume_changed with group_id
+        # Connect slider signals to emit with group_id
         group_id = group.id
         slider.volume_changed.connect(
             lambda vol: self.volume_changed.emit(group_id, vol)  # type: ignore[arg-type]
+        )
+        slider.mute_toggled.connect(
+            lambda muted: self.mute_changed.emit(group_id, muted)  # type: ignore[arg-type]
         )
 
         widget_action = QWidgetAction(self._menu)

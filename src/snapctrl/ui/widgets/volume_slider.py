@@ -119,9 +119,14 @@ class VolumeSlider(QWidget):
     def set_volume(self, volume: int) -> None:
         """Set the volume (0-100).
 
+        Skips update while the user is actively dragging the slider to prevent
+        server state updates from causing the slider to snap back.
+
         Args:
             volume: Volume value.
         """
+        if self._slider.isSliderDown():
+            return
         self._slider.blockSignals(True)
         self._slider.setValue(volume)
         self._volume_label.setText(f"{volume}%")
