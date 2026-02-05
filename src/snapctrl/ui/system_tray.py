@@ -29,11 +29,11 @@ from PySide6.QtWidgets import (
 
 from snapctrl.core.snapclient_manager import SnapclientManager
 from snapctrl.core.state import StateStore
+from snapctrl.models.client import Client
 from snapctrl.ui.theme import theme_manager
 from snapctrl.ui.widgets.volume_slider import VolumeSlider
 
 if TYPE_CHECKING:
-    from snapctrl.models.client import Client
     from snapctrl.models.group import Group
     from snapctrl.models.source import Source
 
@@ -285,11 +285,11 @@ class SystemTrayManager(QObject):
         # Now Playing
         self._add_now_playing()
 
-        # Quick volume slider
+        # Quick volume slider (reuse client_by_id from above)
         target_group = self._get_target_group()
         if target_group:
             self._menu.addSeparator()
-            self._add_quick_volume(target_group)
+            self._add_quick_volume(target_group, client_by_id)
 
         # Preferences and Quit
         self._menu.addSeparator()
@@ -354,15 +354,13 @@ class SystemTrayManager(QObject):
         action.setEnabled(False)
         self._menu.addAction(action)
 
-    def _add_quick_volume(self, group: Group) -> None:
+    def _add_quick_volume(self, group: Group, client_by_id: dict[str, Client]) -> None:
         """Add an embedded volume slider for the target group.
 
         Args:
             group: The group to control.
+            client_by_id: Pre-built client lookup dict (avoids duplicate creation).
         """
-        # Build client lookup for volume calculation
-        client_by_id = {c.id: c for c in self._state.clients}
-
         # Calculate volume using the same helper as group entries (consistent rounding)
         avg_vol = self._calc_avg_volume(group.client_ids, client_by_id)
 
