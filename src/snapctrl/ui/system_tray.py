@@ -195,7 +195,8 @@ class SystemTrayManager(QObject):
             if client and client.connected:
                 total_vol += client.volume
                 count += 1
-        return total_vol // count if count > 0 else 0
+        # Use round() for proper averaging (74.5 -> 75, not 74)
+        return round(total_vol / count) if count > 0 else 0
 
     def _compute_menu_fingerprint(self) -> str:
         """Compute a fingerprint of state relevant to the menu.
