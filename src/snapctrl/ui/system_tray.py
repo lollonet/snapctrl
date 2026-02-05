@@ -101,6 +101,9 @@ class SystemTrayManager(QObject):
         # State fingerprint for skipping unnecessary menu rebuilds
         self._last_menu_fingerprint: str = ""
 
+        # Flag to prevent timer spam when menu is open
+        self._rebuild_pending: bool = False
+
         # Debounce timer for menu rebuild
         self._rebuild_timer = QTimer()
         self._rebuild_timer.setSingleShot(True)
@@ -241,8 +244,12 @@ class SystemTrayManager(QObject):
         # Don't rebuild while the menu is open — destroying widgets mid-interaction
         # causes the slider to vanish and recreate, producing erratic volume jumps.
         if self._menu.isVisible():
-            self._rebuild_timer.start()  # Retry after menu closes
+            if not self._rebuild_pending:
+                self._rebuild_pending = True
+                self._rebuild_timer.start()  # Retry after menu closes
             return
+
+        self._rebuild_pending = False
 
         # Check if rebuild is actually needed
         fingerprint = self._compute_menu_fingerprint()
