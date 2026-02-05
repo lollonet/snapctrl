@@ -193,7 +193,9 @@ class SystemTrayManager(QObject):
         for cid in client_ids:
             client = client_by_id.get(cid)
             if client and client.connected:
-                total_vol += client.volume
+                # Clamp volume to valid range (0-100) in case of corrupt data
+                vol = max(0, min(100, client.volume))
+                total_vol += vol
                 count += 1
         # Use round() for proper averaging (74.5 -> 75, not 74)
         return round(total_vol / count) if count > 0 else 0

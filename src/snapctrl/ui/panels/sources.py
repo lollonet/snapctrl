@@ -358,7 +358,13 @@ class SourcesPanel(QWidget):
         current = self._album_art.pixmap()
         if not current.isNull():
             cw, ch = current.width(), current.height()
-            if abs(cw - w) <= _SCALE_TOLERANCE_PX and abs(ch - h) <= _SCALE_TOLERANCE_PX:
+            # Check both dimensions are valid and close to target
+            if (
+                cw > 0
+                and ch > 0
+                and abs(cw - w) <= _SCALE_TOLERANCE_PX
+                and abs(ch - h) <= _SCALE_TOLERANCE_PX
+            ):
                 return
         # Scale pixmap to fit label size while keeping aspect ratio
         scaled = self._original_pixmap.scaled(
