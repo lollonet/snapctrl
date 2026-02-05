@@ -123,6 +123,7 @@ class SystemTrayManager(QObject):
 
         # Build initial menu
         self._menu = QMenu()
+        self._menu.aboutToHide.connect(self._on_menu_closed)
         self._tray.setContextMenu(self._menu)
         self._rebuild_menu()
 
@@ -160,6 +161,11 @@ class SystemTrayManager(QObject):
         """
         self._snapclient_host = host
         self._snapclient_port = port
+
+    def _on_menu_closed(self) -> None:
+        """Trigger pending rebuild after menu closes."""
+        if self._rebuild_pending:
+            self._rebuild_timer.start()
 
     def show(self) -> None:
         """Show the tray icon."""
