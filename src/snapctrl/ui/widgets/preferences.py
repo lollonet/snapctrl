@@ -62,8 +62,8 @@ class PreferencesDialog(QDialog):
         super().__init__(parent)
         self._config = config
         self.setWindowTitle("Preferences")
-        self.setMinimumWidth(480)
-        self.setMinimumHeight(360)
+        self.setMinimumWidth(560)
+        self.setMinimumHeight(400)
         self._original_theme: str | None = None
         self._setup_ui()
         self._load()
@@ -108,6 +108,29 @@ class PreferencesDialog(QDialog):
                 background: transparent;
                 color: {p.text};
                 spacing: {spacing.sm}px;
+                font-size: {typography.subtitle}pt;
+            }}
+            QLineEdit, QSpinBox, QComboBox {{
+                background: {p.surface};
+                border: 1px solid {p.border};
+                border-radius: {sizing.border_radius_md}px;
+                padding: {spacing.xs}px {spacing.md}px;
+                font-size: {typography.subtitle}pt;
+                min-height: 22px;
+                color: {p.text};
+            }}
+            QLineEdit {{
+                min-width: 280px;
+            }}
+            QLineEdit:focus, QSpinBox:focus, QComboBox:focus {{
+                border-color: {p.accent};
+            }}
+            QLineEdit:read-only {{
+                background: {p.surface_dim};
+                color: {p.text_secondary};
+            }}
+            QFormLayout QLabel {{
+                font-size: {typography.subtitle}pt;
             }}
         """)
 

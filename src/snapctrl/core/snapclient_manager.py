@@ -584,9 +584,8 @@ class SnapclientManager(QObject):
     def detach(self) -> None:
         """Detach the running process so it survives app exit.
 
-        After calling this, the process continues running independently
-        and this manager no longer tracks it. Also handles external
-        snapclient cleanup.
+        Restarts the process in truly detached mode using QProcess.startDetached()
+        so it's completely independent of the Qt application lifecycle.
         """
         # Always stop timers, even for external snapclient
         self._auto_restart = False
@@ -600,23 +599,29 @@ class SnapclientManager(QObject):
             logger.info("Detached external snapclient tracking")
             return
 
-        if self._process is None:
+        if self._process is None or not self._binary_path or not self._host:
             return
 
-        # Disconnect signals so we don't receive events
-        try:
-            self._process.readyReadStandardOutput.disconnect(self._on_stdout)
-            self._process.finished.disconnect(self._on_finished)
-            self._process.errorOccurred.disconnect(self._on_error)
-        except RuntimeError:
-            pass  # Already disconnected
+        # Save args before stopping
+        args = self._build_args()
+        binary = self._binary_path
 
-        # Clear our reference without calling deleteLater() or terminate()
-        # The QProcess will be orphaned but the child process continues
-        self._process.setParent(None)  # Prevent destruction with parent
-        self._process = None
+        # Stop the managed process (this terminates the child)
+        logger.info("Stopping managed process to restart in detached mode")
+        if self._process.state() != QProcess.ProcessState.NotRunning:
+            self._process.terminate()
+            self._process.waitForFinished(1000)  # Brief wait
+        self._cleanup_process()
+
+        # Restart in truly detached mode - process survives app exit
+        logger.info("Starting detached snapclient: %s %s", binary, args)
+        success = QProcess.startDetached(binary, args)
+        if success:
+            logger.info("Detached snapclient process started (will survive app exit)")
+        else:
+            logger.error("Failed to start detached snapclient")
+
         self._set_status("stopped")
-        logger.info("Detached snapclient process (will continue running)")
 
     def _cleanup_process(self) -> None:
         """Clean up the QProcess instance."""
