@@ -122,11 +122,15 @@ class GroupsPanel(QWidget):
         new_group_ids = {g.id for g in groups}
         existing_group_ids = set(self._group_cards.keys())
 
-        # Remove cards for groups that no longer exist
+        # Remove cards for groups that no longer exist.
+        # Use deleteLater() for safe deferred deletion — ensures all pending
+        # Qt events for the widget are processed before destruction, preventing
+        # SIGSEGV in sendPostedEvents when events reference deleted widgets.
         removed_ids = existing_group_ids - new_group_ids
         for gid in removed_ids:
             card = self._group_cards.pop(gid)
             card.setParent(None)
+            card.deleteLater()
 
         # Track if we need to auto-expand (only if starting from empty)
         was_empty = len(existing_group_ids) == 0
@@ -188,6 +192,7 @@ class GroupsPanel(QWidget):
         """Clear all groups from the panel."""
         for card in self._group_cards.values():
             card.setParent(None)
+            card.deleteLater()
         self._group_cards.clear()
 
     def update_group(

@@ -31,6 +31,11 @@ from snapctrl.ui.theme import theme_manager
 logging.basicConfig(level=logging.DEBUG, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 logger = logging.getLogger(__name__)
 
+# Constants
+SNAPCLIENT_PORT = 1704  # Snapclient streaming port (distinct from control port 1705)
+VOLUME_SLIDER_STALE_THRESHOLD = 1.0  # Seconds before slider state is reset for external updates
+VOLUME_NOTIFICATION_DEBOUNCE_MS = 300  # Debounce time for volume change notifications
+
 
 def get_resource_path(relative_path: str) -> Path:
     """Get absolute path to resource, works for dev and PyInstaller bundle.
@@ -204,7 +209,7 @@ def main() -> int:  # noqa: PLR0912, PLR0915
         # Reset base volumes for groups whose slider hasn't been used recently
         # This allows external changes (from mobile app) to update the group slider
         current_time = time.time()
-        stale_threshold = 1.0  # seconds - reset if slider inactive for this long
+        stale_threshold = VOLUME_SLIDER_STALE_THRESHOLD
 
         for group_id in list(group_base_volumes.keys()):
             last_active = group_slider_active.get(group_id, 0)
@@ -256,7 +261,7 @@ def main() -> int:  # noqa: PLR0912, PLR0915
                     notification_timer.setSingleShot(True)
                     notification_timer.timeout.connect(do_refresh)
                 # Reset timer - only refresh 300ms after last notification
-                notification_timer.start(300)
+                notification_timer.start(VOLUME_NOTIFICATION_DEBOUNCE_MS)
             else:
                 # Other notifications (connect, disconnect, etc.) refresh immediately
                 worker.request_status()
@@ -305,7 +310,7 @@ def main() -> int:  # noqa: PLR0912, PLR0915
     # Set up system tray
     tray = SystemTrayManager(window, state_store, snapclient_mgr=snapclient_mgr)
     # Snapclient port (1704) is distinct from the control port (1705)
-    snapclient_port = 1704
+    snapclient_port = SNAPCLIENT_PORT
     tray.set_snapclient_connection(host, snapclient_port)
     if tray.available:
         tray.show()
@@ -361,8 +366,9 @@ def main() -> int:  # noqa: PLR0912, PLR0915
 
         # Calculate new volumes and update both UI and server
         new_volumes: dict[str, int] = {}
+        group_bases = group_base_volumes.get(group_id, {})
         for client_id in group.client_ids:
-            base_vol = group_base_volumes[group_id].get(client_id, 50)
+            base_vol = group_bases.get(client_id, 50)
             new_vol = min(100, max(0, int(base_vol * scale)))
             new_volumes[client_id] = new_vol
             client = state_store.get_client(client_id)

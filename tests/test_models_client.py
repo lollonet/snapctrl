@@ -1,5 +1,7 @@
 """Tests for Client model."""
 
+import time
+
 import pytest
 
 from snapctrl.models.client import Client
@@ -89,3 +91,100 @@ class TestClient:
 
         assert client1 == client2
         assert client1 != client3
+
+
+class TestClientLastSeenAgo:
+    """Tests for last_seen_ago property."""
+
+    def test_last_seen_ago_unknown(self) -> None:
+        """Test last_seen_ago returns 'unknown' when last_seen_sec is 0."""
+        client = Client(id="client-1", host="192.168.1.50", last_seen_sec=0)
+        assert client.last_seen_ago == "unknown"
+
+    def test_last_seen_ago_just_now(self) -> None:
+        """Test last_seen_ago returns 'just now' for recent clients."""
+        client = Client(
+            id="client-1",
+            host="192.168.1.50",
+            last_seen_sec=int(time.time()) - 1,  # 1 second ago
+        )
+        assert client.last_seen_ago == "just now"
+
+    def test_last_seen_ago_seconds(self) -> None:
+        """Test last_seen_ago returns seconds ago."""
+        client = Client(
+            id="client-1",
+            host="192.168.1.50",
+            last_seen_sec=int(time.time()) - 30,  # 30 seconds ago
+        )
+        assert "s ago" in client.last_seen_ago
+
+    def test_last_seen_ago_minutes(self) -> None:
+        """Test last_seen_ago returns minutes ago."""
+        client = Client(
+            id="client-1",
+            host="192.168.1.50",
+            last_seen_sec=int(time.time()) - 300,  # 5 minutes ago
+        )
+        assert "m ago" in client.last_seen_ago
+
+    def test_last_seen_ago_hours(self) -> None:
+        """Test last_seen_ago returns hours ago."""
+        client = Client(
+            id="client-1",
+            host="192.168.1.50",
+            last_seen_sec=int(time.time()) - 7200,  # 2 hours ago
+        )
+        assert "h ago" in client.last_seen_ago
+
+    def test_last_seen_ago_days(self) -> None:
+        """Test last_seen_ago returns days ago."""
+        client = Client(
+            id="client-1",
+            host="192.168.1.50",
+            last_seen_sec=int(time.time()) - 172800,  # 2 days ago
+        )
+        assert "d ago" in client.last_seen_ago
+
+
+class TestClientDisplaySystem:
+    """Tests for display_system property."""
+
+    def test_display_system_both(self) -> None:
+        """Test display_system with both OS and arch."""
+        client = Client(id="client-1", host="192.168.1.50", host_os="Linux", host_arch="aarch64")
+        assert client.display_system == "Linux / aarch64"
+
+    def test_display_system_os_only(self) -> None:
+        """Test display_system with OS only."""
+        client = Client(id="client-1", host="192.168.1.50", host_os="macOS")
+        assert client.display_system == "macOS"
+
+    def test_display_system_arch_only(self) -> None:
+        """Test display_system with arch only."""
+        client = Client(id="client-1", host="192.168.1.50", host_arch="x86_64")
+        assert client.display_system == "x86_64"
+
+    def test_display_system_empty(self) -> None:
+        """Test display_system returns empty when neither is set."""
+        client = Client(id="client-1", host="192.168.1.50")
+        assert client.display_system == ""
+
+
+class TestClientDisplayLatency:
+    """Tests for display_latency property."""
+
+    def test_display_latency_zero(self) -> None:
+        """Test display_latency with zero offset."""
+        client = Client(id="client-1", host="192.168.1.50", latency=0)
+        assert client.display_latency == "0ms (no offset)"
+
+    def test_display_latency_positive(self) -> None:
+        """Test display_latency with positive offset."""
+        client = Client(id="client-1", host="192.168.1.50", latency=150)
+        assert client.display_latency == "150ms"
+
+    def test_display_latency_negative(self) -> None:
+        """Test display_latency with negative offset."""
+        client = Client(id="client-1", host="192.168.1.50", latency=-50)
+        assert client.display_latency == "-50ms"

@@ -604,12 +604,7 @@ class SnapclientManager(QObject):
             return
 
         # Disconnect signals so we don't receive events
-        try:
-            self._process.readyReadStandardOutput.disconnect(self._on_stdout)
-            self._process.finished.disconnect(self._on_finished)
-            self._process.errorOccurred.disconnect(self._on_error)
-        except RuntimeError:
-            pass  # Already disconnected
+        self._disconnect_process_signals()
 
         # Clear our reference without calling deleteLater() or terminate()
         # The QProcess will be orphaned but the child process continues
@@ -618,14 +613,20 @@ class SnapclientManager(QObject):
         self._set_status("stopped")
         logger.info("Detached snapclient process (will continue running)")
 
+    def _disconnect_process_signals(self) -> None:
+        """Disconnect signals from current process (safe to call multiple times)."""
+        if self._process is None:
+            return
+        try:
+            self._process.readyReadStandardOutput.disconnect(self._on_stdout)
+            self._process.finished.disconnect(self._on_finished)
+            self._process.errorOccurred.disconnect(self._on_error)
+        except RuntimeError:
+            logger.debug("Signals already disconnected")
+
     def _cleanup_process(self) -> None:
         """Clean up the QProcess instance."""
         if self._process is not None:
-            try:
-                self._process.readyReadStandardOutput.disconnect(self._on_stdout)
-                self._process.finished.disconnect(self._on_finished)
-                self._process.errorOccurred.disconnect(self._on_error)
-            except RuntimeError:
-                logger.debug("Signals already disconnected during cleanup")
+            self._disconnect_process_signals()
             self._process.deleteLater()
             self._process = None

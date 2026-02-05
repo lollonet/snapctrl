@@ -190,3 +190,107 @@ class TestSignalConnection:
         assert hasattr(controller, "on_client_volume_changed")
         assert hasattr(controller, "on_client_mute_toggled")
         assert hasattr(controller, "connect_to_group_panel")
+
+
+class TestControllerExceptionHandling:
+    """Test exception handling in controller methods."""
+
+    @pytest.mark.asyncio
+    async def test_group_volume_error_handling(
+        self, controller: Controller, mock_client: Mock
+    ) -> None:
+        """Test error handling during group volume change."""
+        mock_client.set_client_volume.side_effect = Exception("API error")
+
+        # Should not raise, just log
+        await controller.on_group_volume_changed("g1", 50)
+
+    @pytest.mark.asyncio
+    async def test_group_mute_error_handling(
+        self, controller: Controller, mock_client: Mock
+    ) -> None:
+        """Test error handling during group mute toggle."""
+        mock_client.set_group_mute.side_effect = Exception("API error")
+
+        # Should not raise, just log
+        await controller.on_group_mute_toggled("g1", True)
+
+    @pytest.mark.asyncio
+    async def test_group_source_error_handling(
+        self, controller: Controller, mock_client: Mock
+    ) -> None:
+        """Test error handling during group source change."""
+        mock_client.set_group_stream.side_effect = Exception("API error")
+
+        # Should not raise, just log
+        await controller.on_group_source_changed("g1", "s2")
+
+    @pytest.mark.asyncio
+    async def test_client_volume_error_handling(
+        self, controller: Controller, mock_client: Mock
+    ) -> None:
+        """Test error handling during client volume change."""
+        mock_client.set_client_volume.side_effect = Exception("API error")
+
+        # Should not raise, just log
+        await controller.on_client_volume_changed("c1", 50)
+
+    @pytest.mark.asyncio
+    async def test_client_mute_error_handling(
+        self, controller: Controller, mock_client: Mock
+    ) -> None:
+        """Test error handling during client mute toggle."""
+        mock_client.set_client_volume.side_effect = Exception("API error")
+
+        # Should not raise, just log
+        await controller.on_client_mute_toggled("c1", True)
+
+
+class TestConnectToGroupPanel:
+    """Test connect_to_group_panel method."""
+
+    def test_connect_to_group_panel(self, controller: Controller) -> None:
+        """Test connecting to a mock group panel."""
+        mock_panel = Mock()
+        mock_panel.volume_changed = Mock()
+        mock_panel.mute_toggled = Mock()
+        mock_panel.source_changed = Mock()
+        mock_panel.client_volume_changed = Mock()
+        mock_panel.client_mute_toggled = Mock()
+
+        controller.connect_to_group_panel(mock_panel)
+
+        # Verify all signals were connected
+        mock_panel.volume_changed.connect.assert_called_once()
+        mock_panel.mute_toggled.connect.assert_called_once()
+        mock_panel.source_changed.connect.assert_called_once()
+        mock_panel.client_volume_changed.connect.assert_called_once()
+        mock_panel.client_mute_toggled.connect.assert_called_once()
+
+
+class TestUnknownClientMute:
+    """Test client mute with unknown client."""
+
+    @pytest.mark.asyncio
+    async def test_on_client_mute_unknown_client(
+        self, controller: Controller, mock_client: Mock
+    ) -> None:
+        """Test handling mute toggle for unknown client."""
+        await controller.on_client_mute_toggled("unknown", True)
+
+        # Should not call API
+        assert mock_client.set_client_volume.call_count == 0
+
+
+class TestGroupSourceUnknownGroup:
+    """Test group source with unknown group."""
+
+    @pytest.mark.asyncio
+    async def test_on_group_source_unknown_group(
+        self, controller: Controller, mock_client: Mock
+    ) -> None:
+        """Test handling source change for unknown group."""
+        await controller.on_group_source_changed("unknown", "s1")
+
+        # Should not call API
+        assert mock_client.set_group_stream.call_count == 0
