@@ -8,7 +8,7 @@ import logging
 import threading
 from urllib.parse import urlparse, urlunparse
 
-from PySide6.QtCore import QEvent, Qt, QTimer, QUrl, Signal
+from PySide6.QtCore import QEvent, Qt, QTimer, QUrl, Signal, Slot
 from PySide6.QtGui import QPixmap
 from PySide6.QtNetwork import QNetworkAccessManager, QNetworkReply, QNetworkRequest
 from PySide6.QtWidgets import (
@@ -69,8 +69,10 @@ class SourcesPanel(QWidget):
     # Signal emitted when a source is double-clicked (for switching groups)
     source_selected = Signal(str)  # source_id
 
-    # Internal signal for thread-safe album art updates
+    # Internal signals for thread-safe album art updates from background threads.
+    # These MUST use QueuedConnection since they're emitted from plain Python threads.
     _art_decoded = Signal()
+    _fallback_art_ready = Signal()
 
     def __init__(self) -> None:
         """Initialize the sources panel."""
@@ -97,8 +99,14 @@ class SourcesPanel(QWidget):
         # Flag to cancel fallback when valid art arrives
         self._art_loaded: bool = False
 
-        # Connect internal signal for thread-safe art updates
-        self._art_decoded.connect(self._apply_data_uri_art)
+        # Connect internal signals for thread-safe art updates.
+        # Explicit QueuedConnection is required because these signals are emitted
+        # from plain Python threads (not QThread), ensuring the slot runs on the
+        # main thread where QWidget operations are safe.
+        self._art_decoded.connect(self._apply_data_uri_art, Qt.ConnectionType.QueuedConnection)
+        self._fallback_art_ready.connect(
+            self._apply_fallback_art, Qt.ConnectionType.QueuedConnection
+        )
 
         # Debounce timer for resize-driven album art height updates
         self._resize_timer = QTimer(self)
@@ -420,13 +428,16 @@ class SourcesPanel(QWidget):
             try:
                 art = loop.run_until_complete(self._art_provider.fetch(artist, album, title))
                 if art and art.is_valid:
-                    # Store result with generation and schedule UI update on main thread
+                    # Store result with generation and signal main thread for UI update.
+                    # IMPORTANT: Use signal (not QTimer.singleShot) because this runs
+                    # in a plain Python thread — QTimer from non-Qt threads is undefined
+                    # behavior and can cause SIGSEGV during event delivery.
                     with self._fallback_lock:
                         self._pending_fallback_art = (art.data, art.mime_type, art.source)
                         self._pending_fallback_generation = current_generation
-                    QTimer.singleShot(0, self._apply_fallback_art)
+                    self._fallback_art_ready.emit()
             except Exception as e:  # noqa: BLE001
-                logger.debug("Fallback album art failed: %s", e)
+                logger.warning("Fallback album art failed: %s", e)
             finally:
                 loop.close()
 
@@ -434,24 +445,26 @@ class SourcesPanel(QWidget):
         thread = threading.Thread(target=fetch_in_thread, daemon=True)
         thread.start()
 
+    @Slot()
     def _apply_fallback_art(self) -> None:
-        """Apply fallback album art to UI (called on main thread)."""
-        # Safely read and clear pending art under lock
+        """Apply fallback album art to UI (called on main thread via signal)."""
+        # Safely read and clear pending art under lock, including generation check
         with self._fallback_lock:
             if self._pending_fallback_art is None:
                 return
             pending_art = self._pending_fallback_art
             pending_gen = self._pending_fallback_generation
+            current_gen = self._fallback_generation
             self._pending_fallback_art = None
 
-        # Skip if this is a stale request (new fallback was started)
-        if pending_gen != self._fallback_generation:
-            logger.debug(
-                "Skipping stale fallback art (gen %d != %d)",
-                pending_gen,
-                self._fallback_generation,
-            )
-            return
+            # Skip if this is a stale request (new fallback was started)
+            if pending_gen != current_gen:
+                logger.debug(
+                    "Skipping stale fallback art (gen %d != %d)",
+                    pending_gen,
+                    current_gen,
+                )
+                return
 
         # Skip if valid art already loaded (prevents race condition)
         if self._art_loaded:
