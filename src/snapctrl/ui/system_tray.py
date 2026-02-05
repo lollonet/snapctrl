@@ -60,6 +60,7 @@ class SystemTrayManager(QObject):
 
     # Signals forwarded from the quick volume slider
     volume_changed = Signal(str, int)  # group_id, volume
+    mute_changed = Signal(str, bool)  # group_id, muted
     mute_all_changed = Signal(bool)  # True=mute all, False=unmute all
     preferences_requested = Signal()  # Open preferences dialog
 
@@ -173,11 +174,39 @@ class SystemTrayManager(QObject):
         """Schedule a debounced menu rebuild."""
         self._rebuild_timer.start()
 
+    @staticmethod
+    def _calc_avg_volume(client_ids: list[str], client_by_id: dict[str, Client]) -> int:
+        """Calculate average volume for a group's connected clients.
+
+        Only connected clients are included since disconnected clients
+        aren't actively playing audio.
+
+        Args:
+            client_ids: List of client IDs in the group.
+            client_by_id: Dict mapping client IDs to Client objects.
+
+        Returns:
+            Average volume (0-100), or 0 if no connected clients found.
+        """
+        total_vol = 0
+        count = 0
+        for cid in client_ids:
+            client = client_by_id.get(cid)
+            if client and client.connected:
+                # Clamp volume to valid range (0-100) in case of corrupt data
+                vol = max(0, min(100, client.volume))
+                total_vol += vol
+                count += 1
+        # Use round() for proper averaging (74.5 -> 75, not 74)
+        return round(total_vol / count) if count > 0 else 0
+
     def _compute_menu_fingerprint(self) -> str:
         """Compute a fingerprint of state relevant to the menu.
 
         This is used to skip menu rebuilds when nothing visible has changed.
         Returns a string hash of the relevant state components.
+
+        Optimized: Uses pre-built client lookup dict to avoid O(n*m) filtering.
         """
         parts: list[str] = []
 
@@ -187,29 +216,23 @@ class SystemTrayManager(QObject):
         # Window visibility affects toggle label
         parts.append(f"vis:{self._window.isVisible()}")
 
+        # Build client lookup once (O(n) instead of O(n*m))
+        client_by_id = {c.id: c for c in self._state.clients}
+
         # Groups and their mute/volume/name/stream state
         for group in self._state.groups:
-            clients = [c for c in self._state.clients if c.id in group.client_ids]
-            connected = [c for c in clients if c.connected]
-            if connected:
-                avg_vol = sum(c.volume for c in connected) // len(connected)
-            elif clients:
-                avg_vol = sum(c.volume for c in clients) // len(clients)
-            else:
-                avg_vol = 0
-            # Include name and stream_id for complete state tracking
+            avg_vol = self._calc_avg_volume(group.client_ids, client_by_id)
             parts.append(f"g:{group.id}:{group.name}:{group.muted}:{avg_vol}:{group.stream_id}")
 
-        # Now playing metadata and source status
+        # Now playing - only include playing source (skip idle sources for perf)
         for source in self._state.sources:
-            # Include source name and status even without metadata
-            parts.append(f"s:{source.id}:{source.name}:{source.status}")
-            if source.is_playing and source.has_metadata:
-                parts.append(f"sm:{source.id}:{source.meta_title}:{source.meta_artist}")
+            if source.is_playing:
+                parts.append(f"s:{source.id}:{source.meta_title}:{source.meta_artist}")
+                break  # Only show first playing source
 
         # Snapclient status
         if self._snapclient_mgr:
-            parts.append(f"sc:{self._snapclient_mgr.status}:{self._snapclient_mgr.is_external}")
+            parts.append(f"sc:{self._snapclient_mgr.status}")
 
         return "|".join(parts)
 
@@ -234,13 +257,14 @@ class SystemTrayManager(QObject):
 
         self._menu.addSeparator()
 
+        # Build client lookup once for all group entries
+        client_by_id = {c.id: c for c in self._state.clients}
+
         # Group entries
         groups = self._state.groups
-        clients = self._state.clients
         if groups:
             for group in groups:
-                group_clients = [c for c in clients if c.id in group.client_ids]
-                self._add_group_entry(group, group_clients)
+                self._add_group_entry(group, client_by_id)
 
             # Mute All / Unmute All
             mute_all = QAction("Mute All", self._menu)
@@ -277,27 +301,39 @@ class SystemTrayManager(QObject):
         quit_action.triggered.connect(self._on_quit)
         self._menu.addAction(quit_action)
 
-    def _add_group_entry(self, group: Group, clients: list[Client]) -> None:
-        """Add a read-only group entry to the menu.
+    def _add_group_entry(self, group: Group, client_by_id: dict[str, Client]) -> None:
+        """Add a clickable group entry to toggle mute.
 
         Args:
             group: The group to display.
-            clients: Clients in this group.
+            client_by_id: Dict mapping client IDs to Client objects.
         """
-        # Calculate average volume
-        connected = [c for c in clients if c.connected]
-        if connected:
-            avg_vol = sum(c.volume for c in connected) // len(connected)
-        elif clients:
-            avg_vol = sum(c.volume for c in clients) // len(clients)
-        else:
-            avg_vol = 0
+        avg_vol = self._calc_avg_volume(group.client_ids, client_by_id)
 
-        mute_icon = "🔇" if group.muted else "🔊"
-        label = f"{mute_icon} {group.name} — {avg_vol}%"
+        # Visual distinction: muted shows "(muted)" instead of volume percentage
+        label = f"🔇 {group.name} — (muted)" if group.muted else f"🔊 {group.name} — {avg_vol}%"
+
         action = QAction(label, self._menu)
-        action.setEnabled(False)  # Read-only
+        # Clicking toggles mute state - read current state at trigger time, not build time
+        group_id = group.id
+        action.triggered.connect(lambda *, gid=group_id: self._toggle_group_mute(gid))
         self._menu.addAction(action)
+
+    def _toggle_group_mute(self, group_id: str) -> None:
+        """Toggle mute state for a group, reading current state at trigger time.
+
+        This reads the current mute state from StateStore when triggered, rather than
+        capturing the state when the menu was built. This prevents stale state bugs
+        where rapid clicks or external changes could cause incorrect toggle behavior.
+
+        Args:
+            group_id: The group to toggle.
+        """
+        group = self._state.get_group(group_id)
+        if group:
+            self.mute_changed.emit(group_id, not group.muted)
+        else:
+            logger.debug("Cannot toggle mute: group %s not found (may have been removed)", group_id)
 
     def _add_now_playing(self) -> None:
         """Add now playing entry from source metadata."""
@@ -324,6 +360,18 @@ class SystemTrayManager(QObject):
         Args:
             group: The group to control.
         """
+        # Build client lookup for volume calculation
+        client_by_id = {c.id: c for c in self._state.clients}
+
+        # Calculate volume using the same helper as group entries (consistent rounding)
+        avg_vol = self._calc_avg_volume(group.client_ids, client_by_id)
+
+        # Don't show slider if no connected clients (volume would be 0/unknown)
+        if avg_vol == 0 and not any(
+            client_by_id.get(cid) and client_by_id[cid].connected for cid in group.client_ids
+        ):
+            return
+
         # Label
         label_action = QAction(f"Volume: {group.name}", self._menu)
         label_action.setEnabled(False)
@@ -331,14 +379,6 @@ class SystemTrayManager(QObject):
 
         # Embedded slider via QWidgetAction
         slider = VolumeSlider()
-
-        # Calculate current volume from clients
-        clients = self._state.clients
-        group_clients = [c for c in clients if c.id in group.client_ids and c.connected]
-        if group_clients:
-            avg_vol = sum(c.volume for c in group_clients) // len(group_clients)
-        else:
-            avg_vol = 50
         slider.set_volume(avg_vol)
         slider.set_muted(group.muted)
 

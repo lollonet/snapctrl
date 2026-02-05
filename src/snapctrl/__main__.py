@@ -32,6 +32,39 @@ logging.basicConfig(level=logging.DEBUG, format="%(asctime)s %(levelname)s %(nam
 logger = logging.getLogger(__name__)
 
 
+def get_resource_path(relative_path: str) -> Path:
+    """Get absolute path to resource, works for dev and PyInstaller bundle.
+
+    Args:
+        relative_path: Path relative to the resource root (no .. or absolute paths).
+
+    Returns:
+        Absolute path to the resource.
+
+    Raises:
+        ValueError: If the path is empty, absolute, or attempts directory traversal.
+    """
+    # Validate input
+    if not relative_path:
+        raise ValueError("Resource path cannot be empty")
+
+    # Prevent path traversal attacks (including null byte injection)
+    if ".." in relative_path or relative_path.startswith("/") or "\x00" in relative_path:
+        raise ValueError(f"Invalid resource path: {relative_path}")
+
+    meipass = getattr(sys, "_MEIPASS", None)
+    # PyInstaller bundle uses _MEIPASS, dev uses project root
+    base_path = Path(meipass) if meipass is not None else Path(__file__).parent.parent.parent
+    base_resolved = base_path.resolve()
+    full_path = (base_path / relative_path).resolve()
+
+    # Ensure resolved path stays within base_path (handles symlinks, etc.)
+    if not full_path.is_relative_to(base_resolved):
+        raise ValueError(f"Invalid resource path: {relative_path}")
+
+    return full_path
+
+
 def discover_server() -> tuple[str, int, str] | None:
     """Discover a Snapcast server on the network.
 
@@ -242,8 +275,8 @@ def main() -> int:  # noqa: PLR0912, PLR0915
     window.set_server_info(host, port, hostname)
     window.sources_panel.set_server_host(host)
 
-    # Set app icon
-    icon_path = Path(__file__).parent.parent.parent / "resources" / "icon.svg"
+    # Set app icon (works in both dev and PyInstaller bundle)
+    icon_path = get_resource_path("resources/icon.svg")
     if icon_path.exists():
         app.setWindowIcon(QIcon(str(icon_path)))
         window.setWindowIcon(QIcon(str(icon_path)))
@@ -371,6 +404,7 @@ def main() -> int:  # noqa: PLR0912, PLR0915
             worker.set_group_mute(group.id, muted)
 
     tray.mute_all_changed.connect(on_mute_all)
+    tray.mute_changed.connect(worker.set_group_mute)
     tray.preferences_requested.connect(window.open_preferences)
 
     # Sync tray's selected group when user selects in UI

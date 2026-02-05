@@ -42,6 +42,13 @@ _ART_HEIGHT_MAX_RETRIES = 3
 # Network request timeout (15 seconds)
 _NETWORK_TIMEOUT_MS = 15000
 
+# Tolerance for skipping redundant pixmap scaling (pixels).
+# Small size changes (<5px) don't warrant expensive SmoothTransformation rescaling.
+_SCALE_TOLERANCE_PX = 5
+# Tolerance for aspect ratio comparison (1% difference).
+# Ensures rescaling when album art changes to different aspect ratio.
+_ASPECT_RATIO_TOLERANCE = 0.01
+
 
 class SourcesPanel(QWidget):
     """Left panel showing list of audio sources.
@@ -301,7 +308,7 @@ class SourcesPanel(QWidget):
     _MAX_STORED_PIXMAP_SIZE = 512
 
     def _set_pixmap(self, pixmap: QPixmap) -> None:
-        """Store original pixmap and let Qt scale via setScaledContents.
+        """Store original pixmap and scale to fit label while preserving aspect ratio.
 
         Args:
             pixmap: Full-resolution pixmap to display.
@@ -317,18 +324,19 @@ class SourcesPanel(QWidget):
                 Qt.TransformationMode.SmoothTransformation,
             )
         self._original_pixmap = pixmap
-        self._album_art.setScaledContents(True)
-        self._album_art.setPixmap(pixmap)
+        # Don't use setScaledContents - it stretches without keeping aspect ratio
+        self._album_art.setScaledContents(False)
+        self._album_art.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._album_art.setStyleSheet(f"""
             QLabel {{
                 border-radius: {sizing.border_radius_md}px;
             }}
         """)
-        # Defer height update so layout has assigned the label's width
+        # Defer display so layout has assigned the label's width
         QTimer.singleShot(10, self._update_art_height)
 
     def _update_art_height(self, *, _retries: int = 0) -> None:
-        """Set label height to match aspect ratio of the original pixmap."""
+        """Scale pixmap to fit label width while preserving aspect ratio."""
         if self._original_pixmap is None or self._original_pixmap.isNull():
             return
         pw = self._original_pixmap.width()
@@ -339,10 +347,40 @@ class SourcesPanel(QWidget):
         if w == 0:
             if _retries < _ART_HEIGHT_MAX_RETRIES:
                 QTimer.singleShot(10, lambda: self._update_art_height(_retries=_retries + 1))
+            else:
+                logger.warning(
+                    "Failed to get album art width after %d retries", _ART_HEIGHT_MAX_RETRIES
+                )
             return
+        # Calculate height that preserves aspect ratio
         h = max(int(w * ph / pw), ALBUM_ART_SIZE)
         h = min(h, 4 * ALBUM_ART_SIZE)  # Cap to prevent excessive heights
         self._album_art.setFixedHeight(h)
+        # Skip scaling if current pixmap already matches target size (avoids expensive
+        # SmoothTransformation on every resize event when size hasn't meaningfully changed)
+        current = self._album_art.pixmap()
+        if not current.isNull():
+            cw, ch = current.width(), current.height()
+            # Check dimensions are valid, close to target, AND aspect ratio matches original
+            # (aspect ratio check prevents skipping when new art with different ratio arrives)
+            if cw > 0 and ch > 0:
+                current_ratio = cw / ch
+                original_ratio = pw / ph
+                ratio_matches = abs(current_ratio - original_ratio) < _ASPECT_RATIO_TOLERANCE
+                if (
+                    ratio_matches
+                    and abs(cw - w) <= _SCALE_TOLERANCE_PX
+                    and abs(ch - h) <= _SCALE_TOLERANCE_PX
+                ):
+                    return
+        # Scale pixmap to fit label size while keeping aspect ratio
+        scaled = self._original_pixmap.scaled(
+            w,
+            h,
+            Qt.AspectRatioMode.KeepAspectRatio,
+            Qt.TransformationMode.SmoothTransformation,
+        )
+        self._album_art.setPixmap(scaled)
 
     def event(self, ev: QEvent) -> bool:
         """Update album art height on resize (debounced so layout is complete)."""
