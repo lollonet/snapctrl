@@ -1,5 +1,6 @@
 """Tests for mDNS/Zeroconf discovery module."""
 
+import socket
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -223,3 +224,84 @@ class TestDiscoveryIntegration:
         ):
             result = ServerDiscovery.discover_all(timeout=0.1)
             assert isinstance(result, list)
+
+
+class TestServiceListenerAddressFormats:
+    """Test address parsing in service listener."""
+
+    def test_add_service_ipv6_address(self) -> None:
+        """Test add_service handles IPv6 addresses."""
+        servers_found: list[DiscoveredServer] = []
+
+        def on_found(server: DiscoveredServer) -> None:
+            servers_found.append(server)
+
+        listener = SnapcastServiceListener(on_found=on_found)
+
+        # Create mock service info with IPv6 address
+        mock_info = MagicMock()
+        # Use a valid 16-byte IPv6 address
+        ipv6_bytes = socket.inet_pton(socket.AF_INET6, "2001:db8::1")
+        mock_info.addresses = [ipv6_bytes]
+        mock_info.port = 1704
+        mock_info.properties = {b"name": b"Test Server"}
+        mock_info.server = "test.local."
+
+        mock_zc = MagicMock()
+        mock_zc.get_service_info.return_value = mock_info
+
+        listener.add_service(mock_zc, SNAPCAST_SERVICE_TYPE, "test._snapcast._tcp.local.")
+
+        assert len(servers_found) == 1
+        assert servers_found[0].host == "2001:db8::1"
+
+    def test_add_service_multiple_ipv4_addresses(self) -> None:
+        """Test add_service uses first of multiple IPv4 addresses."""
+        servers_found: list[DiscoveredServer] = []
+
+        def on_found(server: DiscoveredServer) -> None:
+            servers_found.append(server)
+
+        listener = SnapcastServiceListener(on_found=on_found)
+
+        mock_info = MagicMock()
+        # Multiple valid IPv4 addresses
+        addr1 = bytes([192, 168, 1, 100])
+        addr2 = bytes([192, 168, 1, 101])
+        mock_info.addresses = [addr1, addr2]
+        mock_info.port = 1704
+        mock_info.properties = {}
+        mock_info.server = "test.local."
+
+        mock_zc = MagicMock()
+        mock_zc.get_service_info.return_value = mock_info
+
+        listener.add_service(mock_zc, SNAPCAST_SERVICE_TYPE, "test._snapcast._tcp.local.")
+
+        # Should find server with the first IPv4 address
+        assert len(servers_found) == 1
+        assert servers_found[0].host == "192.168.1.100"
+        assert len(servers_found[0].addresses) == 2
+
+    def test_add_service_empty_addresses(self) -> None:
+        """Test add_service with empty addresses does not add server."""
+        servers_found: list[DiscoveredServer] = []
+
+        def on_found(server: DiscoveredServer) -> None:
+            servers_found.append(server)
+
+        listener = SnapcastServiceListener(on_found=on_found)
+
+        mock_info = MagicMock()
+        mock_info.addresses = []  # No addresses
+        mock_info.port = 1704
+        mock_info.properties = {}
+        mock_info.server = "test.local."
+
+        mock_zc = MagicMock()
+        mock_zc.get_service_info.return_value = mock_info
+
+        listener.add_service(mock_zc, SNAPCAST_SERVICE_TYPE, "test._snapcast._tcp.local.")
+
+        # Should not find any servers
+        assert len(servers_found) == 0

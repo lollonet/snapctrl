@@ -1,11 +1,15 @@
 """Tests for network ping utilities."""
 
+import subprocess
+from unittest.mock import MagicMock, patch
+
 from snapctrl.core.ping import (
     PingMonitor,
     RttThresholds,
     _parse_ping_output,
     format_rtt,
     get_rtt_color,
+    ping_host_sync,
 )
 
 
@@ -176,3 +180,168 @@ class TestPingMonitor:
         assert monitor._thread is thread1
 
         monitor.stop()
+
+
+class TestPingHostSync:
+    """Tests for ping_host_sync function."""
+
+    def test_ping_success_macos(self) -> None:
+        """Test successful ping on macOS."""
+        mock_result = MagicMock()
+        mock_result.returncode = 0
+        mock_result.stdout = "64 bytes from 192.168.1.1: icmp_seq=0 ttl=64 time=5.432 ms"
+
+        with (
+            patch("platform.system", return_value="Darwin"),
+            patch("subprocess.run", return_value=mock_result) as mock_run,
+        ):
+            rtt = ping_host_sync("192.168.1.1", timeout=2.0)
+
+            assert rtt == 5.432
+            # Verify macOS command format
+            mock_run.assert_called_once()
+            cmd = mock_run.call_args[0][0]
+            assert cmd[0] == "ping"
+            assert "-c" in cmd
+            assert "-W" in cmd
+
+    def test_ping_success_linux(self) -> None:
+        """Test successful ping on Linux."""
+        mock_result = MagicMock()
+        mock_result.returncode = 0
+        mock_result.stdout = "64 bytes from 192.168.1.1: icmp_seq=1 ttl=64 time=3.21 ms"
+
+        with (
+            patch("platform.system", return_value="Linux"),
+            patch("subprocess.run", return_value=mock_result) as mock_run,
+        ):
+            rtt = ping_host_sync("192.168.1.1", timeout=2.0)
+
+            assert rtt == 3.21
+            cmd = mock_run.call_args[0][0]
+            assert cmd[0] == "ping"
+            assert "-c" in cmd
+
+    def test_ping_success_windows(self) -> None:
+        """Test successful ping on Windows."""
+        mock_result = MagicMock()
+        mock_result.returncode = 0
+        mock_result.stdout = "Reply from 192.168.1.1: bytes=32 time=5ms TTL=64"
+
+        with (
+            patch("platform.system", return_value="Windows"),
+            patch("subprocess.run", return_value=mock_result) as mock_run,
+        ):
+            rtt = ping_host_sync("192.168.1.1", timeout=2.0)
+
+            assert rtt == 5.0
+            cmd = mock_run.call_args[0][0]
+            assert cmd[0] == "ping"
+            assert "-n" in cmd
+            assert "-w" in cmd
+
+    def test_ping_failure_nonzero_return(self) -> None:
+        """Test ping failure with non-zero return code."""
+        mock_result = MagicMock()
+        mock_result.returncode = 1
+        mock_result.stdout = "Request timed out."
+
+        with (
+            patch("platform.system", return_value="Darwin"),
+            patch("subprocess.run", return_value=mock_result),
+        ):
+            rtt = ping_host_sync("192.168.1.1")
+
+            assert rtt is None
+
+    def test_ping_timeout_expired(self) -> None:
+        """Test ping timeout expired."""
+        with (
+            patch("platform.system", return_value="Darwin"),
+            patch("subprocess.run", side_effect=subprocess.TimeoutExpired("ping", 3.0)),
+        ):
+            rtt = ping_host_sync("192.168.1.1", timeout=2.0)
+
+            assert rtt is None
+
+    def test_ping_os_error(self) -> None:
+        """Test ping with OSError (e.g., ping command not found)."""
+        with (
+            patch("platform.system", return_value="Darwin"),
+            patch("subprocess.run", side_effect=OSError("No such file")),
+        ):
+            rtt = ping_host_sync("192.168.1.1")
+
+            assert rtt is None
+
+    def test_ping_subprocess_error(self) -> None:
+        """Test ping with generic subprocess error."""
+        with (
+            patch("platform.system", return_value="Darwin"),
+            patch("subprocess.run", side_effect=subprocess.SubprocessError("Unknown error")),
+        ):
+            rtt = ping_host_sync("192.168.1.1")
+
+            assert rtt is None
+
+    def test_ping_parse_failure(self) -> None:
+        """Test ping when output cannot be parsed."""
+        mock_result = MagicMock()
+        mock_result.returncode = 0
+        mock_result.stdout = "Unknown output format"
+
+        with (
+            patch("platform.system", return_value="Darwin"),
+            patch("subprocess.run", return_value=mock_result),
+        ):
+            rtt = ping_host_sync("192.168.1.1")
+
+            assert rtt is None
+
+
+class TestPingMonitorInternal:
+    """Test PingMonitor internal methods."""
+
+    def test_ping_all_empty_hosts(self) -> None:
+        """Test _ping_all with no hosts."""
+        monitor = PingMonitor()
+        monitor._hosts = {}
+
+        # Should not crash
+        monitor._ping_all()
+
+        assert monitor._results == {}
+
+    def test_ping_all_with_hosts(self) -> None:
+        """Test _ping_all with hosts."""
+        monitor = PingMonitor()
+        monitor._hosts = {"c1": "192.168.1.10"}
+        monitor._running = True
+
+        results_received: list[dict] = []
+        monitor.results_updated.connect(results_received.append)
+
+        with patch("snapctrl.core.ping.ping_host_sync", return_value=5.5):
+            monitor._ping_all()
+
+        assert len(results_received) == 1
+        assert results_received[0] == {"c1": 5.5}
+
+    def test_ping_all_stops_when_not_running(self) -> None:
+        """Test _ping_all stops early when monitor stops."""
+        monitor = PingMonitor()
+        monitor._hosts = {"c1": "192.168.1.10", "c2": "192.168.1.11"}
+        monitor._running = False  # Already stopped
+
+        call_count = 0
+
+        def mock_ping(host: str, timeout: float = 2.0) -> float | None:
+            nonlocal call_count
+            call_count += 1
+            return 1.0
+
+        with patch("snapctrl.core.ping.ping_host_sync", side_effect=mock_ping):
+            monitor._ping_all()
+
+        # Should not ping any hosts because _running is False
+        assert call_count == 0
