@@ -909,7 +909,12 @@ class TestLoadDataUriImage:
         data_uri = f"data:image/jpeg;base64,{small_data}"
 
         initial_gen = panel._fallback_generation
-        result = panel._load_data_uri_image(data_uri)
+
+        # Mock threading to prevent background thread from emitting signals
+        # during pytest-qt event cleanup (causes SIGSEGV on Linux/Python 3.14)
+        with patch("snapctrl.ui.panels.sources.threading.Thread") as mock_thread:
+            mock_thread.return_value = MagicMock()
+            result = panel._load_data_uri_image(data_uri)
 
         assert result is True
         # Generation should have been incremented
