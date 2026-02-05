@@ -165,6 +165,7 @@ class SystemTrayManager(QObject):
     def _on_menu_closed(self) -> None:
         """Trigger pending rebuild after menu closes."""
         if self._rebuild_pending:
+            self._rebuild_pending = False
             self._rebuild_timer.start()
 
     def show(self) -> None:
@@ -249,10 +250,9 @@ class SystemTrayManager(QObject):
         """Rebuild the tray context menu from current state."""
         # Don't rebuild while the menu is open — destroying widgets mid-interaction
         # causes the slider to vanish and recreate, producing erratic volume jumps.
+        # Set flag before checking to avoid race with aboutToHide signal.
         if self._menu.isVisible():
-            if not self._rebuild_pending:
-                self._rebuild_pending = True
-                self._rebuild_timer.start()  # Retry after menu closes
+            self._rebuild_pending = True
             return
 
         self._rebuild_pending = False
