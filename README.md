@@ -45,7 +45,7 @@ SnapCTRL is a cross-platform desktop application that provides an intuitive GUI 
 | Album Art        | ✅ Complete   |
 | Integration      | ✅ Complete   |
 
-Run `pytest tests/ -v` for current test count (499 tests).
+Run `pytest tests/ -v` for current test count (934 tests).
 
 ## Requirements
 
@@ -101,7 +101,7 @@ QT_QPA_PLATFORM=offscreen uv run pytest tests/ -v
 uv run basedpyright src/
 ```
 
-### Test Coverage (499 tests)
+### Test Coverage (934 tests)
 
 - **Models, protocol, API**: 150+ tests
 - **Core (state, config, ping, discovery)**: 80+ tests

@@ -7,6 +7,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **SIGSEGV Crash in QWidget::ensurePolished()** ([571cffe](https://github.com/lollonet/snapctrl/commit/571cffe)) - Feb 5
+  - Replaced unsafe `QTimer.singleShot(0, ...)` from background thread with `_fallback_art_ready` Signal + explicit `QueuedConnection`
+  - Added explicit `QueuedConnection` to `_art_decoded` signal connection in sources panel
+  - Added `deleteLater()` after `setParent(None)` for removed GroupCard widgets to prevent dangling event pointers
+  - Root cause: `QTimer.singleShot` from plain Python threads is undefined Qt behavior; removed widgets without `deleteLater()` leave stale events in the Qt event queue
+
+- **CI Crash in test_valid_data_uri_starts_decode** ([47631c7](https://github.com/lollonet/snapctrl/commit/47631c7)) - Feb 5
+  - Background thread in test emitted signal during pytest-qt cleanup, causing SIGSEGV on Linux/Python 3.14
+  - Fixed by mocking `threading.Thread` in the test
+
+### Changed
+
+- **Magic Number Constants** ([e605d1a](https://github.com/lollonet/snapctrl/commit/e605d1a)) - Feb 5
+  - Wired `SNAPCLIENT_PORT`, `VOLUME_SLIDER_STALE_THRESHOLD`, `VOLUME_NOTIFICATION_DEBOUNCE_MS` constants in `__main__.py`
+  - Extracted `_disconnect_process_signals()` helper in `snapclient_manager.py` (DRY)
+  - Reuse `client_by_id` dict in tray menu rebuild
+
+### Maintenance
+
+- **Test Lint Cleanup** ([132212f](https://github.com/lollonet/snapctrl/commit/132212f)) - Feb 5
+  - Fixed 160 ruff lint issues across 18 test files (PLC0415 imports, SIM117 nested `with`)
+  - Added 8 new test files (934 total tests)
+
+## [0.2.5] - 2026-02-05
+
+### Fixed
+
+- **External Snapclient Detach Crash** ([a7e68b0](https://github.com/lollonet/snapctrl/commit/a7e68b0)) - Feb 5
+  - `detach()` crashed when snapclient was externally managed (no QProcess to detach)
+  - Added guard to check process existence before detach
+
+- **Album Art Aspect Ratio** ([9604942](https://github.com/lollonet/snapctrl/commit/9604942), [#31](https://github.com/lollonet/snapctrl/pull/31)) - Feb 5
+  - Album art now preserves aspect ratio with `Qt.AspectRatioMode.KeepAspectRatio`
+  - Tray menu rebuild performance optimized (debounced, fewer widget recreations)
+
 ## [0.2.4] - 2026-02-04
 
 ### Added

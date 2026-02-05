@@ -119,9 +119,14 @@ class VolumeSlider(QWidget):
     def set_volume(self, volume: int) -> None:
         """Set the volume (0-100).
 
+        Skips update while the user is actively dragging the slider to prevent
+        server state updates from causing the slider to snap back.
+
         Args:
             volume: Volume value.
         """
+        if self._slider.isSliderDown():
+            return
         self._slider.blockSignals(True)
         self._slider.setValue(volume)
         self._volume_label.setText(f"{volume}%")
@@ -141,9 +146,14 @@ class VolumeSlider(QWidget):
     def set_muted(self, muted: bool) -> None:
         """Set the mute state without emitting signals (for external updates).
 
+        Skips update while the user is actively dragging the slider to prevent
+        server state updates from causing the slider to snap.
+
         Args:
             muted: Whether to mute.
         """
+        if self._slider.isSliderDown():
+            return
         if self._muted == muted:
             return
 
@@ -167,11 +177,14 @@ class VolumeSlider(QWidget):
         """Set both volume and mute state atomically without emitting signals.
 
         Used for external state updates (e.g., from server).
+        Skips update while the user is actively dragging the slider.
 
         Args:
             volume: Volume value.
             muted: Whether to mute.
         """
+        if self._slider.isSliderDown():
+            return
         self._muted = muted
         self._volume_before_mute = volume
 

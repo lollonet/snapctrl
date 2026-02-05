@@ -101,6 +101,9 @@ class SystemTrayManager(QObject):
         # State fingerprint for skipping unnecessary menu rebuilds
         self._last_menu_fingerprint: str = ""
 
+        # Flag to prevent timer spam when menu is open
+        self._rebuild_pending: bool = False
+
         # Debounce timer for menu rebuild
         self._rebuild_timer = QTimer()
         self._rebuild_timer.setSingleShot(True)
@@ -120,6 +123,7 @@ class SystemTrayManager(QObject):
 
         # Build initial menu
         self._menu = QMenu()
+        self._menu.aboutToHide.connect(self._on_menu_closed)
         self._tray.setContextMenu(self._menu)
         self._rebuild_menu()
 
@@ -157,6 +161,12 @@ class SystemTrayManager(QObject):
         """
         self._snapclient_host = host
         self._snapclient_port = port
+
+    def _on_menu_closed(self) -> None:
+        """Trigger pending rebuild after menu closes."""
+        if self._rebuild_pending:
+            self._rebuild_pending = False
+            self._rebuild_timer.start()
 
     def show(self) -> None:
         """Show the tray icon."""
@@ -238,6 +248,15 @@ class SystemTrayManager(QObject):
 
     def _rebuild_menu(self) -> None:
         """Rebuild the tray context menu from current state."""
+        # Don't rebuild while the menu is open — destroying widgets mid-interaction
+        # causes the slider to vanish and recreate, producing erratic volume jumps.
+        # Set flag before checking to avoid race with aboutToHide signal.
+        if self._menu.isVisible():
+            self._rebuild_pending = True
+            return
+
+        self._rebuild_pending = False
+
         # Check if rebuild is actually needed
         fingerprint = self._compute_menu_fingerprint()
         if fingerprint == self._last_menu_fingerprint:
@@ -380,10 +399,13 @@ class SystemTrayManager(QObject):
         slider.set_volume(avg_vol)
         slider.set_muted(group.muted)
 
-        # Connect slider to emit volume_changed with group_id
+        # Connect slider signals to emit with group_id
         group_id = group.id
         slider.volume_changed.connect(
             lambda vol: self.volume_changed.emit(group_id, vol)  # type: ignore[arg-type]
+        )
+        slider.mute_toggled.connect(
+            lambda muted: self.mute_changed.emit(group_id, muted)  # type: ignore[arg-type]
         )
 
         widget_action = QWidgetAction(self._menu)
