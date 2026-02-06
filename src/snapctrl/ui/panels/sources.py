@@ -129,6 +129,7 @@ class SourcesPanel(QWidget):
         # Thread pool for background album art operations (fetch, decode)
         # Limited to 2 workers to prevent thread exhaustion under heavy load
         self._executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="album_art")
+        self._executor_shutdown = False  # Flag for idempotent cleanup
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -835,7 +836,11 @@ class SourcesPanel(QWidget):
 
         Shuts down the thread pool executor to prevent orphaned threads.
         Should be called when the parent window is closing.
+        Safe to call multiple times (idempotent).
         """
+        if self._executor_shutdown:
+            return
+        self._executor_shutdown = True
         self._executor.shutdown(wait=True, cancel_futures=True)
 
     def refresh_theme(self) -> None:
