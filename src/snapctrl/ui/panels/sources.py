@@ -7,6 +7,7 @@ import ipaddress
 import logging
 import threading
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import suppress
 from urllib.parse import urlparse, urlunparse
 
 from PySide6.QtCore import QEvent, Qt, QTimer, QUrl, Signal, Slot
@@ -838,10 +839,12 @@ class SourcesPanel(QWidget):
         Should be called when the parent window is closing.
         Safe to call multiple times (idempotent).
         """
-        if self._executor_shutdown:
-            return
-        self._executor_shutdown = True
-        self._executor.shutdown(wait=True, cancel_futures=True)
+        with self._fallback_lock:
+            if self._executor_shutdown:
+                return
+            self._executor_shutdown = True
+        with suppress(RuntimeError):
+            self._executor.shutdown(wait=True, cancel_futures=True)
 
     def refresh_theme(self) -> None:
         """Refresh styles when theme changes."""
