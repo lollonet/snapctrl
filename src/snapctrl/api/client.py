@@ -498,6 +498,27 @@ class SnapcastClient:
         )
 
 
+def _clamp_volume(volume: int, client_id: str) -> int:
+    """Clamp volume to valid 0-100 range with logging.
+
+    Args:
+        volume: Raw volume value from server.
+        client_id: Client identifier for logging.
+
+    Returns:
+        Volume clamped to 0-100 range.
+    """
+    clamped = max(0, min(100, volume))
+    if clamped != volume:
+        logger.warning(
+            "Client %s volume %d out of range, clamped to %d",
+            client_id,
+            volume,
+            clamped,
+        )
+    return clamped
+
+
 def _parse_server_status(data: dict[str, Any]) -> ServerState:
     """Parse Server.GetStatus response into ServerState.
 
@@ -566,7 +587,10 @@ def _parse_server_status(data: dict[str, Any]) -> ServerState:
                     host=host.get("ip", ""),
                     name=config.get("name", ""),
                     mac=host.get("mac", ""),
-                    volume=config.get("volume", {}).get("percent", 50),
+                    volume=_clamp_volume(
+                        config.get("volume", {}).get("percent", 50),
+                        c.get("id", "unknown"),
+                    ),
                     muted=config.get("volume", {}).get("muted", False),
                     connected=c.get("connected", True),
                     latency=config.get("latency", 0),

@@ -1,6 +1,7 @@
 """Tests for SnapcastClient."""
 
 import asyncio
+import logging
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -275,6 +276,46 @@ class TestParseServerStatus:
         source = state.sources[0]
         assert source.is_playing is True
         assert source.stream_type == "flac"
+
+    def test_parse_clamps_volume_out_of_range(self, caplog: pytest.LogCaptureFixture) -> None:
+        """Test that out-of-range volume is clamped and logged at API layer."""
+        data = {
+            "server": {
+                "groups": [
+                    {
+                        "id": "g1",
+                        "name": "Test",
+                        "clients": [
+                            {
+                                "id": "c1",
+                                "connected": True,
+                                "host": {"ip": "10.0.0.1"},
+                                "config": {"volume": {"percent": 150}},
+                            },
+                            {
+                                "id": "c2",
+                                "connected": True,
+                                "host": {"ip": "10.0.0.2"},
+                                "config": {"volume": {"percent": -10}},
+                            },
+                        ],
+                    }
+                ],
+                "server": {"snapserver": {}, "host": {}},
+                "streams": [],
+            }
+        }
+
+        with caplog.at_level(logging.WARNING):
+            state = _parse_server_status(data)
+
+        # Volume should be clamped
+        assert state.clients[0].volume == 100
+        assert state.clients[1].volume == 0
+
+        # Warnings should be logged
+        assert "c1 volume 150 out of range, clamped to 100" in caplog.text
+        assert "c2 volume -10 out of range, clamped to 0" in caplog.text
 
 
 class TestSetClientMute:

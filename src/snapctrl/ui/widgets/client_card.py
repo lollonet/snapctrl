@@ -60,6 +60,7 @@ class ClientCard(QFrame):
         self._client_id = client_id
         self._name = name
         self._connected = connected
+        self._muted = muted
 
         self._setup_ui(volume, muted)
 
@@ -116,6 +117,10 @@ class ClientCard(QFrame):
         self._volume_slider.mute_toggled.connect(self._on_mute_toggled)
         layout.addWidget(self._volume_slider)
 
+        # Apply initial muted style if needed
+        if muted:
+            self._update_muted_style()
+
     def _on_volume_changed(self, volume: int) -> None:
         """Handle volume change from slider.
 
@@ -156,19 +161,33 @@ class ClientCard(QFrame):
         Args:
             muted: Whether to mute.
         """
+        self._muted = muted
         self._volume_slider.set_muted(muted)
+        self._update_muted_style()
 
-    def set_connected(self, connected: bool) -> None:
-        """Update the connection status display.
+    def _update_muted_style(self) -> None:
+        """Update the visual style based on mute state.
 
-        Args:
-            connected: Whether the client is connected.
+        Only dims the name label - status indicator always shows connection state.
         """
-        self._connected = connected
-        # Always use filled circle, change color: green=connected, red=disconnected
+        p = theme_manager.palette
+        if self._muted:
+            # Dim the name label when muted
+            self._name_label.setStyleSheet(
+                f"font-size: {typography.body}pt; color: {p.text_disabled}; "
+                f"padding: {spacing.xs}px;"
+            )
+        else:
+            # Normal style
+            self._name_label.setStyleSheet(
+                f"font-size: {typography.body}pt; color: {p.text}; padding: {spacing.xs}px;"
+            )
+
+    def _update_connection_indicator(self) -> None:
+        """Update the status indicator based on connection state."""
         p = theme_manager.palette
         indicator_size = sizing.emoji_indicator
-        if connected:
+        if self._connected:
             self._status_indicator.setStyleSheet(
                 f"color: {p.success}; font-size: {indicator_size}px;"
             )
@@ -178,6 +197,15 @@ class ClientCard(QFrame):
                 f"color: {p.error}; font-size: {indicator_size}px;"
             )
             self._status_indicator.setToolTip("Disconnected")
+
+    def set_connected(self, connected: bool) -> None:
+        """Update the connection status display.
+
+        Args:
+            connected: Whether the client is connected.
+        """
+        self._connected = connected
+        self._update_connection_indicator()
 
     def set_selected(self, selected: bool) -> None:
         """Set the visual selection state.
