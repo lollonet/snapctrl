@@ -9,26 +9,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- **SIGSEGV Crash in QWidget::ensurePolished()** ([571cffe](https://github.com/lollonet/snapctrl/commit/571cffe)) - Feb 5
+- **SIGSEGV Crash in QWidget::ensurePolished()** ([#32](https://github.com/lollonet/snapctrl/pull/32)) - Feb 5
   - Replaced unsafe `QTimer.singleShot(0, ...)` from background thread with `_fallback_art_ready` Signal + explicit `QueuedConnection`
-  - Added explicit `QueuedConnection` to `_art_decoded` signal connection in sources panel
-  - Added `deleteLater()` after `setParent(None)` for removed GroupCard widgets to prevent dangling event pointers
-  - Root cause: `QTimer.singleShot` from plain Python threads is undefined Qt behavior; removed widgets without `deleteLater()` leave stale events in the Qt event queue
+  - Added `deleteLater()` for removed GroupCard widgets to prevent dangling event pointers
+  - Root cause: `QTimer.singleShot` from plain Python threads is undefined Qt behavior
 
-- **CI Crash in test_valid_data_uri_starts_decode** ([47631c7](https://github.com/lollonet/snapctrl/commit/47631c7)) - Feb 5
-  - Background thread in test emitted signal during pytest-qt cleanup, causing SIGSEGV on Linux/Python 3.14
-  - Fixed by mocking `threading.Thread` in the test
+- **Tray Menu Mute Button** ([#33](https://github.com/lollonet/snapctrl/pull/33)) - Feb 6
+  - Connected `mute_toggled` signal so mute button in tray volume slider works
+  - Added menu rebuild guard with `aboutToHide` handler to prevent erratic volume jumps
+
+- **Volume Slider Snap-Back During Drag** ([#33](https://github.com/lollonet/snapctrl/pull/33)) - Feb 6
+  - Added `isSliderDown()` guard to `set_volume()`, `set_muted()`, and `set_volume_and_mute()`
+  - Server updates no longer snap slider position while user is dragging
+
+- **Preferences Dialog Styling** ([#33](https://github.com/lollonet/snapctrl/pull/33)) - Feb 6
+  - Restored dialog sizing (560×400) and input control styling (focus/read-only states)
 
 ### Changed
 
-- **Magic Number Constants** ([e605d1a](https://github.com/lollonet/snapctrl/commit/e605d1a)) - Feb 5
-  - Wired `SNAPCLIENT_PORT`, `VOLUME_SLIDER_STALE_THRESHOLD`, `VOLUME_NOTIFICATION_DEBOUNCE_MS` constants in `__main__.py`
-  - Extracted `_disconnect_process_signals()` helper in `snapclient_manager.py` (DRY)
-  - Reuse `client_by_id` dict in tray menu rebuild
+- **Magic Number Constants** ([#32](https://github.com/lollonet/snapctrl/pull/32)) - Feb 5
+  - Wired `SNAPCLIENT_PORT`, `VOLUME_SLIDER_STALE_THRESHOLD`, `VOLUME_NOTIFICATION_DEBOUNCE_MS` constants
+  - Extracted `_disconnect_process_signals()` helper in `snapclient_manager.py`
+
+### Documentation
+
+- **CLAUDE.md Added** ([#33](https://github.com/lollonet/snapctrl/pull/33)) - Feb 6
+  - Project instructions for AI-assisted development (tech stack, conventions, quality gates)
+
+- **README Test Count Updated** ([#33](https://github.com/lollonet/snapctrl/pull/33)) - Feb 6
+  - Updated from 499 to 934 tests
 
 ### Maintenance
 
-- **Test Lint Cleanup** ([132212f](https://github.com/lollonet/snapctrl/commit/132212f)) - Feb 5
+- **Test Lint Cleanup** ([#32](https://github.com/lollonet/snapctrl/pull/32)) - Feb 5
   - Fixed 160 ruff lint issues across 18 test files (PLC0415 imports, SIM117 nested `with`)
   - Added 8 new test files (934 total tests)
 
