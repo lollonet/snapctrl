@@ -1,6 +1,7 @@
 """Tests for SnapcastClient."""
 
 import asyncio
+import logging
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -304,8 +305,6 @@ class TestParseServerStatus:
                 "streams": [],
             }
         }
-
-        import logging
 
         with caplog.at_level(logging.WARNING):
             state = _parse_server_status(data)
