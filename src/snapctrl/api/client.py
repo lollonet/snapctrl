@@ -566,7 +566,7 @@ def _parse_server_status(data: dict[str, Any]) -> ServerState:
                     host=host.get("ip", ""),
                     name=config.get("name", ""),
                     mac=host.get("mac", ""),
-                    volume=config.get("volume", {}).get("percent", 50),
+                    volume=max(0, min(100, config.get("volume", {}).get("percent", 50))),
                     muted=config.get("volume", {}).get("muted", False),
                     connected=c.get("connected", True),
                     latency=config.get("latency", 0),
