@@ -6,6 +6,7 @@ import binascii
 import ipaddress
 import logging
 import threading
+from concurrent.futures import ThreadPoolExecutor
 from urllib.parse import urlparse, urlunparse
 
 from PySide6.QtCore import QEvent, Qt, QTimer, QUrl, Signal, Slot
@@ -124,6 +125,10 @@ class SourcesPanel(QWidget):
                 MusicBrainzAlbumArtProvider(),
             ]
         )
+
+        # Thread pool for background album art operations (fetch, decode)
+        # Limited to 2 workers to prevent thread exhaustion under heavy load
+        self._executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="album_art")
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -441,9 +446,8 @@ class SourcesPanel(QWidget):
             finally:
                 loop.close()
 
-        # Start background thread
-        thread = threading.Thread(target=fetch_in_thread, daemon=True)
-        thread.start()
+        # Submit to thread pool for managed background execution
+        self._executor.submit(fetch_in_thread)
 
     @Slot()
     def _apply_fallback_art(self) -> None:
@@ -641,9 +645,8 @@ class SourcesPanel(QWidget):
                 except MemoryError:
                     logger.error("Out of memory loading album art")
 
-            # Start background thread for decode
-            thread = threading.Thread(target=decode_in_thread, daemon=True)
-            thread.start()
+            # Submit to thread pool for managed background execution
+            self._executor.submit(decode_in_thread)
             return True
 
         except ValueError as e:
@@ -826,6 +829,14 @@ class SourcesPanel(QWidget):
         if item:
             return item.data(Qt.ItemDataRole.UserRole)
         return None
+
+    def cleanup(self) -> None:
+        """Clean up resources before widget destruction.
+
+        Shuts down the thread pool executor to prevent orphaned threads.
+        Should be called when the parent window is closing.
+        """
+        self._executor.shutdown(wait=False, cancel_futures=True)
 
     def refresh_theme(self) -> None:
         """Refresh styles when theme changes."""

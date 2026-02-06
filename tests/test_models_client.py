@@ -73,15 +73,16 @@ class TestClient:
             client.volume = 75  # type: ignore[misc]
 
     def test_client_volume_range(self) -> None:
-        """Test client can have any volume value (validation elsewhere)."""
-        # Model doesn't enforce range - validation is higher layer
+        """Test client volume is clamped to 0-100 range."""
         client_low = Client(id="client-1", host="192.168.1.50", volume=0)
         client_high = Client(id="client-2", host="192.168.1.51", volume=100)
         client_over = Client(id="client-3", host="192.168.1.52", volume=150)
+        client_under = Client(id="client-4", host="192.168.1.53", volume=-10)
 
         assert client_low.volume == 0
         assert client_high.volume == 100
-        assert client_over.volume == 150
+        assert client_over.volume == 100  # Clamped from 150
+        assert client_under.volume == 0  # Clamped from -10
 
     def test_client_equality(self) -> None:
         """Test client equality comparison."""

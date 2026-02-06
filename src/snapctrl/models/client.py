@@ -58,6 +58,11 @@ class Client:
     host_arch: str = ""
     host_name: str = ""
 
+    def __post_init__(self) -> None:
+        """Validate and clamp volume to 0-100 range."""
+        if self.volume < 0 or self.volume > 100:  # noqa: PLR2004
+            object.__setattr__(self, "volume", max(0, min(100, self.volume)))
+
     @property
     def display_name(self) -> str:
         """Return name or host as fallback for display."""

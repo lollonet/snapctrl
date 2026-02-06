@@ -124,6 +124,8 @@ class GroupCard(QWidget):
         self._expand_button.setFixedSize(sizing.icon_md, sizing.icon_md)
         self._expand_button.setFlat(True)
         self._expand_button.setStyleSheet("QPushButton { border: none; }")
+        self._expand_button.setAccessibleName("Expand")
+        self._expand_button.setAccessibleDescription("Show or hide client list")
         self._expand_button.clicked.connect(self._toggle_expand)
         header.addWidget(self._expand_button)
 
@@ -318,6 +320,7 @@ class GroupCard(QWidget):
         self._expanded = not self._expanded
         self._client_list.setVisible(self._expanded)
         self._expand_button.setText("▲" if self._expanded else "▼")
+        self._expand_button.setAccessibleName("Collapse" if self._expanded else "Expand")
         self.expand_toggled.emit(self._group.id if self._group else "", self._expanded)
 
     @property
@@ -335,6 +338,7 @@ class GroupCard(QWidget):
             self._expanded = expanded
             self._client_list.setVisible(expanded)
             self._expand_button.setText("▲" if expanded else "▼")
+            self._expand_button.setAccessibleName("Collapse" if expanded else "Expand")
 
     def set_volume(self, volume: int) -> None:
         """Set the volume for this card.

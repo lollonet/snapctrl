@@ -56,6 +56,8 @@ class VolumeSlider(QWidget):
         self._mute_button = QPushButton("🔊")
         self._mute_button.setFixedSize(sizing.control_button, sizing.control_button)
         self._mute_button.setFlat(True)
+        self._mute_button.setAccessibleName("Mute")
+        self._mute_button.setAccessibleDescription("Toggle audio mute")
         self._mute_button.setStyleSheet(f"""
             QPushButton {{
                 border: none;
@@ -95,6 +97,7 @@ class VolumeSlider(QWidget):
             self._slider.blockSignals(False)
             self._volume_label.setText("M")
             self._mute_button.setText("🔇")
+            self._mute_button.setAccessibleName("Unmute")
         else:
             # Restore volume and unmute
             self._slider.blockSignals(True)
@@ -102,6 +105,7 @@ class VolumeSlider(QWidget):
             self._slider.blockSignals(False)
             self._volume_label.setText(f"{self._volume_before_mute}%")
             self._mute_button.setText("🔊")
+            self._mute_button.setAccessibleName("Mute")
 
         # Only emit mute_toggled - the handler should use the stored volume
         self.mute_toggled.emit(self._muted)
@@ -166,12 +170,14 @@ class VolumeSlider(QWidget):
             self._slider.blockSignals(False)
             self._volume_label.setText("M")
             self._mute_button.setText("🔇")
+            self._mute_button.setAccessibleName("Unmute")
         else:
             self._slider.blockSignals(True)
             self._slider.setValue(self._volume_before_mute)
             self._slider.blockSignals(False)
             self._volume_label.setText(f"{self._volume_before_mute}%")
             self._mute_button.setText("🔊")
+            self._mute_button.setAccessibleName("Mute")
 
     def set_volume_and_mute(self, volume: int, muted: bool) -> None:
         """Set both volume and mute state atomically without emitting signals.
@@ -194,12 +200,14 @@ class VolumeSlider(QWidget):
             self._slider.blockSignals(False)
             self._volume_label.setText("M")
             self._mute_button.setText("🔇")
+            self._mute_button.setAccessibleName("Unmute")
         else:
             self._slider.blockSignals(True)
             self._slider.setValue(volume)
             self._slider.blockSignals(False)
             self._volume_label.setText(f"{volume}%")
             self._mute_button.setText("🔊")
+            self._mute_button.setAccessibleName("Mute")
 
     def refresh_theme(self) -> None:
         """Refresh styles when theme changes."""
