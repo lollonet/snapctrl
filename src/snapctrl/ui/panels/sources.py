@@ -843,8 +843,9 @@ class SourcesPanel(QWidget):
             if self._executor_shutdown:
                 return
             self._executor_shutdown = True
-        with suppress(RuntimeError):
-            self._executor.shutdown(wait=True, cancel_futures=True)
+            with suppress(RuntimeError):
+                # Use wait=False to avoid blocking Qt shutdown if tasks emit signals
+                self._executor.shutdown(wait=False, cancel_futures=True)
 
     def refresh_theme(self) -> None:
         """Refresh styles when theme changes."""
