@@ -836,7 +836,7 @@ class SourcesPanel(QWidget):
         Shuts down the thread pool executor to prevent orphaned threads.
         Should be called when the parent window is closing.
         """
-        self._executor.shutdown(wait=False, cancel_futures=True)
+        self._executor.shutdown(wait=True, cancel_futures=True)
 
     def refresh_theme(self) -> None:
         """Refresh styles when theme changes."""

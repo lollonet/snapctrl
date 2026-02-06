@@ -1,7 +1,10 @@
 """Client model representing a Snapcast audio endpoint."""
 
+import logging
 import time
 from dataclasses import dataclass
+
+logger = logging.getLogger(__name__)
 
 # Time thresholds for last_seen display (in seconds)
 _SECONDS_PER_MINUTE = 60
@@ -61,7 +64,14 @@ class Client:
     def __post_init__(self) -> None:
         """Validate and clamp volume to 0-100 range."""
         if self.volume < 0 or self.volume > 100:  # noqa: PLR2004
-            object.__setattr__(self, "volume", max(0, min(100, self.volume)))
+            clamped = max(0, min(100, self.volume))
+            logger.warning(
+                "Client %s volume %d out of range, clamped to %d",
+                self.id,
+                self.volume,
+                clamped,
+            )
+            object.__setattr__(self, "volume", clamped)
 
     @property
     def display_name(self) -> str:

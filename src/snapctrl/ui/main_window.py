@@ -584,6 +584,7 @@ class MainWindow(QMainWindow):
         """Handle window close event.
 
         If hide-to-tray is enabled, hides the window instead of closing.
+        Otherwise, cleans up resources before closing.
 
         Args:
             event: The close event.
@@ -592,6 +593,8 @@ class MainWindow(QMainWindow):
             event.ignore()
             self.hide()
         else:
+            # Clean up SourcesPanel thread pool before closing
+            self._sources_panel.cleanup()
             super().closeEvent(event)
 
     def toggle_visibility(self) -> None:
