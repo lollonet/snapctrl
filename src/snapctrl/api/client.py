@@ -508,16 +508,15 @@ def _clamp_volume(volume: int, client_id: str) -> int:
     Returns:
         Volume clamped to 0-100 range.
     """
-    if volume < 0 or volume > 100:  # noqa: PLR2004
-        clamped = max(0, min(100, volume))
+    clamped = max(0, min(100, volume))
+    if clamped != volume:
         logger.warning(
             "Client %s volume %d out of range, clamped to %d",
             client_id,
             volume,
             clamped,
         )
-        return clamped
-    return volume
+    return clamped
 
 
 def _parse_server_status(data: dict[str, Any]) -> ServerState:
