@@ -386,6 +386,9 @@ def main() -> int:  # noqa: PLR0912, PLR0915
         worker.set_group_mute(group_id, muted)
 
     def on_source_changed(group_id: str, stream_id: str) -> None:
+        if not group_id:
+            logger.warning("Cannot change source: no group selected")
+            return
         logger.debug(f"Group source: {group_id} -> {stream_id}")
         worker.set_group_stream(group_id, stream_id)
 

@@ -312,8 +312,8 @@ class GroupCard(QWidget):
     def _on_source_changed(self, _text: str) -> None:
         """Handle source dropdown change."""
         stream_id = self._source_combo.currentData()
-        if stream_id:
-            self.source_changed.emit(self._group.id if self._group else "", stream_id)
+        if stream_id and self._group:
+            self.source_changed.emit(self._group.id, stream_id)
 
     def _toggle_expand(self) -> None:
         """Toggle expand/collapse of client list."""
@@ -321,7 +321,8 @@ class GroupCard(QWidget):
         self._client_list.setVisible(self._expanded)
         self._expand_button.setText("▲" if self._expanded else "▼")
         self._expand_button.setAccessibleName("Collapse" if self._expanded else "Expand")
-        self.expand_toggled.emit(self._group.id if self._group else "", self._expanded)
+        if self._group:
+            self.expand_toggled.emit(self._group.id, self._expanded)
 
     @property
     def is_expanded(self) -> bool:
