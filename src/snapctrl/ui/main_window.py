@@ -593,8 +593,7 @@ class MainWindow(QMainWindow):
             event.ignore()
             self.hide()
         else:
-            # Clean up SourcesPanel thread pool before closing
-            self._sources_panel.cleanup()
+            # Cleanup handled by aboutToQuit in __main__.py
             super().closeEvent(event)
 
     def toggle_visibility(self) -> None:

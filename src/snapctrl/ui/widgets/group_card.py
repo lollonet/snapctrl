@@ -1,5 +1,7 @@
 """Group card widget - displays a group with volume control and source selection."""
 
+import logging
+
 from PySide6.QtCore import QEvent, QObject, Signal
 from PySide6.QtGui import QContextMenuEvent, QMouseEvent
 from PySide6.QtWidgets import (
@@ -19,6 +21,8 @@ from snapctrl.ui.theme import theme_manager
 from snapctrl.ui.tokens import sizing, spacing, typography
 from snapctrl.ui.widgets.client_card import ClientCard
 from snapctrl.ui.widgets.volume_slider import VolumeSlider
+
+logger = logging.getLogger(__name__)
 
 
 class GroupCard(QWidget):
@@ -312,8 +316,13 @@ class GroupCard(QWidget):
     def _on_source_changed(self, _text: str) -> None:
         """Handle source dropdown change."""
         stream_id = self._source_combo.currentData()
-        if stream_id and self._group:
-            self.source_changed.emit(self._group.id, stream_id)
+        if not stream_id:
+            logger.debug("Source change ignored: no stream_id selected")
+            return
+        if not self._group:
+            logger.warning("Source change ignored: group not set")
+            return
+        self.source_changed.emit(self._group.id, stream_id)
 
     def _toggle_expand(self) -> None:
         """Toggle expand/collapse of client list."""
