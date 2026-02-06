@@ -449,7 +449,8 @@ class SourcesPanel(QWidget):
                 loop.close()
 
         # Submit to thread pool for managed background execution
-        self._executor.submit(fetch_in_thread)
+        if not self._executor_shutdown:
+            self._executor.submit(fetch_in_thread)
 
     @Slot()
     def _apply_fallback_art(self) -> None:
@@ -648,7 +649,8 @@ class SourcesPanel(QWidget):
                     logger.error("Out of memory loading album art")
 
             # Submit to thread pool for managed background execution
-            self._executor.submit(decode_in_thread)
+            if not self._executor_shutdown:
+                self._executor.submit(decode_in_thread)
             return True
 
         except ValueError as e:
